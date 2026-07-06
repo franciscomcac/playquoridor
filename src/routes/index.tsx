@@ -27,6 +27,7 @@ type View =
       name: "game";
       isHost: boolean;
       code: string;
+      walls: number;
     };
 
 function Home() {
@@ -43,13 +44,17 @@ function Home() {
               walls={view.walls}
               setWalls={(w) => setView({ name: "create", walls: w })}
               onBack={() => setView({ name: "menu" })}
-              onStart={(code) => setView({ name: "game", isHost: true, code })}
+              onStart={(code) =>
+                setView({ name: "game", isHost: true, code, walls: view.walls })
+              }
             />
           )}
           {view.name === "join" && (
             <JoinRoom
               onBack={() => setView({ name: "menu" })}
-              onJoin={(code) => setView({ name: "game", isHost: false, code })}
+              onJoin={(code) =>
+                setView({ name: "game", isHost: false, code, walls: 10 })
+              }
             />
           )}
           {view.name === "game" && (
@@ -57,7 +62,7 @@ function Home() {
               key={view.code + (view.isHost ? "-h" : "-g")}
               code={view.code}
               isHost={view.isHost}
-              initialWalls={10}
+              initialWalls={view.walls}
               onLeave={() => setView({ name: "menu" })}
             />
           )}
