@@ -1,9 +1,8 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   BOARD,
   canPlaceWall,
   legalPawnMoves,
-  wallConflicts,
   type GameState,
   type Move,
   type Orient,
@@ -17,174 +16,147 @@ type Props = {
   interactive: boolean;
 };
 
+type HoverTarget =
+  | { kind: "cell"; r: number; c: number }
+  | { kind: "wall"; wall: Wall };
+
+// How close (in cell-widths) to a gridline before we snap to a wall.
+const WALL_SNAP_RADIUS = 0.32;
+
 export function QuoridorBoard({ state, you, onMove, interactive }: Props) {
-  const [orient, setOrient] = useState<Orient>("h");
-  const [hoverWall, setHoverWall] = useState<Wall | null>(null);
+  const [hover, setHover] = useState<HoverTarget | null>(null);
+  const boardRef = useRef<HTMLDivElement>(null);
 
   const isYourTurn = interactive && state.turn === you && state.winner === null;
   const legal = isYourTurn ? legalPawnMoves(state, you) : [];
   const legalSet = new Set(legal.map(([r, c]) => `${r},${c}`));
 
-  const wallSet = new Set(state.walls.map((w) => `${w.o}${w.r},${w.c}`));
+  function targetFor(e: { clientX: number; clientY: number }): HoverTarget | null {
+    const el = boardRef.current;
+    if (!el) return null;
+    const rect = el.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * BOARD;
+    const y = ((e.clientY - rect.top) / rect.height) * BOARD;
+    if (x < 0 || x > BOARD || y < 0 || y > BOARD) return null;
 
-  const tryPlaceWall = (w: Wall) => {
-    if (!isYourTurn) return;
-    if (state.wallsLeft[you] <= 0) return;
-    if (!canPlaceWall(state, you, w)) return;
-    onMove({ kind: "wall", wall: w });
-  };
+    // Nearest interior gridline (1..8) in each axis
+    const gy = Math.min(BOARD - 1, Math.max(1, Math.round(y)));
+    const gx = Math.min(BOARD - 1, Math.max(1, Math.round(x)));
+    const dy = Math.abs(y - gy);
+    const dx = Math.abs(x - gx);
 
-  const hoverValid =
-    hoverWall &&
-    isYourTurn &&
-    state.wallsLeft[you] > 0 &&
-    canPlaceWall(state, you, hoverWall);
-
-  // 9 cells + 8 gaps = 17 tracks. Cells wider than gaps.
-  const cellFr = "1fr";
-  const gapFr = "0.22fr";
-  const tracks = Array.from({ length: 17 }, (_, i) => (i % 2 === 0 ? cellFr : gapFr)).join(" ");
-
-  const items: React.ReactNode[] = [];
-
-  for (let gr = 0; gr < 17; gr++) {
-    for (let gc = 0; gc < 17; gc++) {
-      const rowIsCell = gr % 2 === 0;
-      const colIsCell = gc % 2 === 0;
-      const key = `${gr}-${gc}`;
-      const style: React.CSSProperties = {
-        gridRow: `${gr + 1} / span 1`,
-        gridColumn: `${gc + 1} / span 1`,
-      };
-
-      if (rowIsCell && colIsCell) {
-        const r = gr / 2;
-        const c = gc / 2;
-        const p1 = state.pawns[0][0] === r && state.pawns[0][1] === c;
-        const p2 = state.pawns[1][0] === r && state.pawns[1][1] === c;
-        const isLegal = legalSet.has(`${r},${c}`);
-        const goal1 = r === 0;
-        const goal2 = r === BOARD - 1;
-        const bg = goal1
-          ? "var(--goal-1)"
-          : goal2
-            ? "var(--goal-2)"
-            : (r + c) % 2 === 0
-              ? "var(--board-cell)"
-              : "var(--board-cell-alt)";
-        items.push(
-          <button
-            key={key}
-            type="button"
-            aria-label={`cell ${r},${c}`}
-            disabled={!isLegal}
-            onClick={() => {
-              if (isLegal) onMove({ kind: "pawn", to: [r, c] });
-            }}
-            style={{ ...style, background: bg }}
-            className="relative flex items-center justify-center rounded-[3px] transition-colors disabled:cursor-default"
-          >
-            {p1 && <Pawn player={0} you={you} />}
-            {p2 && <Pawn player={1} you={you} />}
-            {isLegal && !p1 && !p2 && (
-              <span
-                className="pointer-events-none block h-3 w-3 rounded-full"
-                style={{
-                  background:
-                    you === 0 ? "var(--pawn-1)" : "var(--pawn-2)",
-                  opacity: 0.35,
-                }}
-              />
-            )}
-          </button>,
-        );
-      } else if (!rowIsCell && !colIsCell) {
-        // intersection point — used to anchor wall placement targets
-        const r = (gr - 1) / 2;
-        const c = (gc - 1) / 2;
-        const w: Wall = { r, c, o: orient };
-        const invalid = wallConflicts(state.walls, w) || !isYourTurn;
-        items.push(
-          <button
-            key={key}
-            type="button"
-            disabled={invalid || state.wallsLeft[you] <= 0}
-            onMouseEnter={() => setHoverWall(w)}
-            onMouseLeave={() =>
-              setHoverWall((h) => (h && h.r === r && h.c === c ? null : h))
-            }
-            onClick={() => tryPlaceWall(w)}
-            style={style}
-            className="rounded-full transition-colors disabled:cursor-default"
-            aria-label={`place ${orient} wall at ${r},${c}`}
-          />,
-        );
+    if (Math.min(dx, dy) < WALL_SNAP_RADIUS) {
+      let o: Orient;
+      let r: number;
+      let c: number;
+      if (dy <= dx) {
+        // Cursor is close to a horizontal gridline → horizontal wall
+        o = "h";
+        r = gy - 1;
+        c = Math.min(BOARD - 2, Math.max(0, Math.round(x) - 1));
       } else {
-        // wall slot between two cells
-        items.push(<div key={key} style={style} />);
+        o = "v";
+        c = gx - 1;
+        r = Math.min(BOARD - 2, Math.max(0, Math.round(y) - 1));
+      }
+      return { kind: "wall", wall: { r, c, o } };
+    }
+
+    const c = Math.min(BOARD - 1, Math.max(0, Math.floor(x)));
+    const r = Math.min(BOARD - 1, Math.max(0, Math.floor(y)));
+    return { kind: "cell", r, c };
+  }
+
+  function handlePointerMove(e: React.PointerEvent) {
+    if (!isYourTurn) {
+      if (hover) setHover(null);
+      return;
+    }
+    const t = targetFor(e);
+    // Avoid noisy state updates
+    setHover((prev) => {
+      if (!t && !prev) return prev;
+      if (!t || !prev) return t;
+      if (t.kind === "cell" && prev.kind === "cell" && t.r === prev.r && t.c === prev.c) return prev;
+      if (
+        t.kind === "wall" &&
+        prev.kind === "wall" &&
+        t.wall.r === prev.wall.r &&
+        t.wall.c === prev.wall.c &&
+        t.wall.o === prev.wall.o
+      )
+        return prev;
+      return t;
+    });
+  }
+
+  function handleClick(e: React.MouseEvent) {
+    if (!isYourTurn) return;
+    const t = targetFor(e);
+    if (!t) return;
+    if (t.kind === "cell") {
+      if (legalSet.has(`${t.r},${t.c}`)) onMove({ kind: "pawn", to: [t.r, t.c] });
+    } else {
+      if (state.wallsLeft[you] > 0 && canPlaceWall(state, you, t.wall)) {
+        onMove({ kind: "wall", wall: t.wall });
       }
     }
   }
 
-  // overlay existing walls as spans
-  for (const w of state.walls) {
-    if (w.o === "h") {
-      items.push(
-        <div
-          key={`wall-${w.o}-${w.r}-${w.c}`}
-          style={{
-            gridRow: `${w.r * 2 + 2} / span 1`,
-            gridColumn: `${w.c * 2 + 1} / span 3`,
-            background: "var(--wall)",
-            borderRadius: "3px",
-            boxShadow: "0 1px 2px rgba(0,0,0,0.25)",
-          }}
-        />,
-      );
-    } else {
-      items.push(
-        <div
-          key={`wall-${w.o}-${w.r}-${w.c}`}
-          style={{
-            gridRow: `${w.r * 2 + 1} / span 3`,
-            gridColumn: `${w.c * 2 + 2} / span 1`,
-            background: "var(--wall)",
-            borderRadius: "3px",
-            boxShadow: "0 1px 2px rgba(0,0,0,0.25)",
-          }}
-        />,
-      );
-    }
-  }
+  const ghostWall =
+    hover && hover.kind === "wall" && state.wallsLeft[you] > 0 && canPlaceWall(state, you, hover.wall)
+      ? hover.wall
+      : null;
+  const invalidGhost =
+    hover && hover.kind === "wall" && !ghostWall ? hover.wall : null;
+  const hoverCell = hover && hover.kind === "cell" ? hover : null;
+  const cursor =
+    ghostWall || (hoverCell && legalSet.has(`${hoverCell.r},${hoverCell.c}`))
+      ? "pointer"
+      : "default";
 
-  // ghost wall preview
-  if (hoverWall && hoverValid) {
-    const w = hoverWall;
-    if (w.o === "h") {
-      items.push(
+  // Render 9x9 cells
+  const cells: React.ReactNode[] = [];
+  for (let r = 0; r < BOARD; r++) {
+    for (let c = 0; c < BOARD; c++) {
+      const p1 = state.pawns[0][0] === r && state.pawns[0][1] === c;
+      const p2 = state.pawns[1][0] === r && state.pawns[1][1] === c;
+      const isLegal = legalSet.has(`${r},${c}`);
+      const isGoal1 = r === 0;
+      const isGoal2 = r === BOARD - 1;
+      const bg = isGoal1
+        ? "var(--goal-1)"
+        : isGoal2
+          ? "var(--goal-2)"
+          : (r + c) % 2 === 0
+            ? "var(--board-cell)"
+            : "var(--board-cell-alt)";
+      const isHovered = hoverCell && hoverCell.r === r && hoverCell.c === c;
+      cells.push(
         <div
-          key="ghost"
-          className="pointer-events-none"
+          key={`${r}-${c}`}
           style={{
-            gridRow: `${w.r * 2 + 2} / span 1`,
-            gridColumn: `${w.c * 2 + 1} / span 3`,
-            background: "var(--wall-ghost)",
-            borderRadius: "3px",
+            gridRow: r + 1,
+            gridColumn: c + 1,
+            background: bg,
+            boxShadow: "inset 0 0 0 1px var(--board-line)",
           }}
-        />,
-      );
-    } else {
-      items.push(
-        <div
-          key="ghost"
-          className="pointer-events-none"
-          style={{
-            gridRow: `${w.r * 2 + 1} / span 3`,
-            gridColumn: `${w.c * 2 + 2} / span 1`,
-            background: "var(--wall-ghost)",
-            borderRadius: "3px",
-          }}
-        />,
+          className="relative flex items-center justify-center"
+        >
+          {p1 && <Pawn player={0} you={you} />}
+          {p2 && <Pawn player={1} you={you} />}
+          {isLegal && !p1 && !p2 && (
+            <span
+              className="pointer-events-none block rounded-full transition-all"
+              style={{
+                width: isHovered ? "44%" : "18%",
+                height: isHovered ? "44%" : "18%",
+                background: you === 0 ? "var(--pawn-1)" : "var(--pawn-2)",
+                opacity: isHovered ? 0.55 : 0.32,
+              }}
+            />
+          )}
+        </div>,
       );
     }
   }
@@ -192,47 +164,92 @@ export function QuoridorBoard({ state, you, onMove, interactive }: Props) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between text-xs uppercase tracking-[0.15em] text-muted-foreground">
-        <span>{isYourTurn ? "Your move" : state.winner !== null ? "Game over" : "Opponent's turn"}</span>
-        <div className="flex items-center gap-1 rounded-full border border-border bg-card p-1">
-          <button
-            type="button"
-            onClick={() => setOrient("h")}
-            className={`rounded-full px-3 py-1 text-[10px] font-medium tracking-wider transition-colors ${
-              orient === "h" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
-            }`}
-          >
-            Horizontal
-          </button>
-          <button
-            type="button"
-            onClick={() => setOrient("v")}
-            className={`rounded-full px-3 py-1 text-[10px] font-medium tracking-wider transition-colors ${
-              orient === "v" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
-            }`}
-          >
-            Vertical
-          </button>
-        </div>
+        <span>
+          {isYourTurn
+            ? "Your move"
+            : state.winner !== null
+              ? "Game over"
+              : "Opponent's turn"}
+        </span>
+        <span>Walls left: {state.wallsLeft[you]}</span>
       </div>
       <div
         className="aspect-square w-full rounded-lg p-2 shadow-inner"
         style={{ background: "var(--board-bg)" }}
       >
         <div
-          className="grid h-full w-full gap-0"
-          style={{
-            gridTemplateColumns: tracks,
-            gridTemplateRows: tracks,
-          }}
+          ref={boardRef}
+          onPointerMove={handlePointerMove}
+          onPointerLeave={() => setHover(null)}
+          onClick={handleClick}
+          className="relative h-full w-full select-none"
+          style={{ cursor }}
         >
-          {items}
+          <div
+            className="grid h-full w-full overflow-hidden rounded-[4px]"
+            style={{
+              gridTemplateColumns: `repeat(${BOARD}, 1fr)`,
+              gridTemplateRows: `repeat(${BOARD}, 1fr)`,
+            }}
+          >
+            {cells}
+          </div>
+          {state.walls.map((w) => (
+            <WallSpan key={`w-${w.o}-${w.r}-${w.c}`} wall={w} tone="solid" />
+          ))}
+          {ghostWall && <WallSpan wall={ghostWall} tone="ghost" />}
+          {invalidGhost && <WallSpan wall={invalidGhost} tone="invalid" />}
         </div>
       </div>
       <p className="text-center text-[11px] text-muted-foreground">
-        Click a highlighted square to move · click between cells to place a{" "}
-        <strong>{orient === "h" ? "horizontal" : "vertical"}</strong> wall
+        Hover a square to move · hover between cells to place a wall — orientation snaps automatically
       </p>
     </div>
+  );
+}
+
+function WallSpan({ wall, tone }: { wall: Wall; tone: "solid" | "ghost" | "invalid" }) {
+  const thickness = 6; // px
+  const bg =
+    tone === "solid"
+      ? "var(--wall)"
+      : tone === "ghost"
+        ? "var(--wall-ghost)"
+        : "oklch(0.55 0.2 25 / 0.35)";
+  const shadow = tone === "solid" ? "0 1px 2px rgba(0,0,0,0.25)" : "none";
+  const common: React.CSSProperties = {
+    position: "absolute",
+    background: bg,
+    borderRadius: "3px",
+    boxShadow: shadow,
+    pointerEvents: "none",
+    zIndex: 2,
+  };
+  if (wall.o === "h") {
+    return (
+      <div
+        style={{
+          ...common,
+          top: `${((wall.r + 1) / BOARD) * 100}%`,
+          left: `${(wall.c / BOARD) * 100}%`,
+          width: `${(2 / BOARD) * 100}%`,
+          height: thickness,
+          transform: "translateY(-50%)",
+        }}
+      />
+    );
+  }
+  return (
+    <div
+      style={{
+        ...common,
+        left: `${((wall.c + 1) / BOARD) * 100}%`,
+        top: `${(wall.r / BOARD) * 100}%`,
+        height: `${(2 / BOARD) * 100}%`,
+        width: thickness,
+        transform: "translateX(-50%)",
+      }}
+    />
   );
 }
 
