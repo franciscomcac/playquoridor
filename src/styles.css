@@ -199,3 +199,66 @@
   50%     { box-shadow: 0 0 0 8px oklch(0.6 0.2 25 / 0); }
 }
 .afk-pulse { animation: afk-pulse 1.2s ease-out infinite; }
+
+/* 3D coin flip — physical toss with two colored faces */
+.coin-stage { perspective: 900px; }
+@keyframes coin-toss {
+  0%   { transform: translateY(0)     rotateX(0);                       }
+  35%  { transform: translateY(-72px) rotateX(calc(var(--end, 1800deg) * 0.45)); }
+  70%  { transform: translateY(-24px) rotateX(calc(var(--end, 1800deg) * 0.85)); }
+  100% { transform: translateY(0)     rotateX(var(--end, 1800deg));      }
+}
+.coin-3d {
+  position: relative;
+  transform-style: preserve-3d;
+  animation: coin-toss 1.9s cubic-bezier(.35,.05,.25,1) forwards;
+  will-change: transform;
+}
+.coin-face {
+  position: absolute; inset: 0;
+  border-radius: 9999px;
+  backface-visibility: hidden;
+  display: grid; place-items: center;
+  font-weight: 700;
+  box-shadow:
+    inset 0 4px 10px rgba(255,255,255,0.35),
+    inset 0 -6px 12px rgba(0,0,0,0.35),
+    0 12px 28px rgba(0,0,0,0.35);
+}
+.coin-face.back { transform: rotateX(180deg); }
+.coin-edge {
+  position: absolute; left: 50%; top: 50%;
+  width: 100%; height: 6px;
+  transform: translate(-50%,-50%) rotateX(90deg);
+  background: linear-gradient(90deg, oklch(0.55 0.05 65), oklch(0.75 0.06 70), oklch(0.55 0.05 65));
+  border-radius: 3px;
+  opacity: 0.9;
+}
+@keyframes coin-shadow {
+  0%,100% { transform: translateX(-50%) scale(1);    opacity: 0.35; }
+  40%     { transform: translateX(-50%) scale(0.55); opacity: 0.18; }
+}
+.coin-shadow { animation: coin-shadow 1.9s cubic-bezier(.35,.05,.25,1) forwards; }
+
+/* Chess-style clock */
+@keyframes clock-tick {
+  0%,100% { transform: scale(1); }
+  50%     { transform: scale(1.02); }
+}
+.clock-active { animation: clock-tick 1s ease-in-out infinite; }
+@keyframes clock-warn {
+  0%,100% { box-shadow: 0 0 0 0 oklch(0.75 0.16 60 / 0.55); }
+  50%     { box-shadow: 0 0 0 8px oklch(0.75 0.16 60 / 0); }
+}
+.clock-warn { animation: clock-warn 1s ease-out infinite; }
+@keyframes clock-danger {
+  0%,100% {
+    box-shadow: 0 0 0 0 oklch(0.6 0.24 25 / 0.75);
+    color: oklch(0.6 0.24 25);
+  }
+  50%     {
+    box-shadow: 0 0 0 10px oklch(0.6 0.24 25 / 0);
+    color: oklch(0.68 0.28 25);
+  }
+}
+.clock-danger { animation: clock-danger 0.7s ease-out infinite; }

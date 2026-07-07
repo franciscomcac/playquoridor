@@ -1,4 +1,5 @@
 // Pure Quoridor engine — 2 or 4 players, no UI deps. Serializable state.
+import type { ClockState } from "./clock";
 
 export type PlayerId = 0 | 1 | 2 | 3;
 export type Mode = 2 | 4;
@@ -27,6 +28,9 @@ export type GameState = {
   // per-match tallies (for end-screen summary)
   wallsPlacedByPlayer: number[];
   pawnsEliminatedByPlayer: number[];
+  // Optional chess-style clocks. Host manages transitions; when present
+  // every client renders live remaining time. Absent = no clock UI.
+  clocks?: ClockState;
 };
 
 export const BOARD = 9;
