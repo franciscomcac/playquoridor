@@ -21,7 +21,83 @@ import {
   getVolume, initSoundOnGesture, isMuted, play, setMuted, setVolume,
 } from "@/lib/sound";
 
-export const Route = createFileRoute("/")({ component: Home });
+const SEO_TITLE = "Play Quoridor Online Free – Wall Blocking Strategy Game";
+const SEO_DESCRIPTION =
+  "Play Quoridor online for free! The classic strategy game where you move your piece and place walls to block your opponent. No download needed. Also known as the 'balls and walls game' or 'wall blocking puzzle game'.";
+const SEO_OG_DESCRIPTION =
+  "Move your piece, place walls, block your opponent. Free online Quoridor — the addictive strategy game anyone can learn in 2 minutes.";
+const SEO_KEYWORDS =
+  "quoridor online, play quoridor, quoridor game free, wall blocking game, balls and walls game, block opponent with walls game, wall placement strategy game, pawn and walls board game, maze blocking game online, grid wall game, place walls to win game, quoridor multiplayer";
+const SITE_URL = "https://playquoridor.online";
+
+export const Route = createFileRoute("/")({
+  component: Home,
+  head: () => ({
+    meta: [
+      { title: SEO_TITLE },
+      { name: "description", content: SEO_DESCRIPTION },
+      { name: "keywords", content: SEO_KEYWORDS },
+      { property: "og:title", content: SEO_TITLE },
+      { property: "og:description", content: SEO_OG_DESCRIPTION },
+      { property: "og:url", content: SITE_URL },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: SEO_TITLE },
+      { name: "twitter:description", content: SEO_OG_DESCRIPTION },
+    ],
+    links: [{ rel: "canonical", href: SITE_URL }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebApplication",
+          name: "Play Quoridor Online",
+          url: SITE_URL,
+          description:
+            "Free online Quoridor game. Move your pawn and place walls to block your opponent from reaching the other side. Strategy board game playable in browser.",
+          applicationCategory: "GameApplication",
+          genre: "Strategy",
+          operatingSystem: "Web Browser",
+          offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: [
+            {
+              "@type": "Question",
+              name: "What is the game where you place walls to block your opponent?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "It's called Quoridor — a two- or four-player strategy board game where each player moves a pawn across a 9×9 grid while placing walls (fences) to slow the opponent down. First pawn to reach the opposite side wins.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "What is the balls and walls game called?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "The board game people describe as 'balls and walls' — round pawns you push forward while dropping wall segments to block the other player — is Quoridor. You can play it free in your browser at playquoridor.online.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "How do you play the wall blocking board game?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "On your turn you either move your pawn one square (up, down, left, or right) or place one of your walls between two rows or columns to block a path. Walls cannot completely trap the opponent — they must always have a route to their goal edge. First player to reach the opposite side wins.",
+              },
+            },
+          ],
+        }),
+      },
+    ],
+  }),
+});
 
 type View =
   | { name: "menu" }
@@ -98,6 +174,7 @@ function Home() {
           </div>
         )}
 
+        <SeoContent />
         <Footer />
       </div>
 
@@ -112,7 +189,7 @@ function Header({ ident, onOpenSettings }: { ident: Identity | null; onOpenSetti
       <div className="flex items-center gap-3">
         <img
           src="/favicon.png"
-          alt="playquoridor.online"
+          alt="Play Quoridor free in browser — place walls to block opponent"
           width={40}
           height={40}
           className="h-10 w-10 rounded-md"
@@ -155,6 +232,94 @@ function Footer() {
     <footer className="pt-6 text-center text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
       Peer-to-peer · no accounts · your browser only
     </footer>
+  );
+}
+
+function SeoContent() {
+  return (
+    <section
+      aria-labelledby="seo-heading"
+      className="mx-auto mt-12 max-w-3xl space-y-8 border-t border-border/60 pt-10 text-sm leading-relaxed text-muted-foreground"
+    >
+      <div>
+        <h1 id="seo-heading" className="text-2xl font-semibold text-foreground sm:text-3xl">
+          Play Quoridor Online — Free Wall Blocking Strategy Game
+        </h1>
+        <p className="mt-3">
+          <strong className="text-foreground">Quoridor</strong> is the strategy game where you move
+          your pawn across the board while placing walls to block your opponent. Race to the other
+          side before they reach yours. Sometimes called the "balls and walls game", the "wall
+          blocking game", or "the game where you block with fences" — whatever you call it, it
+          takes 2 minutes to learn and years to master. Play free in your browser, no download
+          required.
+        </p>
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">How to Play the Wall Blocking Game</h2>
+        <p className="mt-2">
+          Each turn you do one of two things: move your pawn one square, or drop a wall to slow the
+          other player down. Walls can never fully trap an opponent — they must always have a legal
+          route to their goal edge. The first pawn to touch the opposite side of the 9×9 board
+          wins the round.
+        </p>
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">
+          Quoridor Rules — Move or Place a Wall Each Turn
+        </h2>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          <li>2-player games start with 10 walls each; 4-player games start with 5 walls each.</li>
+          <li>On your turn, either move one square or place a two-square wall between rows or columns.</li>
+          <li>You can jump directly over an adjacent opponent's pawn when there is no wall behind them.</li>
+          <li>Walls may never completely block a player from reaching their goal side.</li>
+          <li>First pawn to reach the opposite edge of the board wins.</li>
+        </ul>
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">Play Online vs Computer or a Friend</h2>
+        <p className="mt-2">
+          Create a private room and share the code with a friend, jump into Quick Match to be
+          paired with the next available player, or set up a 4-player free-for-all. Everything runs
+          peer-to-peer in your browser — no downloads, no accounts, just a room code.
+        </p>
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">Frequently Asked Questions</h2>
+        <dl className="mt-3 space-y-4">
+          <div>
+            <dt className="font-medium text-foreground">
+              What is the game where you place walls to block your opponent?
+            </dt>
+            <dd className="mt-1">
+              It's called Quoridor — a two- or four-player strategy board game where each player
+              moves a pawn across a 9×9 grid while placing walls (fences) to slow the opponent
+              down. First pawn to reach the opposite side wins.
+            </dd>
+          </div>
+          <div>
+            <dt className="font-medium text-foreground">What is the balls and walls game called?</dt>
+            <dd className="mt-1">
+              The board game people describe as "balls and walls" — round pawns you push forward
+              while dropping wall segments to block the other player — is Quoridor. Play it free in
+              your browser here at playquoridor.online.
+            </dd>
+          </div>
+          <div>
+            <dt className="font-medium text-foreground">How do you play the wall blocking board game?</dt>
+            <dd className="mt-1">
+              On your turn you either move your pawn one square, or place one of your walls
+              between two rows or columns to block a path. Walls cannot completely trap the
+              opponent — they must always have a route to their goal edge. First player to reach
+              the opposite side wins.
+            </dd>
+          </div>
+        </dl>
+      </div>
+    </section>
   );
 }
 
