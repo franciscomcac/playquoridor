@@ -1279,3 +1279,163 @@ function SettingsDrawer({ onClose }: { onClose: () => void }) {
     </div>
   );
 }
+
+// ---------------- BOT GAME ----------------
+
+const BOT_NAMES = ["Aria", "Bishop", "Nyx", "Turing", "Echo", "Rook", "Vex", "Juno", "Kilo", "Zephyr"];
+function randomBotName(): string {
+  return BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)];
+}
+
+function BotGame({ ident, difficulty, botName, onLeave }: {
+  ident: Identity;
+  difficulty: BotDifficulty;
+  botName: string;
+  onLeave: () => void;
+}) {
+  const YOU: PlayerId = 0;
+  const BOT: PlayerId = 1;
+  const [state, setState] = useState<GameState>(() => initialState(2, defaultWallsFor(2), 5));
+  const stateRef = useRef(state); stateRef.current = state;
+  const [coinflip, setCoinflip] = useState<{ starter: PlayerId; animating: boolean } | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const nameOf = useCallback((s: PlayerId) => (s === YOU ? ident.name : `${botName} (${difficulty.label} bot)`), [ident.name, botName, difficulty.label]);
+
+  const startCoinflip = useCallback((starter: PlayerId) => {
+    setCoinflip({ starter, animating: true });
+    play("matchStart");
+    window.setTimeout(() => setCoinflip((cf) => (cf ? { ...cf, animating: false } : cf)), 1800);
+  }, []);
+
+  const startRound = useCallback((base?: GameState) => {
+    const src = base ?? stateRef.current;
+    const starter = (Math.random() < 0.5 ? 0 : 1) as PlayerId;
+    const ns = newRound(src, starter);
+    setState(ns);
+    startCoinflip(starter);
+  }, [startCoinflip]);
+
+  const startMatch = useCallback(() => {
+    startRound(initialState(2, defaultWallsFor(2), 5));
+  }, [startRound]);
+
+  // Kick off the first round on mount.
+  useEffect(() => { startMatch(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+
+  // Sound cues.
+  const prevWinnerRef = useRef<PlayerId | null>(null);
+  const prevMatchWinnerRef = useRef<PlayerId | null>(null);
+  useEffect(() => {
+    if (state.winner !== null && prevWinnerRef.current === null) play("roundWin");
+    if (state.matchWinner !== null && prevMatchWinnerRef.current === null) play("matchWin");
+    prevWinnerRef.current = state.winner;
+    prevMatchWinnerRef.current = state.matchWinner;
+  }, [state.winner, state.matchWinner]);
+
+  // Bot's turn — think for a moment, then move.
+  useEffect(() => {
+    if (state.winner !== null || state.matchWinner !== null) return;
+    if (coinflip?.animating) return;
+    if (state.turn !== BOT || !state.active[BOT]) return;
+    const delay = 500 + Math.random() * 900;
+    const t = window.setTimeout(() => {
+      const cur = stateRef.current;
+      if (cur.turn !== BOT || cur.winner !== null || cur.matchWinner !== null) return;
+      const move = pickBotMove(cur, BOT, difficulty.value);
+      if (!move) {
+        const ns = applyForfeit(cur, BOT, false);
+        if (ns) { setState(ns); play("pop"); }
+        return;
+      }
+      const ns = applyMove(cur, BOT, move);
+      if (ns) {
+        setState(ns);
+        play(move.kind === "wall" ? "wall" : "click");
+      }
+    }, delay);
+    return () => window.clearTimeout(t);
+  }, [state.turn, state.active, state.winner, state.matchWinner, coinflip?.animating, difficulty.value]);
+
+  const handleMove = useCallback((move: Move) => {
+    initSoundOnGesture();
+    const cur = stateRef.current;
+    if (cur.turn !== YOU) return;
+    const ns = applyMove(cur, YOU, move);
+    if (!ns) return;
+    play(move.kind === "wall" ? "wall" : "click");
+    setState(ns);
+  }, []);
+
+  const forfeit = useCallback(() => {
+    if (state.winner !== null || state.matchWinner !== null) return;
+    if (!state.active[YOU]) return;
+    if (!window.confirm("Forfeit this round?")) return;
+    const ns = applyForfeit(state, YOU, false);
+    if (ns) { setState(ns); play("pop"); setToast("You forfeited the round"); window.setTimeout(() => setToast(null), 1400); }
+  }, [state]);
+
+  const nextRound = useCallback(() => {
+    if (stateRef.current.matchWinner === null) startRound();
+  }, [startRound]);
+
+  const roundOver = state.winner !== null;
+  const matchOver = state.matchWinner !== null;
+  const boardInteractive = state.winner === null && !coinflip?.animating && state.turn === YOU;
+
+  return (
+    <div className="grid w-full max-w-6xl gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="order-1 flex min-w-0 flex-col gap-3">
+        <TurnBar
+          state={state} you={YOU} status={"connected"}
+          presence={{ count: 2, expected: 2 }}
+          coinAnimating={!!coinflip?.animating} nameOf={nameOf}
+        />
+        <div className="relative">
+          <QuoridorBoard state={state} you={YOU} onMove={handleMove} interactive={boardInteractive} />
+          {coinflip?.animating && <CoinflipOverlay starter={coinflip.starter} you={YOU} name={nameOf(coinflip.starter)} />}
+          {roundOver && !matchOver && (
+            <WinOverlay state={state} you={YOU} matchOver={false} nameOf={nameOf}
+              onPrimary={nextRound} primaryLabel="Next round" onLeave={onLeave} />
+          )}
+          {matchOver && (
+            <EndScreen state={state} you={YOU} nameOf={nameOf}
+              onPrimary={startMatch} onLeave={onLeave} />
+          )}
+        </div>
+      </div>
+
+      <aside className="order-2 flex min-w-0 flex-col gap-3">
+        <div className="rounded-xl border border-border bg-card p-3 sm:p-4">
+          <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Bot match</p>
+          <p className="mt-1 font-mono text-xl tracking-[0.2em] text-primary sm:text-2xl">{difficulty.label}</p>
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            No opponents found — playing a {difficulty.label.toLowerCase()} bot ({botName}).
+          </p>
+          {toast && <p className="toast-in mt-2 text-[10px] uppercase tracking-widest text-primary">{toast}</p>}
+        </div>
+
+        <ScoreCard state={state} you={YOU} nameOf={nameOf} />
+        <PlayersCard state={state} you={YOU} nameOf={nameOf} />
+
+        <div className="flex flex-col gap-2">
+          <button onClick={forfeit}
+            disabled={state.winner !== null || state.matchWinner !== null || !state.active[YOU]}
+            className="rounded-lg border px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary/50 disabled:opacity-40"
+            style={{ borderColor: "var(--destructive)", color: "var(--destructive)" }}>
+            Forfeit round
+          </button>
+          <div className="flex gap-2">
+            <button onClick={startMatch} disabled={!!coinflip?.animating}
+              className="flex-1 rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary disabled:opacity-40">
+              New match
+            </button>
+            <button onClick={onLeave} className="flex-1 rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary">
+              Leave
+            </button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  );
+}
