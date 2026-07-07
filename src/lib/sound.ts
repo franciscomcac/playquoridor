@@ -1,5 +1,5 @@
 // Web Audio SFX — synthesized, no assets. Lazy-init on first user gesture.
-type SfxName = "pop"|"wall"|"join"|"matchStart"|"roundWin"|"matchWin"|"afkWarn"|"click"|"lowTime"|"tick";
+type SfxName = "pop"|"wall"|"join"|"matchStart"|"roundWin"|"matchWin"|"afkWarn"|"click"|"lowTime"|"tick"|"denied";
 const MUTE_KEY = "quoridor.mute";
 const VOL_KEY = "quoridor.volume";
 let ctx: AudioContext | null = null;
@@ -78,9 +78,26 @@ function noiseBurst(dur: number, vol = 0.3) {
 export function play(name: SfxName) {
   ensureCtx();
   if (!ctx || muted) return;
+  if (!master || (master.gain.value ?? 0) <= 0) return;
+  // Rate-limit identical rapid triggers (e.g. double-clicks) so voices
+  // don't stack and clip. Different sounds are unaffected.
+  const now = ctx.currentTime * 1000;
+  const last = lastPlayed[name] ?? -Infinity;
+  const minGap = MIN_GAP_MS[name] ?? 40;
+  if (now - last < minGap) return;
+  lastPlayed[name] = now;
   switch (name) {
-    case "pop": beep({ freq: 880, dur: 0.14, vol: 0.4, slideTo: 220 }); noiseBurst(0.09, 0.15); break;
-    case "wall": beep({ freq: 180, dur: 0.09, type: "square", vol: 0.28, slideTo: 90 }); noiseBurst(0.05, 0.22); break;
+    // Pawn "pop" is delayed to align with the landing-bounce keyframe (~180ms
+    // after the glide starts).
+    case "pop":
+      beep({ freq: 880, dur: 0.14, vol: 0.4, slideTo: 220, delay: 0.18 });
+      noiseBurst(0.09, 0.15, 0.18);
+      break;
+    // Wall thunk plays at the end of the 150ms grow-in animation.
+    case "wall":
+      beep({ freq: 180, dur: 0.09, type: "square", vol: 0.28, slideTo: 90, delay: 0.15 });
+      noiseBurst(0.05, 0.22, 0.15);
+      break;
     case "join": beep({ freq: 520, dur: 0.09, type: "triangle", vol: 0.32 }); beep({ freq: 780, dur: 0.11, type: "triangle", vol: 0.32, delay: 0.09 }); break;
     case "matchStart": [523.25, 659.25, 783.99].forEach((f, i) => beep({ freq: f, dur: 0.16, type: "triangle", vol: 0.32, delay: i * 0.09 })); break;
     case "roundWin": [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => beep({ freq: f, dur: 0.15, vol: 0.35, delay: i * 0.08 })); break;
@@ -90,12 +107,19 @@ export function play(name: SfxName) {
       break;
     case "afkWarn": beep({ freq: 660, dur: 0.14, type: "square", vol: 0.3 }); beep({ freq: 660, dur: 0.14, type: "square", vol: 0.3, delay: 0.22 }); break;
     case "click": beep({ freq: 1200, dur: 0.04, vol: 0.22 }); break;
+    // Softer, so we can pulse it repeatedly while the clock is under 15s
+    // without becoming grating.
     case "lowTime":
-      beep({ freq: 880, dur: 0.11, type: "square", vol: 0.32 });
-      beep({ freq: 660, dur: 0.14, type: "square", vol: 0.32, delay: 0.14 });
+      beep({ freq: 880, dur: 0.09, type: "square", vol: 0.18 });
+      beep({ freq: 660, dur: 0.11, type: "square", vol: 0.18, delay: 0.11 });
       break;
     case "tick":
       beep({ freq: 1500, dur: 0.05, type: "square", vol: 0.22 });
+      break;
+    // Short descending "nope" for illegal input.
+    case "denied":
+      beep({ freq: 260, dur: 0.09, type: "square", vol: 0.22, slideTo: 140 });
+      noiseBurst(0.05, 0.12);
       break;
   }
 }
