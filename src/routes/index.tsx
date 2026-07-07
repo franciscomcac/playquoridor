@@ -240,7 +240,7 @@ function SeoContent() {
   return (
     <section
       aria-labelledby="seo-heading"
-      className="mx-auto mt-32 max-w-2xl space-y-3 border-t border-border/40 pt-8 text-xs leading-relaxed text-muted-foreground/80"
+      className="mx-auto mt-16 max-w-2xl space-y-3 border-t border-border/40 pt-8 text-xs leading-relaxed text-muted-foreground/80 sm:mt-32"
     >
       <h1 id="seo-heading" className="text-[10px] font-medium uppercase tracking-[0.25em] text-muted-foreground">
         Play Quoridor Online — Free Wall Blocking Strategy Game
@@ -1121,7 +1121,7 @@ function WinOverlay({ state, you, matchOver, onPrimary, primaryLabel, onLeave, n
             } as React.CSSProperties} />
         );
       })}
-      <div className={(youWon ? "win-pop" : "lose-fade") + " relative flex flex-col items-center gap-3 rounded-2xl border border-border bg-card px-8 py-7 text-center shadow-2xl"}>
+      <div className={(youWon ? "win-pop" : "lose-fade") + " relative mx-4 flex flex-col items-center gap-3 rounded-2xl border border-border bg-card px-6 py-6 text-center shadow-2xl sm:mx-0 sm:px-8 sm:py-7"}>
         <span className="grid h-14 w-14 place-items-center rounded-full text-xl font-semibold"
           style={{ background: winnerColor, color: "oklch(0.15 0.02 55)", boxShadow: `0 0 26px color-mix(in oklab, ${winnerColor} 60%, transparent)` }}>
           {winner + 1}
