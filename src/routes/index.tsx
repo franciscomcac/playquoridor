@@ -538,13 +538,17 @@ const AFK_COUNTDOWN_MS = 90_000;
 
 function GameScreen({
   ident, code, isHost, mode: initialMode, initialWalls, initialRounds, onLeave,
+  quickMatch, onBotFallback,
 }: {
   ident: Identity; code: string; isHost: boolean; mode: Mode;
   initialWalls: number; initialRounds: number; onLeave: () => void;
+  quickMatch?: boolean; onBotFallback?: () => void;
 }) {
   const [status, setStatus] = useState<Status>("connecting");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [presence, setPresence] = useState<{ count: number; expected: number }>({ count: 1, expected: initialMode });
+  const presenceRef = useRef(presence);
+  presenceRef.current = presence;
   const [roster, setRoster] = useState<RosterEntry[]>([]);
   const rosterRef = useRef<RosterEntry[]>(roster);
   rosterRef.current = roster;
