@@ -830,8 +830,8 @@ function GameScreen({
   const boardInteractive = status === "connected" && state.winner === null && !coinflip?.animating;
 
   return (
-    <div className="grid w-full max-w-6xl gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="order-2 flex min-w-0 flex-col gap-3 lg:order-1">
+    <div className="grid w-full max-w-6xl gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="order-1 flex min-w-0 flex-col gap-3">
         <TurnBar state={state} you={you} status={status} presence={presence} coinAnimating={!!coinflip?.animating} nameOf={nameOf} />
         {afk && state.winner === null && state.matchWinner === null && (
           <AfkBanner slot={afk.slot} deadline={afk.deadline} name={nameOf(afk.slot)} />
@@ -857,12 +857,12 @@ function GameScreen({
         </div>
       </div>
 
-      <aside className="order-1 flex flex-col gap-3 lg:order-2">
-        <div className="rounded-xl border border-border bg-card p-4">
+      <aside className="order-2 flex min-w-0 flex-col gap-3">
+        <div className="rounded-xl border border-border bg-card p-3 sm:p-4">
           <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Room code</p>
           <div className="mt-1 flex items-center justify-between gap-2">
-            <p className="font-mono text-2xl tracking-[0.3em] text-primary">{code}</p>
-            <button onClick={copyCode} className="rounded-md border border-border px-2 py-1 text-[10px] uppercase tracking-widest text-muted-foreground hover:bg-secondary">Copy</button>
+            <p className="font-mono text-xl tracking-[0.3em] text-primary sm:text-2xl">{code}</p>
+            <button onClick={copyCode} className="shrink-0 rounded-md border border-border px-2 py-1 text-[10px] uppercase tracking-widest text-muted-foreground hover:bg-secondary">Copy</button>
           </div>
           <p className="mt-2 text-[11px] text-muted-foreground">
             {isHost ? "Share this code." : "Connected to host."} · {presence.count}/{presence.expected} in
