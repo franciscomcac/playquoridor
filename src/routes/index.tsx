@@ -597,6 +597,10 @@ function GameScreen({
   const roomRef = useRef<Room | null>(null);
   const matchRecordedRef = useRef(false);
 
+  // Ready-up state for the between-rounds flow (replaces "Next round" button).
+  const [readySlots, setReadySlots] = useState<PlayerId[]>([]);
+  const [merging, setMerging] = useState(false);
+
   const nameOf = useCallback((s: PlayerId): string => {
     const r = rosterRef.current.find((e) => e.slot === s);
     return r?.name ?? `Player ${s + 1}`;
@@ -646,6 +650,25 @@ function GameScreen({
     roomRef.current?.send({ type: "state", payload: ns });
     play("pop");
   }, []);
+
+  // Host-authoritative ready tracking. Guest clicks send a "ready" message;
+  // host writes to local state and broadcasts the canonical list.
+  const markSlotReady = useCallback((slot: PlayerId) => {
+    setReadySlots((prev) => {
+      if (prev.includes(slot)) return prev;
+      const next = [...prev, slot];
+      if (isHost) roomRef.current?.send({ type: "readyState", payload: { slots: next } });
+      return next;
+    });
+  }, [isHost]);
+
+  const requestReady = useCallback(() => {
+    if (stateRef.current.winner === null) return;
+    if (stateRef.current.matchWinner !== null) return;
+    const s = slotRef.current;
+    if (isHost) markSlotReady(s);
+    else roomRef.current?.send({ type: "ready", payload: { slot: s } });
+  }, [isHost, markSlotReady]);
 
   // ---------- Connection ----------
   useEffect(() => {
@@ -710,6 +733,12 @@ function GameScreen({
           play("afkWarn");
         } else if (msg.type === "afkCancel") {
           setAfk(null);
+        } else if (msg.type === "ready" && isHost) {
+          const p = msg.payload as { slot: number };
+          markSlotReady(p.slot as PlayerId);
+        } else if (msg.type === "readyState") {
+          const p = msg.payload as { slots: number[] };
+          setReadySlots(p.slots as PlayerId[]);
         }
       },
       onError: (err: Error) => {
