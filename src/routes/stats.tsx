@@ -6,11 +6,14 @@ import { getStoredIdentity } from "@/lib/identity";
 export const Route = createFileRoute("/stats")({
   head: () => ({
     meta: [
-      { title: "Stats & Leaderboard — Quoridor Parlour" },
-      { name: "description", content: "Top players, personal stats, and match history for Quoridor Parlour." },
-      { property: "og:title", content: "Stats & Leaderboard — Quoridor Parlour" },
-      { property: "og:description", content: "See the leaderboard and your own Quoridor stats." },
+      { title: "Quoridor Stats & Leaderboard — playquoridor.online" },
+      { name: "description", content: "Global Quoridor leaderboard, top players by wins, and your personal match stats. Free online Quoridor at playquoridor.online." },
+      { property: "og:title", content: "Quoridor Stats & Leaderboard — playquoridor.online" },
+      { property: "og:description", content: "See the leaderboard and your own Quoridor stats — free online Quoridor." },
+      { property: "og:url", content: "https://playquoridor.online/stats" },
+      { property: "og:type", content: "website" },
     ],
+    links: [{ rel: "canonical", href: "https://playquoridor.online/stats" }],
   }),
   component: StatsPage,
 });
