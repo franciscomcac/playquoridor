@@ -914,11 +914,6 @@ function GameScreen({
     }
   }, [isHost, status, markActivity]);
 
-  const nextRound = useCallback(() => {
-    if (isHost) { if (stateRef.current.matchWinner === null) hostStartRound(); }
-    else roomRef.current?.send({ type: "nextRound", payload: {} });
-  }, [isHost, hostStartRound]);
-
   const newMatchAction = useCallback(() => {
     if (isHost) hostStartMatch();
     else roomRef.current?.send({ type: "newMatch", payload: {} });
