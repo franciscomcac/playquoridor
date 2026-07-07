@@ -21,7 +21,83 @@ import {
   getVolume, initSoundOnGesture, isMuted, play, setMuted, setVolume,
 } from "@/lib/sound";
 
-export const Route = createFileRoute("/")({ component: Home });
+const SEO_TITLE = "Play Quoridor Online Free – Wall Blocking Strategy Game";
+const SEO_DESCRIPTION =
+  "Play Quoridor online for free! The classic strategy game where you move your piece and place walls to block your opponent. No download needed. Also known as the 'balls and walls game' or 'wall blocking puzzle game'.";
+const SEO_OG_DESCRIPTION =
+  "Move your piece, place walls, block your opponent. Free online Quoridor — the addictive strategy game anyone can learn in 2 minutes.";
+const SEO_KEYWORDS =
+  "quoridor online, play quoridor, quoridor game free, wall blocking game, balls and walls game, block opponent with walls game, wall placement strategy game, pawn and walls board game, maze blocking game online, grid wall game, place walls to win game, quoridor multiplayer";
+const SITE_URL = "https://playquoridor.online";
+
+export const Route = createFileRoute("/")({
+  component: Home,
+  head: () => ({
+    meta: [
+      { title: SEO_TITLE },
+      { name: "description", content: SEO_DESCRIPTION },
+      { name: "keywords", content: SEO_KEYWORDS },
+      { property: "og:title", content: SEO_TITLE },
+      { property: "og:description", content: SEO_OG_DESCRIPTION },
+      { property: "og:url", content: SITE_URL },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: SEO_TITLE },
+      { name: "twitter:description", content: SEO_OG_DESCRIPTION },
+    ],
+    links: [{ rel: "canonical", href: SITE_URL }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebApplication",
+          name: "Play Quoridor Online",
+          url: SITE_URL,
+          description:
+            "Free online Quoridor game. Move your pawn and place walls to block your opponent from reaching the other side. Strategy board game playable in browser.",
+          applicationCategory: "GameApplication",
+          genre: "Strategy",
+          operatingSystem: "Web Browser",
+          offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: [
+            {
+              "@type": "Question",
+              name: "What is the game where you place walls to block your opponent?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "It's called Quoridor — a two- or four-player strategy board game where each player moves a pawn across a 9×9 grid while placing walls (fences) to slow the opponent down. First pawn to reach the opposite side wins.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "What is the balls and walls game called?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "The board game people describe as 'balls and walls' — round pawns you push forward while dropping wall segments to block the other player — is Quoridor. You can play it free in your browser at playquoridor.online.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "How do you play the wall blocking board game?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "On your turn you either move your pawn one square (up, down, left, or right) or place one of your walls between two rows or columns to block a path. Walls cannot completely trap the opponent — they must always have a route to their goal edge. First player to reach the opposite side wins.",
+              },
+            },
+          ],
+        }),
+      },
+    ],
+  }),
+});
 
 type View =
   | { name: "menu" }
