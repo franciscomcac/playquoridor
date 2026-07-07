@@ -158,7 +158,7 @@ function Home() {
                 ident={ident}
                 onBack={() => setView({ name: "menu" })}
                 onJoin={(code) => setView({ name: "game", isHost: false, code, mode: view.mode, walls: defaultWallsFor(view.mode), rounds: 5 })}
-                onHost={(code) => setView({ name: "game", isHost: true, code, mode: view.mode, walls: defaultWallsFor(view.mode), rounds: 5 })}
+                onHost={(code) => setView({ name: "game", isHost: true, code, mode: view.mode, walls: defaultWallsFor(view.mode), rounds: 5, quickMatch: true })}
               />
             )}
             {view.name === "game" && (
@@ -170,6 +170,16 @@ function Home() {
                 mode={view.mode}
                 initialWalls={view.walls}
                 initialRounds={view.rounds}
+                quickMatch={view.quickMatch}
+                onBotFallback={() => setView({ name: "bot", difficulty: randomDifficulty(), botName: randomBotName() })}
+                onLeave={() => setView({ name: "menu" })}
+              />
+            )}
+            {view.name === "bot" && (
+              <BotGame
+                ident={ident}
+                difficulty={view.difficulty}
+                botName={view.botName}
                 onLeave={() => setView({ name: "menu" })}
               />
             )}
