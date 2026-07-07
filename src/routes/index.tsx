@@ -1248,6 +1248,108 @@ function ClocksCard({ state, you, nameOf }: {
   );
 }
 
+// Vertical clock stack that sits to the right of the board, chess.com style:
+// opponents float up top, you sit bottom-right.
+function BoardSideClocks({ state, you, nameOf }: {
+  state: GameState; you: PlayerId; nameOf: (s: PlayerId) => string;
+}) {
+  if (!state.clocks) return null;
+  const others: PlayerId[] = [];
+  for (let i = 0; i < state.mode; i++) if (i !== you) others.push(i as PlayerId);
+  const showYou = you >= 0 && you < state.mode;
+  return (
+    <div className="flex w-20 shrink-0 flex-col justify-between gap-2 sm:w-24 md:w-28">
+      <div className="flex flex-col gap-2">
+        {others.map((o) => (
+          <ChessClock key={o} state={state} playerId={o} nameOf={nameOf} compact />
+        ))}
+      </div>
+      {showYou && (
+        <ChessClock state={state} playerId={you} nameOf={nameOf} compact />
+      )}
+    </div>
+  );
+}
+
+// Round-end "ready up" panel. Each active player is a red ball that turns
+// green when they click Ready; once every player is green the balls merge
+// into the middle and the next round starts (coinflip runs from the parent).
+function RoundEndReady({
+  state, you, nameOf, readySlots, merging, onReady, onLeave,
+}: {
+  state: GameState; you: PlayerId; nameOf: (s: PlayerId) => string;
+  readySlots: PlayerId[]; merging: boolean;
+  onReady: () => void; onLeave: () => void;
+}) {
+  const winner = state.winner as PlayerId;
+  const youWon = winner === you;
+  const players: PlayerId[] = [];
+  for (let i = 0; i < state.mode; i++) if (!state.leftMatch[i]) players.push(i as PlayerId);
+  const iSeated = you >= 0 && you < state.mode && !state.leftMatch[you];
+  const iAmReady = iSeated && readySlots.includes(you);
+  return (
+    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/75 backdrop-blur-sm">
+      <div className="mx-4 flex flex-col items-center gap-4 rounded-2xl border border-border bg-card px-6 py-6 text-center shadow-2xl sm:px-8">
+        <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
+          {youWon ? "You took the round" : `${nameOf(winner)} took the round`}
+        </p>
+        <p className="text-sm text-foreground/80">
+          {merging ? "Starting next round…" : "Ready up to keep playing"}
+        </p>
+
+        <div
+          className="flex items-center transition-all duration-700 ease-out"
+          style={{
+            gap: merging ? "0rem" : "1.5rem",
+            transform: merging ? "scale(0.85)" : "scale(1)",
+          }}
+        >
+          {players.map((p) => {
+            const isReady = readySlots.includes(p);
+            const ballColor = isReady ? "oklch(0.7 0.18 145)" : "oklch(0.62 0.22 25)";
+            return (
+              <div key={p} className="flex flex-col items-center gap-1">
+                <span
+                  className={
+                    "grid h-14 w-14 place-items-center rounded-full text-[10px] font-semibold uppercase tracking-widest transition-colors duration-300 " +
+                    (isReady ? "ready-glow " : "") +
+                    (merging ? "ready-merge" : "")
+                  }
+                  style={{
+                    background: `radial-gradient(circle at 32% 28%, color-mix(in oklab, ${ballColor} 55%, white 45%), ${ballColor} 60%, color-mix(in oklab, ${ballColor} 60%, black 40%))`,
+                    color: "oklch(0.15 0.02 55)",
+                    boxShadow: `0 6px 16px -4px color-mix(in oklab, ${ballColor} 55%, transparent), inset 0 -3px 5px rgba(0,0,0,0.35)`,
+                  }}
+                >
+                  {p === you ? "You" : nameOf(p).slice(0, 3)}
+                </span>
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                  {isReady ? "Ready" : "Waiting"}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        {!merging && (
+          <div className="flex gap-2">
+            <button
+              onClick={onReady}
+              disabled={!iSeated || iAmReady}
+              className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:opacity-40 disabled:hover:translate-y-0"
+            >
+              {iAmReady ? "Waiting…" : "Ready"}
+            </button>
+            <button onClick={onLeave} className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary">
+              Leave
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function WaitingOverlay({ count, expected, isHost, onStart }: { count: number; expected: number; isHost: boolean; onStart: () => void }) {
   return (
     <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-background/80 backdrop-blur-sm">
