@@ -235,6 +235,94 @@ function Footer() {
   );
 }
 
+function SeoContent() {
+  return (
+    <section
+      aria-labelledby="seo-heading"
+      className="mx-auto mt-12 max-w-3xl space-y-8 border-t border-border/60 pt-10 text-sm leading-relaxed text-muted-foreground"
+    >
+      <div>
+        <h1 id="seo-heading" className="text-2xl font-semibold text-foreground sm:text-3xl">
+          Play Quoridor Online — Free Wall Blocking Strategy Game
+        </h1>
+        <p className="mt-3">
+          <strong className="text-foreground">Quoridor</strong> is the strategy game where you move
+          your pawn across the board while placing walls to block your opponent. Race to the other
+          side before they reach yours. Sometimes called the "balls and walls game", the "wall
+          blocking game", or "the game where you block with fences" — whatever you call it, it
+          takes 2 minutes to learn and years to master. Play free in your browser, no download
+          required.
+        </p>
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">How to Play the Wall Blocking Game</h2>
+        <p className="mt-2">
+          Each turn you do one of two things: move your pawn one square, or drop a wall to slow the
+          other player down. Walls can never fully trap an opponent — they must always have a legal
+          route to their goal edge. The first pawn to touch the opposite side of the 9×9 board
+          wins the round.
+        </p>
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">
+          Quoridor Rules — Move or Place a Wall Each Turn
+        </h2>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          <li>2-player games start with 10 walls each; 4-player games start with 5 walls each.</li>
+          <li>On your turn, either move one square or place a two-square wall between rows or columns.</li>
+          <li>You can jump directly over an adjacent opponent's pawn when there is no wall behind them.</li>
+          <li>Walls may never completely block a player from reaching their goal side.</li>
+          <li>First pawn to reach the opposite edge of the board wins.</li>
+        </ul>
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">Play Online vs Computer or a Friend</h2>
+        <p className="mt-2">
+          Create a private room and share the code with a friend, jump into Quick Match to be
+          paired with the next available player, or set up a 4-player free-for-all. Everything runs
+          peer-to-peer in your browser — no downloads, no accounts, just a room code.
+        </p>
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">Frequently Asked Questions</h2>
+        <dl className="mt-3 space-y-4">
+          <div>
+            <dt className="font-medium text-foreground">
+              What is the game where you place walls to block your opponent?
+            </dt>
+            <dd className="mt-1">
+              It's called Quoridor — a two- or four-player strategy board game where each player
+              moves a pawn across a 9×9 grid while placing walls (fences) to slow the opponent
+              down. First pawn to reach the opposite side wins.
+            </dd>
+          </div>
+          <div>
+            <dt className="font-medium text-foreground">What is the balls and walls game called?</dt>
+            <dd className="mt-1">
+              The board game people describe as "balls and walls" — round pawns you push forward
+              while dropping wall segments to block the other player — is Quoridor. Play it free in
+              your browser here at playquoridor.online.
+            </dd>
+          </div>
+          <div>
+            <dt className="font-medium text-foreground">How do you play the wall blocking board game?</dt>
+            <dd className="mt-1">
+              On your turn you either move your pawn one square, or place one of your walls
+              between two rows or columns to block a path. Walls cannot completely trap the
+              opponent — they must always have a route to their goal edge. First player to reach
+              the opposite side wins.
+            </dd>
+          </div>
+        </dl>
+      </div>
+    </section>
+  );
+}
+
 function NamePrompt({ onSubmit, initial = "" }: { onSubmit: (n: string) => void; initial?: string }) {
   const [name, setName] = useState(initial);
   const clean = sanitizeName(name);
