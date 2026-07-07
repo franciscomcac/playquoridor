@@ -1002,24 +1002,30 @@ function GameScreen({
         {afk && state.winner === null && state.matchWinner === null && (
           <AfkBanner slot={afk.slot} deadline={afk.deadline} name={nameOf(afk.slot)} />
         )}
-        <div className="relative">
-          <QuoridorBoard state={state} you={you} onMove={handleMove} interactive={boardInteractive} onActivity={() => markActivity(you)} />
-          {coinflip?.animating && <CoinflipOverlay starter={coinflip.starter} you={you} mode={state.mode as Mode} name={nameOf(coinflip.starter)} />}
-          {status === "waiting" && presence.count < presence.expected && (
-            <WaitingOverlay count={presence.count} expected={presence.expected} isHost={isHost} onStart={hostStartMatch} />
-          )}
-          {status === "error" && <ErrorOverlay msg={errorMsg} onLeave={onLeave} />}
-          {status === "disconnected" && !roundOver && (
-            <MessageOverlay title="Disconnected" body="Connection to the room was lost." onLeave={onLeave} />
-          )}
-          {roundOver && !matchOver && (
-            <WinOverlay state={state} you={you} matchOver={false} nameOf={nameOf}
-              onPrimary={nextRound} primaryLabel="Next round" onLeave={onLeave} />
-          )}
-          {matchOver && (
-            <EndScreen state={state} you={you} nameOf={nameOf}
-              onPrimary={newMatchAction} onLeave={onLeave} />
-          )}
+        <div className="flex gap-2 sm:gap-3">
+          <div className="relative min-w-0 flex-1">
+            <QuoridorBoard state={state} you={you} onMove={handleMove} interactive={boardInteractive} onActivity={() => markActivity(you)} />
+            {coinflip?.animating && <CoinflipOverlay starter={coinflip.starter} you={you} mode={state.mode as Mode} name={nameOf(coinflip.starter)} />}
+            {status === "waiting" && presence.count < presence.expected && (
+              <WaitingOverlay count={presence.count} expected={presence.expected} isHost={isHost} onStart={hostStartMatch} />
+            )}
+            {status === "error" && <ErrorOverlay msg={errorMsg} onLeave={onLeave} />}
+            {status === "disconnected" && !roundOver && (
+              <MessageOverlay title="Disconnected" body="Connection to the room was lost." onLeave={onLeave} />
+            )}
+            {roundOver && !matchOver && !coinflip?.animating && (
+              <RoundEndReady
+                state={state} you={you} nameOf={nameOf}
+                readySlots={readySlots} merging={merging}
+                onReady={requestReady} onLeave={onLeave}
+              />
+            )}
+            {matchOver && (
+              <EndScreen state={state} you={you} nameOf={nameOf}
+                onPrimary={newMatchAction} onLeave={onLeave} />
+            )}
+          </div>
+          <BoardSideClocks state={state} you={you} nameOf={nameOf} />
         </div>
       </div>
 
@@ -1037,7 +1043,6 @@ function GameScreen({
         </div>
 
         <ScoreCard state={state} you={you} nameOf={nameOf} />
-        <ClocksCard state={state} you={you} nameOf={nameOf} />
         <PlayersCard state={state} you={you} nameOf={nameOf} />
         <EventLog entries={log} />
 
