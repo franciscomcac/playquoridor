@@ -21,7 +21,9 @@ export type PeerMessage =
   | { type: "log"; payload: { text: string } }
   | { type: "afk"; payload: { slot: number; deadline: number } }
   | { type: "afkCancel"; payload: { slot: number } }
-  | { type: "activity"; payload: { slot: number } };
+  | { type: "activity"; payload: { slot: number } }
+  | { type: "ready"; payload: { slot: number } }
+  | { type: "readyState"; payload: { slots: number[] } };
 
 const PREFIX = "quoridor-lvbl-";
 

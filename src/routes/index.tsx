@@ -597,6 +597,10 @@ function GameScreen({
   const roomRef = useRef<Room | null>(null);
   const matchRecordedRef = useRef(false);
 
+  // Ready-up state for the between-rounds flow (replaces "Next round" button).
+  const [readySlots, setReadySlots] = useState<PlayerId[]>([]);
+  const [merging, setMerging] = useState(false);
+
   const nameOf = useCallback((s: PlayerId): string => {
     const r = rosterRef.current.find((e) => e.slot === s);
     return r?.name ?? `Player ${s + 1}`;
@@ -646,6 +650,25 @@ function GameScreen({
     roomRef.current?.send({ type: "state", payload: ns });
     play("pop");
   }, []);
+
+  // Host-authoritative ready tracking. Guest clicks send a "ready" message;
+  // host writes to local state and broadcasts the canonical list.
+  const markSlotReady = useCallback((slot: PlayerId) => {
+    setReadySlots((prev) => {
+      if (prev.includes(slot)) return prev;
+      const next = [...prev, slot];
+      if (isHost) roomRef.current?.send({ type: "readyState", payload: { slots: next } });
+      return next;
+    });
+  }, [isHost]);
+
+  const requestReady = useCallback(() => {
+    if (stateRef.current.winner === null) return;
+    if (stateRef.current.matchWinner !== null) return;
+    const s = slotRef.current;
+    if (isHost) markSlotReady(s);
+    else roomRef.current?.send({ type: "ready", payload: { slot: s } });
+  }, [isHost, markSlotReady]);
 
   // ---------- Connection ----------
   useEffect(() => {
@@ -710,6 +733,12 @@ function GameScreen({
           play("afkWarn");
         } else if (msg.type === "afkCancel") {
           setAfk(null);
+        } else if (msg.type === "ready" && isHost) {
+          const p = msg.payload as { slot: number };
+          markSlotReady(p.slot as PlayerId);
+        } else if (msg.type === "readyState") {
+          const p = msg.payload as { slots: number[] };
+          setReadySlots(p.slots as PlayerId[]);
         }
       },
       onError: (err: Error) => {
@@ -836,6 +865,36 @@ function GameScreen({
     return () => window.clearInterval(iv);
   }, [isHost, status, coinflip, hostApplyForfeit, pushLog, nameOf]);
 
+  // Reset the ready roster whenever a new round begins.
+  const prevWinnerReadyRef = useRef<PlayerId | null>(state.winner);
+  useEffect(() => {
+    if (prevWinnerReadyRef.current !== null && state.winner === null) {
+      setReadySlots([]);
+      setMerging(false);
+      if (isHost) roomRef.current?.send({ type: "readyState", payload: { slots: [] } });
+    }
+    prevWinnerReadyRef.current = state.winner;
+  }, [state.winner, isHost]);
+
+  // Host: once every still-in-match player is ready, play the merge animation
+  // and then kick off the next round (which itself triggers the coinflip).
+  useEffect(() => {
+    if (!isHost) return;
+    if (state.winner === null || state.matchWinner !== null) return;
+    const need: PlayerId[] = [];
+    for (let i = 0; i < state.mode; i++) {
+      if (!state.leftMatch[i]) need.push(i as PlayerId);
+    }
+    if (need.length === 0) return;
+    const allReady = need.every((i) => readySlots.includes(i));
+    if (!allReady || merging) return;
+    setMerging(true);
+    const t = window.setTimeout(() => {
+      hostStartRound();
+    }, 900);
+    return () => window.clearTimeout(t);
+  }, [isHost, readySlots, state.winner, state.matchWinner, state.leftMatch, state.mode, merging, hostStartRound]);
+
   const handleMove = useCallback((move: Move) => {
     if (status !== "connected") return;
     initSoundOnGesture();
@@ -854,11 +913,6 @@ function GameScreen({
       roomRef.current?.send({ type: "move", payload: { from: slotRef.current, move } });
     }
   }, [isHost, status, markActivity]);
-
-  const nextRound = useCallback(() => {
-    if (isHost) { if (stateRef.current.matchWinner === null) hostStartRound(); }
-    else roomRef.current?.send({ type: "nextRound", payload: {} });
-  }, [isHost, hostStartRound]);
 
   const newMatchAction = useCallback(() => {
     if (isHost) hostStartMatch();
@@ -943,24 +997,30 @@ function GameScreen({
         {afk && state.winner === null && state.matchWinner === null && (
           <AfkBanner slot={afk.slot} deadline={afk.deadline} name={nameOf(afk.slot)} />
         )}
-        <div className="relative">
-          <QuoridorBoard state={state} you={you} onMove={handleMove} interactive={boardInteractive} onActivity={() => markActivity(you)} />
-          {coinflip?.animating && <CoinflipOverlay starter={coinflip.starter} you={you} mode={state.mode as Mode} name={nameOf(coinflip.starter)} />}
-          {status === "waiting" && presence.count < presence.expected && (
-            <WaitingOverlay count={presence.count} expected={presence.expected} isHost={isHost} onStart={hostStartMatch} />
-          )}
-          {status === "error" && <ErrorOverlay msg={errorMsg} onLeave={onLeave} />}
-          {status === "disconnected" && !roundOver && (
-            <MessageOverlay title="Disconnected" body="Connection to the room was lost." onLeave={onLeave} />
-          )}
-          {roundOver && !matchOver && (
-            <WinOverlay state={state} you={you} matchOver={false} nameOf={nameOf}
-              onPrimary={nextRound} primaryLabel="Next round" onLeave={onLeave} />
-          )}
-          {matchOver && (
-            <EndScreen state={state} you={you} nameOf={nameOf}
-              onPrimary={newMatchAction} onLeave={onLeave} />
-          )}
+        <div className="flex gap-2 sm:gap-3">
+          <div className="relative min-w-0 flex-1">
+            <QuoridorBoard state={state} you={you} onMove={handleMove} interactive={boardInteractive} onActivity={() => markActivity(you)} />
+            {coinflip?.animating && <CoinflipOverlay starter={coinflip.starter} you={you} mode={state.mode as Mode} name={nameOf(coinflip.starter)} />}
+            {status === "waiting" && presence.count < presence.expected && (
+              <WaitingOverlay count={presence.count} expected={presence.expected} isHost={isHost} onStart={hostStartMatch} />
+            )}
+            {status === "error" && <ErrorOverlay msg={errorMsg} onLeave={onLeave} />}
+            {status === "disconnected" && !roundOver && (
+              <MessageOverlay title="Disconnected" body="Connection to the room was lost." onLeave={onLeave} />
+            )}
+            {roundOver && !matchOver && !coinflip?.animating && (
+              <RoundEndReady
+                state={state} you={you} nameOf={nameOf}
+                readySlots={readySlots} merging={merging}
+                onReady={requestReady} onLeave={onLeave}
+              />
+            )}
+            {matchOver && (
+              <EndScreen state={state} you={you} nameOf={nameOf}
+                onPrimary={newMatchAction} onLeave={onLeave} />
+            )}
+          </div>
+          <BoardSideClocks state={state} you={you} nameOf={nameOf} />
         </div>
       </div>
 
@@ -978,7 +1038,6 @@ function GameScreen({
         </div>
 
         <ScoreCard state={state} you={you} nameOf={nameOf} />
-        <ClocksCard state={state} you={you} nameOf={nameOf} />
         <PlayersCard state={state} you={you} nameOf={nameOf} />
         <EventLog entries={log} />
 
@@ -1168,7 +1227,6 @@ function CoinflipOverlay({ starter, you, mode, name }: {
           <div className="coin-face back text-4xl" style={faceStyle(backColor)}>
             {other + 1}
           </div>
-          <div className="coin-edge" />
         </div>
         <div className="coin-shadow absolute left-1/2 -bottom-4 h-2 w-24 rounded-full"
           style={{ background: "radial-gradient(ellipse at center, rgba(0,0,0,0.5), transparent 70%)" }} />
@@ -1245,6 +1303,108 @@ function ClocksCard({ state, you, nameOf }: {
           <ChessClock state={state} playerId={you} nameOf={nameOf} />
         </>
       )}
+    </div>
+  );
+}
+
+// Vertical clock stack that sits to the right of the board, chess.com style:
+// opponents float up top, you sit bottom-right.
+function BoardSideClocks({ state, you, nameOf }: {
+  state: GameState; you: PlayerId; nameOf: (s: PlayerId) => string;
+}) {
+  if (!state.clocks) return null;
+  const others: PlayerId[] = [];
+  for (let i = 0; i < state.mode; i++) if (i !== you) others.push(i as PlayerId);
+  const showYou = you >= 0 && you < state.mode;
+  return (
+    <div className="flex w-20 shrink-0 flex-col justify-between gap-2 sm:w-24 md:w-28">
+      <div className="flex flex-col gap-2">
+        {others.map((o) => (
+          <ChessClock key={o} state={state} playerId={o} nameOf={nameOf} compact />
+        ))}
+      </div>
+      {showYou && (
+        <ChessClock state={state} playerId={you} nameOf={nameOf} compact />
+      )}
+    </div>
+  );
+}
+
+// Round-end "ready up" panel. Each active player is a red ball that turns
+// green when they click Ready; once every player is green the balls merge
+// into the middle and the next round starts (coinflip runs from the parent).
+function RoundEndReady({
+  state, you, nameOf, readySlots, merging, onReady, onLeave,
+}: {
+  state: GameState; you: PlayerId; nameOf: (s: PlayerId) => string;
+  readySlots: PlayerId[]; merging: boolean;
+  onReady: () => void; onLeave: () => void;
+}) {
+  const winner = state.winner as PlayerId;
+  const youWon = winner === you;
+  const players: PlayerId[] = [];
+  for (let i = 0; i < state.mode; i++) if (!state.leftMatch[i]) players.push(i as PlayerId);
+  const iSeated = you >= 0 && you < state.mode && !state.leftMatch[you];
+  const iAmReady = iSeated && readySlots.includes(you);
+  return (
+    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/75 backdrop-blur-sm">
+      <div className="mx-4 flex flex-col items-center gap-4 rounded-2xl border border-border bg-card px-6 py-6 text-center shadow-2xl sm:px-8">
+        <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
+          {youWon ? "You took the round" : `${nameOf(winner)} took the round`}
+        </p>
+        <p className="text-sm text-foreground/80">
+          {merging ? "Starting next round…" : "Ready up to keep playing"}
+        </p>
+
+        <div
+          className="flex items-center transition-all duration-700 ease-out"
+          style={{
+            gap: merging ? "0rem" : "1.5rem",
+            transform: merging ? "scale(0.85)" : "scale(1)",
+          }}
+        >
+          {players.map((p) => {
+            const isReady = readySlots.includes(p);
+            const ballColor = isReady ? "oklch(0.7 0.18 145)" : "oklch(0.62 0.22 25)";
+            return (
+              <div key={p} className="flex flex-col items-center gap-1">
+                <span
+                  className={
+                    "grid h-14 w-14 place-items-center rounded-full text-[10px] font-semibold uppercase tracking-widest transition-colors duration-300 " +
+                    (isReady ? "ready-glow " : "") +
+                    (merging ? "ready-merge" : "")
+                  }
+                  style={{
+                    background: `radial-gradient(circle at 32% 28%, color-mix(in oklab, ${ballColor} 55%, white 45%), ${ballColor} 60%, color-mix(in oklab, ${ballColor} 60%, black 40%))`,
+                    color: "oklch(0.15 0.02 55)",
+                    boxShadow: `0 6px 16px -4px color-mix(in oklab, ${ballColor} 55%, transparent), inset 0 -3px 5px rgba(0,0,0,0.35)`,
+                  }}
+                >
+                  {p === you ? "You" : nameOf(p).slice(0, 3)}
+                </span>
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                  {isReady ? "Ready" : "Waiting"}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        {!merging && (
+          <div className="flex gap-2">
+            <button
+              onClick={onReady}
+              disabled={!iSeated || iAmReady}
+              className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:opacity-40 disabled:hover:translate-y-0"
+            >
+              {iAmReady ? "Waiting…" : "Ready"}
+            </button>
+            <button onClick={onLeave} className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary">
+              Leave
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -1467,6 +1627,10 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
   const [coinflip, setCoinflip] = useState<{ starter: PlayerId; animating: boolean } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
+  // Ready-up between rounds. Bot auto-readies after a short beat.
+  const [readySlots, setReadySlots] = useState<PlayerId[]>([]);
+  const [merging, setMerging] = useState(false);
+
   const nameOf = useCallback(
     (s: PlayerId) => (s === YOU ? ident.name : opponentName),
     [ident.name, opponentName],
@@ -1600,6 +1764,49 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
     if (stateRef.current.matchWinner === null) startRound();
   }, [startRound]);
 
+  const requestReady = useCallback(() => {
+    if (stateRef.current.winner === null) return;
+    if (stateRef.current.matchWinner !== null) return;
+    setReadySlots((prev) => (prev.includes(YOU) ? prev : [...prev, YOU]));
+  }, []);
+
+  // Reset ready roster whenever a new round begins.
+  const prevWinnerReadyRef = useRef<PlayerId | null>(state.winner);
+  useEffect(() => {
+    if (prevWinnerReadyRef.current !== null && state.winner === null) {
+      setReadySlots([]);
+      setMerging(false);
+    }
+    prevWinnerReadyRef.current = state.winner;
+  }, [state.winner]);
+
+  // Bot auto-readies a beat after the round ends so the player never waits
+  // on nothing. Random delay keeps it feeling human.
+  useEffect(() => {
+    if (state.winner === null || state.matchWinner !== null) return;
+    if (state.leftMatch[BOT]) return;
+    if (readySlots.includes(BOT)) return;
+    const delay = 1400 + Math.random() * 2200;
+    const t = window.setTimeout(() => {
+      setReadySlots((prev) => (prev.includes(BOT) ? prev : [...prev, BOT]));
+    }, delay);
+    return () => window.clearTimeout(t);
+  }, [state.winner, state.matchWinner, state.leftMatch, readySlots]);
+
+  // When both sides are ready, play the merge animation then start next round.
+  useEffect(() => {
+    if (state.winner === null || state.matchWinner !== null) return;
+    const need: PlayerId[] = [];
+    if (!state.leftMatch[YOU]) need.push(YOU);
+    if (!state.leftMatch[BOT]) need.push(BOT);
+    if (need.length === 0) return;
+    const allReady = need.every((i) => readySlots.includes(i));
+    if (!allReady || merging) return;
+    setMerging(true);
+    const t = window.setTimeout(() => { nextRound(); }, 900);
+    return () => window.clearTimeout(t);
+  }, [state.winner, state.matchWinner, state.leftMatch, readySlots, merging, nextRound]);
+
   const roundOver = state.winner !== null;
   const matchOver = state.matchWinner !== null;
   const boardInteractive = state.winner === null && !coinflip?.animating && state.turn === YOU;
@@ -1612,24 +1819,29 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
           presence={{ count: 2, expected: 2 }}
           coinAnimating={!!coinflip?.animating} nameOf={nameOf}
         />
-        <div className="relative">
-          <QuoridorBoard state={state} you={YOU} onMove={handleMove} interactive={boardInteractive} />
-          {coinflip?.animating && (
-            <CoinflipOverlay starter={coinflip.starter} you={YOU} mode={2 as Mode} name={nameOf(coinflip.starter)} />
-          )}
-          {roundOver && !matchOver && (
-            <WinOverlay state={state} you={YOU} matchOver={false} nameOf={nameOf}
-              onPrimary={nextRound} primaryLabel="Next round" onLeave={onLeave} />
-          )}
-          {matchOver && (
-            <EndScreen state={state} you={YOU} nameOf={nameOf}
-              onPrimary={startMatch} onLeave={onLeave} />
-          )}
+        <div className="flex gap-2 sm:gap-3">
+          <div className="relative min-w-0 flex-1">
+            <QuoridorBoard state={state} you={YOU} onMove={handleMove} interactive={boardInteractive} />
+            {coinflip?.animating && (
+              <CoinflipOverlay starter={coinflip.starter} you={YOU} mode={2 as Mode} name={nameOf(coinflip.starter)} />
+            )}
+            {roundOver && !matchOver && !coinflip?.animating && (
+              <RoundEndReady
+                state={state} you={YOU} nameOf={nameOf}
+                readySlots={readySlots} merging={merging}
+                onReady={requestReady} onLeave={onLeave}
+              />
+            )}
+            {matchOver && (
+              <EndScreen state={state} you={YOU} nameOf={nameOf}
+                onPrimary={startMatch} onLeave={onLeave} />
+            )}
+          </div>
+          <BoardSideClocks state={state} you={YOU} nameOf={nameOf} />
         </div>
       </div>
 
       <aside className="order-2 flex min-w-0 flex-col gap-3">
-        <ClocksCard state={state} you={YOU} nameOf={nameOf} />
         <ScoreCard state={state} you={YOU} nameOf={nameOf} />
         <PlayersCard state={state} you={YOU} nameOf={nameOf} />
 
@@ -1827,27 +2039,30 @@ function SpectatorGame({ ident, code, onLeave }: {
           <AfkBanner slot={afk.slot} deadline={afk.deadline} name={nameOf(afk.slot)} />
         )}
 
-        <div className="relative">
-          {state ? (
-            <QuoridorBoard
-              state={state}
-              you={SPECTATOR_YOU}
-              onMove={() => { /* read-only */ }}
-              interactive={false}
-            />
-          ) : (
-            <div className="grid aspect-square w-full place-items-center rounded-2xl border border-dashed border-border bg-card/50 text-sm text-muted-foreground">
-              {status === "error" ? (errorMsg ?? "No match here") : "Waiting for the match…"}
-            </div>
-          )}
-          {state && coinflip?.animating && (
-            <CoinflipOverlay
-              starter={coinflip.starter}
-              you={SPECTATOR_YOU}
-              mode={state.mode as Mode}
-              name={nameOf(coinflip.starter)}
-            />
-          )}
+        <div className="flex gap-2 sm:gap-3">
+          <div className="relative min-w-0 flex-1">
+            {state ? (
+              <QuoridorBoard
+                state={state}
+                you={SPECTATOR_YOU}
+                onMove={() => { /* read-only */ }}
+                interactive={false}
+              />
+            ) : (
+              <div className="grid aspect-square w-full place-items-center rounded-2xl border border-dashed border-border bg-card/50 text-sm text-muted-foreground">
+                {status === "error" ? (errorMsg ?? "No match here") : "Waiting for the match…"}
+              </div>
+            )}
+            {state && coinflip?.animating && (
+              <CoinflipOverlay
+                starter={coinflip.starter}
+                you={SPECTATOR_YOU}
+                mode={state.mode as Mode}
+                name={nameOf(coinflip.starter)}
+              />
+            )}
+          </div>
+          {state && <BoardSideClocks state={state} you={SPECTATOR_YOU} nameOf={nameOf} />}
         </div>
       </div>
 
@@ -1866,7 +2081,6 @@ function SpectatorGame({ ident, code, onLeave }: {
         </div>
 
         {state && <ScoreCard state={state} you={SPECTATOR_YOU} nameOf={nameOf} />}
-        {state && <ClocksCard state={state} you={SPECTATOR_YOU} nameOf={nameOf} />}
         {state && <PlayersCard state={state} you={SPECTATOR_YOU} nameOf={nameOf} />}
         <EventLog entries={log} />
 
