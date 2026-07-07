@@ -7,7 +7,7 @@ import {
   type GameState, type Mode, type Move, type PlayerId,
 } from "@/lib/quoridor";
 import {
-  createGuestRoom, createHostRoom, makeRoomCode,
+  createGuestRoom, createHostRoom, createSpectatorRoom, makeRoomCode,
   type PeerMessage, type Room, type RosterEntry,
 } from "@/lib/peer-room";
 import {
@@ -111,7 +111,9 @@ type View =
   | { name: "join" }
   | { name: "quick"; mode: Mode }
   | { name: "game"; isHost: boolean; code: string; mode: Mode; walls: number; rounds: number; quickMatch?: boolean }
-  | { name: "bot"; difficulty: number; opponentName: string };
+  | { name: "bot"; difficulty: number; opponentName: string }
+  | { name: "spectate" }
+  | { name: "spectating"; code: string };
 
 function Home() {
   const [ident, setIdent] = useState<Identity | null>(null);
@@ -155,6 +157,20 @@ function Home() {
               <JoinRoom
                 onBack={() => setView({ name: "menu" })}
                 onJoin={(code) => setView({ name: "game", isHost: false, code, mode: 2, walls: 10, rounds: 5 })}
+              />
+            )}
+            {view.name === "spectate" && (
+              <SpectateRoom
+                onBack={() => setView({ name: "menu" })}
+                onJoin={(code) => setView({ name: "spectating", code })}
+              />
+            )}
+            {view.name === "spectating" && (
+              <SpectatorGame
+                key={"spec-" + view.code}
+                ident={ident}
+                code={view.code}
+                onLeave={() => setView({ name: "menu" })}
               />
             )}
             {view.name === "quick" && (
@@ -419,6 +435,12 @@ function Menu({ ident, onChoose, onEditName }: {
           className="rounded-lg border border-border bg-secondary/40 px-5 py-2.5 text-sm font-medium hover:bg-secondary"
         >
           Join with code
+        </button>
+        <button
+          onClick={() => { play("click"); onChoose({ name: "spectate" }); }}
+          className="rounded-lg border border-border bg-secondary/40 px-5 py-2.5 text-sm font-medium hover:bg-secondary"
+        >
+          Spectate a match
         </button>
       </div>
     </div>
@@ -1206,16 +1228,23 @@ function ClocksCard({ state, you, nameOf }: {
   state: GameState; you: PlayerId; nameOf: (s: PlayerId) => string;
 }) {
   if (!state.clocks) return null;
-  // Chess.com layout: opponent(s) on top, you on bottom.
+  // Chess.com layout: opponent(s) on top, you on bottom. Spectators pass a
+  // sentinel `you` that never matches a slot, so we render every clock in
+  // the top stack and drop the divider.
   const others: PlayerId[] = [];
   for (let i = 0; i < state.mode; i++) if (i !== you) others.push(i as PlayerId);
+  const showYou = you >= 0 && you < state.mode;
   return (
     <div className="flex flex-col gap-2">
       {others.map((o) => (
         <ChessClock key={o} state={state} playerId={o} nameOf={nameOf} compact={state.mode === 4} />
       ))}
-      <div className="h-px bg-border/50" />
-      <ChessClock state={state} playerId={you} nameOf={nameOf} />
+      {showYou && (
+        <>
+          <div className="h-px bg-border/50" />
+          <ChessClock state={state} playerId={you} nameOf={nameOf} />
+        </>
+      )}
     </div>
   );
 }
@@ -1627,6 +1656,226 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
             </button>
           </div>
         </div>
+      </aside>
+    </div>
+  );
+}
+
+// ---------------- SPECTATE ----------------
+
+function SpectateRoom({ onBack, onJoin }: { onBack: () => void; onJoin: (code: string) => void }) {
+  const [code, setCode] = useState("");
+  const clean = code.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5);
+  return (
+    <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl sm:p-8">
+      <button onClick={onBack} className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground hover:text-foreground">← Back</button>
+      <h2 className="mt-3 text-2xl">Spectate a match</h2>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Enter the code of a match already in progress. You'll watch the board update live — no seat, no wall placement, just the show.
+      </p>
+      <input
+        value={clean}
+        onChange={(e) => setCode(e.target.value)}
+        placeholder="K7M2Q"
+        autoFocus
+        className="mt-6 w-full rounded-lg border border-border bg-background/40 px-4 py-3 text-center font-mono text-2xl uppercase tracking-[0.3em] text-primary focus:border-primary focus:outline-none"
+      />
+      <button
+        disabled={clean.length !== 5}
+        onClick={() => onJoin(clean)}
+        className="mt-6 w-full rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+      >
+        Watch →
+      </button>
+    </div>
+  );
+}
+
+type SpectateStatus = "connecting" | "waiting" | "watching" | "disconnected" | "error";
+
+function SpectatorGame({ ident, code, onLeave }: {
+  ident: Identity; code: string; onLeave: () => void;
+}) {
+  // Spectator has no seat. Use -1 (cast) so no "you" logic ever matches.
+  const SPECTATOR_YOU = -1 as unknown as PlayerId;
+
+  const [status, setStatus] = useState<SpectateStatus>("connecting");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [mode, setMode] = useState<Mode>(2);
+  const [state, setState] = useState<GameState | null>(null);
+  const [roster, setRoster] = useState<RosterEntry[]>([]);
+  const [coinflip, setCoinflip] = useState<{ starter: PlayerId; animating: boolean } | null>(null);
+  const [log, setLog] = useState<EventEntry[]>([]);
+  const [afk, setAfk] = useState<{ slot: PlayerId; deadline: number } | null>(null);
+
+  const roomRef = useRef<Room | null>(null);
+
+  const nameOf = useCallback((s: PlayerId): string => {
+    const r = roster.find((x) => x.slot === s);
+    return r?.name ?? `Player ${s + 1}`;
+  }, [roster]);
+
+  const pushLog = useCallback((text: string) => {
+    setLog((prev) => [...prev.slice(-30), { key: Date.now() + Math.random(), text }]);
+  }, []);
+
+  const startCoinflip = useCallback((starter: PlayerId) => {
+    setCoinflip({ starter, animating: true });
+    play("matchStart");
+    window.setTimeout(() => setCoinflip((cf) => (cf ? { ...cf, animating: false } : cf)), 2000);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const handlers = {
+      onOpen: () => { if (!cancelled) setStatus("connecting"); },
+      onSpectateAssign: (m: Mode, _expected: number, r: RosterEntry[]) => {
+        if (cancelled) return;
+        setMode(m);
+        setRoster(r);
+        // If host hasn't sent state yet, we're between matches; otherwise
+        // the state replay that follows will flip us into "watching".
+        setStatus((s) => (s === "connecting" ? "waiting" : s));
+      },
+      onPresence: (_c: number, _e: number, r: RosterEntry[]) => {
+        if (cancelled) return;
+        setRoster(r);
+      },
+      onDisconnect: () => { if (!cancelled) setStatus("disconnected"); },
+      onError: (err: Error) => {
+        if (cancelled) return;
+        console.error(err);
+        // "peer-unavailable" from PeerJS = the room code isn't hosting anyone.
+        const msg = /peer-unavailable/i.test(err.message)
+          ? "No match found with that code."
+          : err.message || "Connection error";
+        setErrorMsg(msg);
+        setStatus("error");
+      },
+      onMessage: (msg: PeerMessage) => {
+        if (cancelled) return;
+        if (msg.type === "state") {
+          setState(msg.payload as GameState);
+          setStatus("watching");
+        } else if (msg.type === "coinflip") {
+          startCoinflip((msg.payload as { starter: number }).starter as PlayerId);
+        } else if (msg.type === "log") {
+          pushLog((msg.payload as { text: string }).text);
+        } else if (msg.type === "afk") {
+          const p = msg.payload as { slot: number; deadline: number };
+          setAfk({ slot: p.slot as PlayerId, deadline: p.deadline });
+        } else if (msg.type === "afkCancel") {
+          setAfk(null);
+        }
+      },
+    };
+
+    (async () => {
+      try {
+        const room = await createSpectatorRoom(
+          code,
+          { name: ident.name, playerId: ident.id },
+          handlers,
+        );
+        if (cancelled) { room.close(); return; }
+        roomRef.current = room;
+      } catch (err) {
+        if (cancelled) return;
+        console.error(err);
+        setErrorMsg((err as Error).message || "Failed to connect");
+        setStatus("error");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      roomRef.current?.close();
+      roomRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code]);
+
+  return (
+    <div className="grid w-full max-w-6xl gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="order-1 flex min-w-0 flex-col gap-3">
+        <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 shadow-sm">
+          <span className="grid h-9 w-9 place-items-center rounded-full text-[10px] font-semibold uppercase tracking-widest"
+            style={{ background: "var(--secondary)", color: "var(--secondary-foreground)" }}>
+            Live
+          </span>
+          <div className="flex-1 min-w-0">
+            <p className="truncate text-base font-semibold">
+              {status === "connecting" && "Connecting to match…"}
+              {status === "waiting" && "Waiting for the next move…"}
+              {status === "watching" && state && (
+                coinflip?.animating
+                  ? "Flipping the coin…"
+                  : state.matchWinner !== null ? `${nameOf(state.matchWinner)} won the match`
+                  : state.winner !== null ? `${nameOf(state.winner)} took the round`
+                  : `${nameOf(state.turn)}'s turn`
+              )}
+              {status === "disconnected" && "Match ended · host disconnected"}
+              {status === "error" && (errorMsg ?? "Couldn't join")}
+            </p>
+            <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+              Spectating · room {code}
+            </p>
+          </div>
+        </div>
+
+        {afk && state && (
+          <AfkBanner slot={afk.slot} deadline={afk.deadline} name={nameOf(afk.slot)} />
+        )}
+
+        <div className="relative">
+          {state ? (
+            <QuoridorBoard
+              state={state}
+              you={SPECTATOR_YOU}
+              onMove={() => { /* read-only */ }}
+              interactive={false}
+            />
+          ) : (
+            <div className="grid aspect-square w-full place-items-center rounded-2xl border border-dashed border-border bg-card/50 text-sm text-muted-foreground">
+              {status === "error" ? (errorMsg ?? "No match here") : "Waiting for the match…"}
+            </div>
+          )}
+          {state && coinflip?.animating && (
+            <CoinflipOverlay
+              starter={coinflip.starter}
+              you={SPECTATOR_YOU}
+              mode={state.mode as Mode}
+              name={nameOf(coinflip.starter)}
+            />
+          )}
+        </div>
+      </div>
+
+      <aside className="order-2 flex min-w-0 flex-col gap-3">
+        <div className="rounded-xl border border-border bg-card p-3 sm:p-4">
+          <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Spectating</p>
+          <div className="mt-1 flex items-center justify-between gap-2">
+            <p className="font-mono text-xl tracking-[0.3em] text-primary sm:text-2xl">{code}</p>
+            <span className="rounded-md border border-border px-2 py-1 text-[10px] uppercase tracking-widest text-muted-foreground">
+              {mode}p
+            </span>
+          </div>
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            Read-only view. You can watch but not play.
+          </p>
+        </div>
+
+        {state && <ScoreCard state={state} you={SPECTATOR_YOU} nameOf={nameOf} />}
+        {state && <ClocksCard state={state} you={SPECTATOR_YOU} nameOf={nameOf} />}
+        {state && <PlayersCard state={state} you={SPECTATOR_YOU} nameOf={nameOf} />}
+        <EventLog entries={log} />
+
+        <button
+          onClick={onLeave}
+          className="rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary"
+        >
+          Leave
+        </button>
       </aside>
     </div>
   );
