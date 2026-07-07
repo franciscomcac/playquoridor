@@ -1861,6 +1861,8 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
   }, [state.winner, state.matchWinner, state.leftMatch, readySlots]);
 
   // When both sides are ready, play the merge animation then start next round.
+  const botMergingRef = useRef(false);
+  useEffect(() => { botMergingRef.current = merging; }, [merging]);
   useEffect(() => {
     if (state.winner === null || state.matchWinner !== null) return;
     const need: PlayerId[] = [];
@@ -1868,11 +1870,11 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
     if (!state.leftMatch[BOT]) need.push(BOT);
     if (need.length === 0) return;
     const allReady = need.every((i) => readySlots.includes(i));
-    if (!allReady || merging) return;
+    if (!allReady || botMergingRef.current) return;
     setMerging(true);
     const t = window.setTimeout(() => { nextRound(); }, 900);
     return () => window.clearTimeout(t);
-  }, [state.winner, state.matchWinner, state.leftMatch, readySlots, merging, nextRound]);
+  }, [state.winner, state.matchWinner, state.leftMatch, readySlots, nextRound]);
 
   const roundOver = state.winner !== null;
   const matchOver = state.matchWinner !== null;
