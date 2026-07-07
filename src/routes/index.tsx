@@ -1168,7 +1168,6 @@ function CoinflipOverlay({ starter, you, mode, name }: {
           <div className="coin-face back text-4xl" style={faceStyle(backColor)}>
             {other + 1}
           </div>
-          <div className="coin-edge" />
         </div>
         <div className="coin-shadow absolute left-1/2 -bottom-4 h-2 w-24 rounded-full"
           style={{ background: "radial-gradient(ellipse at center, rgba(0,0,0,0.5), transparent 70%)" }} />
