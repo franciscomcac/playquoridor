@@ -15,6 +15,9 @@ export type GameState = {
   turn: 0 | 1;
   winner: 0 | 1 | null;
   totalWalls: number;
+  score: [number, number];
+  totalRounds: number;
+  matchWinner: 0 | 1 | null;
 };
 
 export type Move =
@@ -23,7 +26,7 @@ export type Move =
 
 export const BOARD = 9;
 
-export function initialState(totalWalls = 10): GameState {
+export function initialState(totalWalls = 10, totalRounds = 5): GameState {
   return {
     pawns: [
       [8, 4],
@@ -34,6 +37,32 @@ export function initialState(totalWalls = 10): GameState {
     turn: 0,
     winner: null,
     totalWalls,
+    score: [0, 0],
+    totalRounds,
+    matchWinner: null,
+  };
+}
+
+// Wins needed to take the match (majority of totalRounds).
+export function winsNeeded(totalRounds: number): number {
+  return Math.floor(totalRounds / 2) + 1;
+}
+
+// Reset the board for a new round while preserving match score/config.
+export function newRound(state: GameState, starter: 0 | 1): GameState {
+  return {
+    pawns: [
+      [8, 4],
+      [0, 4],
+    ],
+    walls: [],
+    wallsLeft: [state.totalWalls, state.totalWalls],
+    turn: starter,
+    winner: null,
+    totalWalls: state.totalWalls,
+    score: state.score,
+    totalRounds: state.totalRounds,
+    matchWinner: state.matchWinner,
   };
 }
 
@@ -151,11 +180,20 @@ export function applyMove(state: GameState, player: 0 | 1, move: Move): GameStat
     pawns[player] = move.to;
     const goal = player === 0 ? 0 : BOARD - 1;
     const winner = move.to[0] === goal ? player : null;
+    let score = state.score;
+    let matchWinner = state.matchWinner;
+    if (winner !== null) {
+      score = [...state.score] as [number, number];
+      score[winner] += 1;
+      if (score[winner] >= winsNeeded(state.totalRounds)) matchWinner = winner;
+    }
     return {
       ...state,
       pawns,
       turn: (1 - player) as 0 | 1,
       winner,
+      score,
+      matchWinner,
     };
   } else {
     if (!canPlaceWall(state, player, move.wall)) return null;

@@ -5,7 +5,9 @@ import Peer, { type DataConnection } from "peerjs";
 export type PeerMessage =
   | { type: "state"; payload: unknown }
   | { type: "move"; payload: unknown }
-  | { type: "restart"; payload: { totalWalls: number } }
+  | { type: "forfeit"; payload: Record<string, never> }
+  | { type: "nextRound"; payload: Record<string, never> }
+  | { type: "newMatch"; payload: { totalWalls: number; totalRounds: number } }
   | { type: "coinflip"; payload: { starter: 0 | 1 } }
   | { type: "chat"; payload: string };
 

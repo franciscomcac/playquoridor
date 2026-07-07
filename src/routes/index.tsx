@@ -4,6 +4,8 @@ import { QuoridorBoard } from "@/components/QuoridorBoard";
 import {
   applyMove,
   initialState,
+  newRound,
+  winsNeeded,
   type GameState,
   type Move,
 } from "@/lib/quoridor";
@@ -21,13 +23,14 @@ export const Route = createFileRoute("/")({
 
 type View =
   | { name: "menu" }
-  | { name: "create"; walls: number }
+  | { name: "create"; walls: number; rounds: number }
   | { name: "join" }
   | {
       name: "game";
       isHost: boolean;
       code: string;
       walls: number;
+      rounds: number;
     };
 
 function Home() {
@@ -42,10 +45,18 @@ function Home() {
           {view.name === "create" && (
             <CreateRoom
               walls={view.walls}
-              setWalls={(w) => setView({ name: "create", walls: w })}
+              rounds={view.rounds}
+              setWalls={(w) => setView({ name: "create", walls: w, rounds: view.rounds })}
+              setRounds={(r) => setView({ name: "create", walls: view.walls, rounds: r })}
               onBack={() => setView({ name: "menu" })}
               onStart={(code) =>
-                setView({ name: "game", isHost: true, code, walls: view.walls })
+                setView({
+                  name: "game",
+                  isHost: true,
+                  code,
+                  walls: view.walls,
+                  rounds: view.rounds,
+                })
               }
             />
           )}
@@ -53,7 +64,7 @@ function Home() {
             <JoinRoom
               onBack={() => setView({ name: "menu" })}
               onJoin={(code) =>
-                setView({ name: "game", isHost: false, code, walls: 10 })
+                setView({ name: "game", isHost: false, code, walls: 10, rounds: 5 })
               }
             />
           )}
@@ -63,6 +74,7 @@ function Home() {
               code={view.code}
               isHost={view.isHost}
               initialWalls={view.walls}
+              initialRounds={view.rounds}
               onLeave={() => setView({ name: "menu" })}
             />
           )}
@@ -121,7 +133,7 @@ function Menu({ onChoose }: { onChoose: (v: View) => void }) {
       <div className="mt-8 flex flex-col gap-3">
         <button
           type="button"
-          onClick={() => onChoose({ name: "create", walls: 10 })}
+          onClick={() => onChoose({ name: "create", walls: 10, rounds: 5 })}
           className="rounded-lg bg-primary px-5 py-3 text-sm font-medium text-primary-foreground transition-transform hover:-translate-y-0.5"
         >
           Create a room
@@ -140,12 +152,16 @@ function Menu({ onChoose }: { onChoose: (v: View) => void }) {
 
 function CreateRoom({
   walls,
+  rounds,
   setWalls,
+  setRounds,
   onBack,
   onStart,
 }: {
   walls: number;
+  rounds: number;
   setWalls: (n: number) => void;
+  setRounds: (n: number) => void;
   onBack: () => void;
   onStart: (code: string) => void;
 }) {
@@ -161,7 +177,7 @@ function CreateRoom({
       </button>
       <h2 className="mt-3 text-2xl">Create a room</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Choose how many walls each player gets, then share the code.
+        Set the walls per player and match length, then share the code.
       </p>
 
       <div className="mt-6">
@@ -182,6 +198,29 @@ function CreateRoom({
           <span>0 (pure race)</span>
           <span>10 (standard)</span>
           <span>20 (fortress)</span>
+        </div>
+      </div>
+
+      <div className="mt-6">
+        <label className="flex items-baseline justify-between text-xs uppercase tracking-[0.15em] text-muted-foreground">
+          Rounds (best of)
+          <span className="text-base font-semibold text-foreground">
+            {rounds === 1 ? "1 (single)" : `${rounds} — first to ${Math.floor(rounds / 2) + 1}`}
+          </span>
+        </label>
+        <input
+          type="range"
+          min={1}
+          max={10}
+          step={1}
+          value={rounds}
+          onChange={(e) => setRounds(Number(e.target.value))}
+          className="mt-2 w-full accent-[color:var(--accent)]"
+        />
+        <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
+          <span>1</span>
+          <span>5</span>
+          <span>10</span>
         </div>
       </div>
 
@@ -251,16 +290,20 @@ function GameScreen({
   code,
   isHost,
   initialWalls,
+  initialRounds,
   onLeave,
 }: {
   code: string;
   isHost: boolean;
   initialWalls: number;
+  initialRounds: number;
   onLeave: () => void;
 }) {
   const [status, setStatus] = useState<Status>("connecting");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [state, setState] = useState<GameState>(() => initialState(initialWalls));
+  const [state, setState] = useState<GameState>(() =>
+    initialState(initialWalls, initialRounds),
+  );
   const stateRef = useRef(state);
   stateRef.current = state;
 
@@ -283,6 +326,46 @@ function GameScreen({
       }, 2000);
     },
     [],
+  );
+
+  // Host-only helpers -------------------------------------------------
+  const hostApplyForfeit = useCallback(
+    (forfeiter: 0 | 1) => {
+      const s = stateRef.current;
+      if (s.winner !== null || s.matchWinner !== null) return;
+      const opp = (1 - forfeiter) as 0 | 1;
+      const score: [number, number] = [...s.score] as [number, number];
+      score[opp] += 1;
+      const matchWinner: 0 | 1 | null =
+        score[opp] >= winsNeeded(s.totalRounds) ? opp : null;
+      const ns: GameState = { ...s, winner: opp, score, matchWinner };
+      setState(ns);
+      roomRef.current?.send({ type: "state", payload: ns });
+    },
+    [],
+  );
+
+  const hostStartNextRound = useCallback(() => {
+    const s = stateRef.current;
+    if (s.matchWinner !== null) return;
+    const starter: 0 | 1 = Math.random() < 0.5 ? 0 : 1;
+    const ns = newRound(s, starter);
+    setState(ns);
+    roomRef.current?.send({ type: "state", payload: ns });
+    roomRef.current?.send({ type: "coinflip", payload: { starter } });
+    startCoinflip(starter);
+  }, [startCoinflip]);
+
+  const hostStartNewMatch = useCallback(
+    (totalWalls: number, totalRounds: number) => {
+      const starter: 0 | 1 = Math.random() < 0.5 ? 0 : 1;
+      const ns: GameState = { ...initialState(totalWalls, totalRounds), turn: starter };
+      setState(ns);
+      roomRef.current?.send({ type: "state", payload: ns });
+      roomRef.current?.send({ type: "coinflip", payload: { starter } });
+      startCoinflip(starter);
+    },
+    [startCoinflip],
   );
 
   useEffect(() => {
@@ -319,16 +402,14 @@ function GameScreen({
             setState(next);
             roomRef.current?.send({ type: "state", payload: next });
           }
-        } else if (msg.type === "restart") {
-          const p = msg.payload as { totalWalls: number };
-          if (isHost) {
-            const starter: 0 | 1 = Math.random() < 0.5 ? 0 : 1;
-            const ns: GameState = { ...initialState(p.totalWalls), turn: starter };
-            setState(ns);
-            roomRef.current?.send({ type: "state", payload: ns });
-            roomRef.current?.send({ type: "coinflip", payload: { starter } });
-            startCoinflip(starter);
-          }
+        } else if (msg.type === "forfeit" && isHost) {
+          // Guest forfeited (guest is player 1).
+          hostApplyForfeit(1);
+        } else if (msg.type === "nextRound" && isHost) {
+          hostStartNextRound();
+        } else if (msg.type === "newMatch" && isHost) {
+          const p = msg.payload as { totalWalls: number; totalRounds: number };
+          hostStartNewMatch(p.totalWalls, p.totalRounds);
         } else if (msg.type === "coinflip") {
           const p = msg.payload as { starter: 0 | 1 };
           startCoinflip(p.starter);
@@ -390,18 +471,30 @@ function GameScreen({
     [isHost, status],
   );
 
-  const restart = useCallback(() => {
-    if (isHost) {
-      const starter: 0 | 1 = Math.random() < 0.5 ? 0 : 1;
-      const ns: GameState = { ...initialState(state.totalWalls), turn: starter };
-      setState(ns);
-      roomRef.current?.send({ type: "state", payload: ns });
-      roomRef.current?.send({ type: "coinflip", payload: { starter } });
-      startCoinflip(starter);
-    } else {
-      roomRef.current?.send({ type: "restart", payload: { totalWalls: state.totalWalls } });
-    }
-  }, [isHost, state.totalWalls, startCoinflip]);
+  const nextRound = useCallback(() => {
+    if (isHost) hostStartNextRound();
+    else roomRef.current?.send({ type: "nextRound", payload: {} });
+  }, [isHost, hostStartNextRound]);
+
+  const newMatch = useCallback(() => {
+    if (isHost) hostStartNewMatch(state.totalWalls, state.totalRounds);
+    else
+      roomRef.current?.send({
+        type: "newMatch",
+        payload: { totalWalls: state.totalWalls, totalRounds: state.totalRounds },
+      });
+  }, [isHost, hostStartNewMatch, state.totalWalls, state.totalRounds]);
+
+  const forfeit = useCallback(() => {
+    if (status !== "connected") return;
+    if (state.winner !== null || state.matchWinner !== null) return;
+    const ok = window.confirm(
+      "Forfeit this round? Your opponent will be awarded the point.",
+    );
+    if (!ok) return;
+    if (isHost) hostApplyForfeit(0);
+    else roomRef.current?.send({ type: "forfeit", payload: {} });
+  }, [isHost, status, state.winner, state.matchWinner, hostApplyForfeit]);
 
   const copyCode = () => {
     navigator.clipboard?.writeText(code).catch(() => {});
@@ -419,8 +512,11 @@ function GameScreen({
     return null;
   }, [status, errorMsg, coinflip]);
 
-  const gameOver = state.winner !== null;
-  const youWon = gameOver && state.winner === you;
+  const roundOver = state.winner !== null;
+  const matchOver = state.matchWinner !== null;
+  const youWonRound = roundOver && state.winner === you;
+  const youWonMatch = matchOver && state.matchWinner === you;
+  const target = winsNeeded(state.totalRounds);
   const boardInteractive =
     status === "connected" && state.winner === null && !coinflip?.animating;
 
@@ -434,8 +530,17 @@ function GameScreen({
           interactive={boardInteractive}
         />
         {coinflip?.animating && <CoinflipOverlay starter={coinflip.starter} you={you} />}
-        {gameOver && (
-          <WinOverlay youWon={youWon} onRestart={restart} onLeave={onLeave} />
+        {roundOver && (
+          <WinOverlay
+            matchOver={matchOver}
+            youWon={matchOver ? youWonMatch : youWonRound}
+            score={state.score}
+            you={you}
+            target={target}
+            onPrimary={matchOver ? newMatch : nextRound}
+            primaryLabel={matchOver ? "New match" : "Next round"}
+            onLeave={onLeave}
+          />
         )}
       </div>
       <aside className="order-1 flex flex-col gap-4 lg:order-2">
@@ -454,6 +559,32 @@ function GameScreen({
           <p className="mt-2 text-[11px] text-muted-foreground">
             {isHost ? "Share this code with your friend." : "Connected to host."}
           </p>
+        </div>
+
+        <div className="rounded-xl border border-border bg-card p-4">
+          <div className="flex items-baseline justify-between">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+              Score
+            </p>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+              First to {target} · Best of {state.totalRounds}
+            </p>
+          </div>
+          <div className="mt-2 flex items-end justify-center gap-3">
+            <ScorePill
+              label={you === 0 ? "You" : "Opp"}
+              color="var(--pawn-1)"
+              value={state.score[0]}
+              highlight={state.matchWinner === 0}
+            />
+            <span className="pb-1 text-sm text-muted-foreground">—</span>
+            <ScorePill
+              label={you === 1 ? "You" : "Opp"}
+              color="var(--pawn-2)"
+              value={state.score[1]}
+              highlight={state.matchWinner === 1}
+            />
+          </div>
         </div>
 
         {banner && (
@@ -487,22 +618,38 @@ function GameScreen({
           />
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2">
           <button
             type="button"
-            onClick={restart}
-            disabled={status !== "connected" || coinflip?.animating}
-            className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary disabled:opacity-50"
+            onClick={forfeit}
+            disabled={
+              status !== "connected" ||
+              coinflip?.animating ||
+              state.winner !== null ||
+              state.matchWinner !== null
+            }
+            className="w-full rounded-lg border px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary disabled:opacity-50"
+            style={{ borderColor: "var(--destructive)", color: "var(--destructive)" }}
           >
-            New game
+            Forfeit round
           </button>
-          <button
-            type="button"
-            onClick={onLeave}
-            className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary"
-          >
-            Leave
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={newMatch}
+              disabled={status !== "connected" || coinflip?.animating}
+              className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary disabled:opacity-50"
+            >
+              New match
+            </button>
+            <button
+              type="button"
+              onClick={onLeave}
+              className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary"
+            >
+              Leave
+            </button>
+          </div>
         </div>
       </aside>
     </div>
@@ -539,6 +686,40 @@ function PlayerRow({
   );
 }
 
+function ScorePill({
+  label,
+  color,
+  value,
+  highlight,
+}: {
+  label: string;
+  color: string;
+  value: number;
+  highlight: boolean;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <span
+        className="text-[10px] uppercase tracking-[0.2em]"
+        style={{ color: highlight ? color : "var(--muted-foreground)" }}
+      >
+        {label}
+      </span>
+      <span
+        className="grid h-12 w-12 place-items-center rounded-full text-xl font-semibold text-white"
+        style={{
+          background: color,
+          boxShadow: highlight
+            ? "0 0 0 3px oklch(0.55 0.12 40 / 0.35)"
+            : "0 1px 2px rgba(0,0,0,0.15)",
+        }}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
 function CoinflipOverlay({ starter, you }: { starter: 0 | 1; you: 0 | 1 }) {
   const youStart = starter === you;
   return (
@@ -563,12 +744,22 @@ function CoinflipOverlay({ starter, you }: { starter: 0 | 1; you: 0 | 1 }) {
 }
 
 function WinOverlay({
+  matchOver,
   youWon,
-  onRestart,
+  score,
+  you,
+  target,
+  onPrimary,
+  primaryLabel,
   onLeave,
 }: {
+  matchOver: boolean;
   youWon: boolean;
-  onRestart: () => void;
+  score: [number, number];
+  you: 0 | 1;
+  target: number;
+  onPrimary: () => void;
+  primaryLabel: string;
   onLeave: () => void;
 }) {
   const colors = [
@@ -578,7 +769,23 @@ function WinOverlay({
     "oklch(0.7 0.2 220)",
     "oklch(0.7 0.2 320)",
   ];
-  const pieces = Array.from({ length: youWon ? 60 : 0 }, (_, i) => i);
+  const pieces = Array.from({ length: youWon && matchOver ? 90 : youWon ? 40 : 0 }, (_, i) => i);
+  const youScore = score[you];
+  const oppScore = score[1 - you];
+  const title = matchOver
+    ? youWon
+      ? "Match won!"
+      : "Match over"
+    : youWon
+      ? "Round won"
+      : "Round lost";
+  const sub = matchOver
+    ? youWon
+      ? `You took the match ${youScore}–${oppScore}.`
+      : `Opponent won the match ${oppScore}–${youScore}.`
+    : youWon
+      ? "You reached the other side first."
+      : "Your opponent made it across.";
   return (
     <div className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden rounded-lg bg-background/70 backdrop-blur-sm">
       {pieces.map((i) => {
@@ -615,20 +822,21 @@ function WinOverlay({
           className="text-4xl"
           style={{ fontFamily: "var(--font-display)" }}
         >
-          {youWon ? "Victory!" : "Good game"}
+          {title}
         </p>
         <p className="text-sm text-muted-foreground">
-          {youWon
-            ? "You reached the other side first."
-            : "Your opponent made it across."}
+          {sub}
+        </p>
+        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+          {youScore} – {oppScore} · first to {target}
         </p>
         <div className="mt-2 flex gap-2">
           <button
             type="button"
-            onClick={onRestart}
+            onClick={onPrimary}
             className="rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-foreground transition-transform hover:-translate-y-0.5"
           >
-            Play again
+            {primaryLabel}
           </button>
           <button
             type="button"
