@@ -272,6 +272,7 @@ function SeoContent() {
         <ul className="mt-2 list-disc space-y-1 pl-5">
           <li>2-player games start with 10 walls each; 4-player games start with 5 walls each.</li>
           <li>On your turn, either move one square or place a two-square wall between rows or columns.</li>
+          <li>If an opponent's pawn is directly next to yours, you may jump over them to the square behind. If a wall or the board edge blocks that square, you may instead step diagonally to either square beside the opponent.</li>
           <li>Walls may never completely block a player from reaching their goal side.</li>
           <li>First pawn to reach the opposite edge of the board wins.</li>
         </ul>

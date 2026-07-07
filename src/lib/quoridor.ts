@@ -100,17 +100,45 @@ export function legalPawnMoves(state: GameState, player: PlayerId): Pos[] {
   const [r, c] = state.pawns[player];
   const dirs: Array<[number, number]> = [[-1, 0], [1, 0], [0, -1], [0, 1]];
   const results: Pos[] = [];
+  const pushUnique = (p: Pos) => {
+    if (!results.some(([a, b]) => a === p[0] && b === p[1])) results.push(p);
+  };
+  const occupantAt = (rr: number, cc: number): number => {
+    for (let i = 0; i < state.mode; i++) {
+      if (!state.active[i]) continue;
+      if (state.pawns[i][0] === rr && state.pawns[i][1] === cc) return i;
+    }
+    return -1;
+  };
   for (const [dr, dc] of dirs) {
     const nr = r + dr, nc = c + dc;
     if (!inBounds(nr, nc)) continue;
     if (isBlocked(r, c, nr, nc, state.walls)) continue;
-    let occupied = false;
-    for (let i = 0; i < state.mode; i++) {
-      if (i === player || !state.active[i]) continue;
-      if (state.pawns[i][0] === nr && state.pawns[i][1] === nc) { occupied = true; break; }
+    const occ = occupantAt(nr, nc);
+    if (occ === -1) {
+      pushUnique([nr, nc]);
+      continue;
     }
-    if (occupied) continue;
-    results.push([nr, nc]);
+    if (occ === player) continue;
+    // Adjacent opponent — try to jump straight over.
+    const jr = nr + dr, jc = nc + dc;
+    const jumpInBounds = inBounds(jr, jc);
+    const jumpWallClear = jumpInBounds && !isBlocked(nr, nc, jr, jc, state.walls);
+    const jumpTargetFree = jumpInBounds && occupantAt(jr, jc) === -1;
+    if (jumpInBounds && jumpWallClear && jumpTargetFree) {
+      pushUnique([jr, jc]);
+      continue;
+    }
+    // Straight jump blocked (edge, wall behind, or another pawn) — allow diagonals
+    // to the squares perpendicular to the jump direction, from the opponent's square.
+    const perps: Array<[number, number]> = dr === 0 ? [[-1, 0], [1, 0]] : [[0, -1], [0, 1]];
+    for (const [pdr, pdc] of perps) {
+      const dr2 = nr + pdr, dc2 = nc + pdc;
+      if (!inBounds(dr2, dc2)) continue;
+      if (isBlocked(nr, nc, dr2, dc2, state.walls)) continue;
+      if (occupantAt(dr2, dc2) !== -1) continue;
+      pushUnique([dr2, dc2]);
+    }
   }
   return results;
 }
