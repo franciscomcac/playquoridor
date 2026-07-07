@@ -538,6 +538,9 @@ function GameScreen({
     const iv = window.setInterval(() => {
       const s = stateRef.current;
       if (s.matchWinner !== null || s.winner !== null) return;
+      // Don't run the AFK timer while waiting for players or during the coinflip intro.
+      if (statusRef.current !== "connected") return;
+      if (coinflipRef.current?.animating) return;
       const turn = s.turn;
       if (!s.active[turn]) return;
       const idle = Date.now() - (lastInputRef.current[turn] ?? Date.now());
