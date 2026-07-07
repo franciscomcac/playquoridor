@@ -1536,7 +1536,7 @@ function WinOverlay({ state, you, matchOver, onPrimary, primaryLabel, onLeave, n
         const delay = Math.random() * 0.6;
         const dur = 1.6 + Math.random() * 1.4;
         const size = 6 + Math.random() * 8;
-        const color = PLAYER_COLORS[i % PLAYER_COLORS.length];
+        const color = WARM_CONFETTI[i % WARM_CONFETTI.length];
         return (
           <span key={i} className="confetti-piece absolute top-0 block rounded-sm"
             style={{
@@ -1546,7 +1546,7 @@ function WinOverlay({ state, you, matchOver, onPrimary, primaryLabel, onLeave, n
             } as React.CSSProperties} />
         );
       })}
-      <div className={(youWon ? "win-pop" : "lose-fade") + " relative mx-4 flex flex-col items-center gap-3 rounded-2xl border border-border bg-card px-6 py-6 text-center shadow-2xl sm:mx-0 sm:px-8 sm:py-7"}>
+      <div className={"results-in relative mx-4 flex flex-col items-center gap-3 rounded-2xl border border-border bg-card px-6 py-6 text-center shadow-2xl sm:mx-0 sm:px-8 sm:py-7"}>
         <span className="grid h-14 w-14 place-items-center rounded-full text-xl font-semibold"
           style={{ background: winnerColor, color: "oklch(0.15 0.02 55)", boxShadow: `0 0 26px color-mix(in oklab, ${winnerColor} 60%, transparent)` }}>
           {winner + 1}
@@ -1583,7 +1583,7 @@ function EndScreen({ state, you, onPrimary, onLeave, nameOf }: {
         const delay = Math.random() * 0.6;
         const dur = 1.6 + Math.random() * 1.4;
         const size = 6 + Math.random() * 8;
-        const color = PLAYER_COLORS[i % PLAYER_COLORS.length];
+        const color = WARM_CONFETTI[i % WARM_CONFETTI.length];
         return (
           <span key={i} className="confetti-piece absolute top-0 block rounded-sm"
             style={{
@@ -1593,7 +1593,7 @@ function EndScreen({ state, you, onPrimary, onLeave, nameOf }: {
             } as React.CSSProperties} />
         );
       })}
-      <div className={(youWon ? "win-pop" : "lose-fade") + " relative flex w-[min(92vw,520px)] flex-col items-center gap-3 rounded-2xl border border-border bg-card px-6 py-6 text-center shadow-2xl"}>
+      <div className={"results-in relative flex w-[min(92vw,520px)] flex-col items-center gap-3 rounded-2xl border border-border bg-card px-6 py-6 text-center shadow-2xl"}>
         <span className="grid h-14 w-14 place-items-center rounded-full text-xl font-semibold"
           style={{ background: winnerColor, color: "oklch(0.15 0.02 55)", boxShadow: `0 0 26px color-mix(in oklab, ${winnerColor} 60%, transparent)` }}>
           {winner + 1}
