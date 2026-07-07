@@ -164,3 +164,36 @@
     letter-spacing: -0.02em;
   }
 }
+
+/* Coinflip animation — colourful spinning coin */
+@keyframes coin-spin {
+  0%   { transform: rotateY(0deg)    scale(0.9); }
+  50%  { transform: rotateY(1440deg) scale(1.15); }
+  100% { transform: rotateY(2880deg) scale(1); }
+}
+@keyframes coin-hue {
+  0%   { filter: hue-rotate(0deg)   saturate(1.4); }
+  100% { filter: hue-rotate(360deg) saturate(1.4); }
+}
+.coin-spin  { animation: coin-spin 1.8s cubic-bezier(.2,.7,.2,1) forwards; transform-style: preserve-3d; }
+.coin-hue   { animation: coin-hue  1.8s linear; }
+
+/* Confetti + win overlay */
+@keyframes confetti-fall {
+  0%   { transform: translate3d(0, -20vh, 0) rotate(0deg);   opacity: 1; }
+  100% { transform: translate3d(var(--dx, 0), 110vh, 0) rotate(720deg); opacity: 0.9; }
+}
+.confetti-piece { animation: confetti-fall linear forwards; }
+
+@keyframes win-pop {
+  0%   { transform: scale(0.6); opacity: 0; }
+  60%  { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+.win-pop { animation: win-pop 0.55s cubic-bezier(.2,.9,.3,1.2) forwards; }
+
+@keyframes lose-fade {
+  0%   { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1);   opacity: 1; }
+}
+.lose-fade { animation: lose-fade 0.5s ease-out forwards; }

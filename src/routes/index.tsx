@@ -264,8 +264,26 @@ function GameScreen({
   const stateRef = useRef(state);
   stateRef.current = state;
 
+  // Coinflip: null = not run yet, otherwise the chosen starter.
+  const [coinflip, setCoinflip] = useState<{
+    starter: 0 | 1;
+    animating: boolean;
+  } | null>(null);
+  const coinflipRef = useRef(coinflip);
+  coinflipRef.current = coinflip;
+
   const roomRef = useRef<Room | null>(null);
   const you: 0 | 1 = isHost ? 0 : 1;
+
+  const startCoinflip = useCallback(
+    (starter: 0 | 1) => {
+      setCoinflip({ starter, animating: true });
+      window.setTimeout(() => {
+        setCoinflip((cf) => (cf ? { ...cf, animating: false } : cf));
+      }, 2000);
+    },
+    [],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -279,7 +297,12 @@ function GameScreen({
         if (cancelled) return;
         setStatus("connected");
         if (isHost) {
-          roomRef.current?.send({ type: "state", payload: stateRef.current });
+          const starter: 0 | 1 = Math.random() < 0.5 ? 0 : 1;
+          const ns: GameState = { ...stateRef.current, turn: starter };
+          setState(ns);
+          roomRef.current?.send({ type: "state", payload: ns });
+          roomRef.current?.send({ type: "coinflip", payload: { starter } });
+          startCoinflip(starter);
         }
       },
       onDisconnect: () => {
@@ -298,9 +321,17 @@ function GameScreen({
           }
         } else if (msg.type === "restart") {
           const p = msg.payload as { totalWalls: number };
-          const ns = initialState(p.totalWalls);
-          setState(ns);
-          if (isHost) roomRef.current?.send({ type: "state", payload: ns });
+          if (isHost) {
+            const starter: 0 | 1 = Math.random() < 0.5 ? 0 : 1;
+            const ns: GameState = { ...initialState(p.totalWalls), turn: starter };
+            setState(ns);
+            roomRef.current?.send({ type: "state", payload: ns });
+            roomRef.current?.send({ type: "coinflip", payload: { starter } });
+            startCoinflip(starter);
+          }
+        } else if (msg.type === "coinflip") {
+          const p = msg.payload as { starter: 0 | 1 };
+          startCoinflip(p.starter);
         }
       },
       onError: (err: Error) => {
@@ -360,14 +391,17 @@ function GameScreen({
   );
 
   const restart = useCallback(() => {
-    const ns = initialState(state.totalWalls);
     if (isHost) {
+      const starter: 0 | 1 = Math.random() < 0.5 ? 0 : 1;
+      const ns: GameState = { ...initialState(state.totalWalls), turn: starter };
       setState(ns);
       roomRef.current?.send({ type: "state", payload: ns });
+      roomRef.current?.send({ type: "coinflip", payload: { starter } });
+      startCoinflip(starter);
     } else {
       roomRef.current?.send({ type: "restart", payload: { totalWalls: state.totalWalls } });
     }
-  }, [isHost, state.totalWalls]);
+  }, [isHost, state.totalWalls, startCoinflip]);
 
   const copyCode = () => {
     navigator.clipboard?.writeText(code).catch(() => {});
@@ -381,21 +415,28 @@ function GameScreen({
     if (status === "waiting") return "Waiting for your opponent to join…";
     if (status === "disconnected") return "Opponent disconnected.";
     if (status === "error") return errorMsg ?? "Something went wrong.";
-    if (state.winner !== null) {
-      return state.winner === you ? "You won! 🎉" : "Your opponent won.";
-    }
+    if (coinflip?.animating) return "Flipping the coin…";
     return null;
-  }, [status, errorMsg, state.winner, you]);
+  }, [status, errorMsg, coinflip]);
+
+  const gameOver = state.winner !== null;
+  const youWon = gameOver && state.winner === you;
+  const boardInteractive =
+    status === "connected" && state.winner === null && !coinflip?.animating;
 
   return (
     <div className="grid w-full max-w-5xl gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
-      <div className="order-2 lg:order-1">
+      <div className="relative order-2 lg:order-1">
         <QuoridorBoard
           state={state}
           you={you}
           onMove={handleMove}
-          interactive={status === "connected" && state.winner === null}
+          interactive={boardInteractive}
         />
+        {coinflip?.animating && <CoinflipOverlay starter={coinflip.starter} you={you} />}
+        {gameOver && (
+          <WinOverlay youWon={youWon} onRestart={restart} onLeave={onLeave} />
+        )}
       </div>
       <aside className="order-1 flex flex-col gap-4 lg:order-2">
         <div className="rounded-xl border border-border bg-card p-4">
@@ -450,7 +491,7 @@ function GameScreen({
           <button
             type="button"
             onClick={restart}
-            disabled={status !== "connected"}
+            disabled={status !== "connected" || coinflip?.animating}
             className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary disabled:opacity-50"
           >
             New game
@@ -494,6 +535,110 @@ function PlayerRow({
         <span className="text-sm">{name}</span>
       </div>
       <span className="text-xs text-muted-foreground">{walls} walls</span>
+    </div>
+  );
+}
+
+function CoinflipOverlay({ starter, you }: { starter: 0 | 1; you: 0 | 1 }) {
+  const youStart = starter === you;
+  return (
+    <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-background/70 backdrop-blur-sm">
+      <div
+        className="coin-spin coin-hue grid h-28 w-28 place-items-center rounded-full text-3xl font-bold text-white shadow-2xl"
+        style={{
+          background:
+            "conic-gradient(from 0deg, oklch(0.7 0.2 30), oklch(0.75 0.2 90), oklch(0.7 0.2 150), oklch(0.7 0.2 250), oklch(0.7 0.2 320), oklch(0.7 0.2 30))",
+        }}
+      >
+        <span style={{ textShadow: "0 2px 6px rgba(0,0,0,0.4)" }}>?</span>
+      </div>
+      <p className="mt-4 text-sm uppercase tracking-[0.25em] text-foreground">
+        Coin flip…
+      </p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        {youStart ? "You'll move first" : "Opponent moves first"}
+      </p>
+    </div>
+  );
+}
+
+function WinOverlay({
+  youWon,
+  onRestart,
+  onLeave,
+}: {
+  youWon: boolean;
+  onRestart: () => void;
+  onLeave: () => void;
+}) {
+  const colors = [
+    "oklch(0.7 0.2 30)",
+    "oklch(0.78 0.2 90)",
+    "oklch(0.7 0.2 150)",
+    "oklch(0.7 0.2 220)",
+    "oklch(0.7 0.2 320)",
+  ];
+  const pieces = Array.from({ length: youWon ? 60 : 0 }, (_, i) => i);
+  return (
+    <div className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden rounded-lg bg-background/70 backdrop-blur-sm">
+      {pieces.map((i) => {
+        const left = Math.random() * 100;
+        const dx = (Math.random() - 0.5) * 40;
+        const delay = Math.random() * 0.6;
+        const dur = 1.6 + Math.random() * 1.4;
+        const size = 6 + Math.random() * 8;
+        const color = colors[i % colors.length];
+        return (
+          <span
+            key={i}
+            className="confetti-piece absolute top-0 block rounded-sm"
+            style={{
+              left: `${left}%`,
+              width: size,
+              height: size * 1.6,
+              background: color,
+              animationDelay: `${delay}s`,
+              animationDuration: `${dur}s`,
+              // @ts-expect-error CSS custom property
+              "--dx": `${dx}vw`,
+            }}
+          />
+        );
+      })}
+      <div
+        className={
+          (youWon ? "win-pop" : "lose-fade") +
+          " relative flex flex-col items-center gap-4 rounded-2xl border border-border bg-card px-8 py-7 shadow-2xl"
+        }
+      >
+        <p
+          className="text-4xl"
+          style={{ fontFamily: "var(--font-display)" }}
+        >
+          {youWon ? "Victory!" : "Good game"}
+        </p>
+        <p className="text-sm text-muted-foreground">
+          {youWon
+            ? "You reached the other side first."
+            : "Your opponent made it across."}
+        </p>
+        <div className="mt-2 flex gap-2">
+          <button
+            type="button"
+            onClick={onRestart}
+            className="rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-foreground transition-transform hover:-translate-y-0.5"
+          >
+            Play again
+          </button>
+          <button
+            type="button"
+            onClick={onLeave}
+            className="rounded-lg border border-border bg-background px-5 py-2 text-sm font-medium hover:bg-secondary"
+          >
+            Leave
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

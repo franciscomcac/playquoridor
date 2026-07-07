@@ -79,29 +79,9 @@ export function legalPawnMoves(state: GameState, player: 0 | 1): Pos[] {
     const nc = c + dc;
     if (!inBounds(nr, nc)) continue;
     if (isBlocked(r, c, nr, nc, walls)) continue;
-    if (other[0] === nr && other[1] === nc) {
-      // jump straight over if not blocked and in bounds
-      const jr = nr + dr;
-      const jc = nc + dc;
-      const straightOK =
-        inBounds(jr, jc) && !isBlocked(nr, nc, jr, jc, walls);
-      if (straightOK) {
-        results.push([jr, jc]);
-      } else {
-        // diagonal jumps
-        const perps: Array<[number, number]> =
-          dr === 0 ? [[-1, 0], [1, 0]] : [[0, -1], [0, 1]];
-        for (const [pdr, pdc] of perps) {
-          const dr2 = nr + pdr;
-          const dc2 = nc + pdc;
-          if (!inBounds(dr2, dc2)) continue;
-          if (isBlocked(nr, nc, dr2, dc2, walls)) continue;
-          results.push([dr2, dc2]);
-        }
-      }
-    } else {
-      results.push([nr, nc]);
-    }
+    // Pawns block each other — no jumping.
+    if (other[0] === nr && other[1] === nc) continue;
+    results.push([nr, nc]);
   }
   // de-dup
   const seen = new Set<string>();

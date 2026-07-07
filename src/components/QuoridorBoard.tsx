@@ -21,7 +21,9 @@ type HoverTarget =
   | { kind: "wall"; wall: Wall };
 
 // How close (in cell-widths) to a gridline before we snap to a wall.
-const WALL_SNAP_RADIUS = 0.32;
+// Small radius = most of a cell is a "safe" pawn-move zone, only a thin
+// strip right on the gridline registers as a wall — snappier, fewer misclicks.
+const WALL_SNAP_RADIUS = 0.18;
 
 export function QuoridorBoard({ state, you, onMove, interactive }: Props) {
   const [hover, setHover] = useState<HoverTarget | null>(null);
@@ -209,7 +211,7 @@ export function QuoridorBoard({ state, you, onMove, interactive }: Props) {
 }
 
 function WallSpan({ wall, tone }: { wall: Wall; tone: "solid" | "ghost" | "invalid" }) {
-  const thickness = 6; // px
+  const thickness = 12; // px — chunky, clearly visible
   const bg =
     tone === "solid"
       ? "var(--wall)"
