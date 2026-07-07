@@ -111,7 +111,9 @@ type View =
   | { name: "join" }
   | { name: "quick"; mode: Mode }
   | { name: "game"; isHost: boolean; code: string; mode: Mode; walls: number; rounds: number; quickMatch?: boolean }
-  | { name: "bot"; difficulty: number; opponentName: string };
+  | { name: "bot"; difficulty: number; opponentName: string }
+  | { name: "spectate" }
+  | { name: "spectating"; code: string };
 
 function Home() {
   const [ident, setIdent] = useState<Identity | null>(null);
