@@ -4,6 +4,8 @@ import { QuoridorBoard } from "@/components/QuoridorBoard";
 import {
   applyMove,
   initialState,
+  newRound,
+  winsNeeded,
   type GameState,
   type Move,
 } from "@/lib/quoridor";
@@ -21,13 +23,14 @@ export const Route = createFileRoute("/")({
 
 type View =
   | { name: "menu" }
-  | { name: "create"; walls: number }
+  | { name: "create"; walls: number; rounds: number }
   | { name: "join" }
   | {
       name: "game";
       isHost: boolean;
       code: string;
       walls: number;
+      rounds: number;
     };
 
 function Home() {
@@ -42,10 +45,18 @@ function Home() {
           {view.name === "create" && (
             <CreateRoom
               walls={view.walls}
-              setWalls={(w) => setView({ name: "create", walls: w })}
+              rounds={view.rounds}
+              setWalls={(w) => setView({ name: "create", walls: w, rounds: view.rounds })}
+              setRounds={(r) => setView({ name: "create", walls: view.walls, rounds: r })}
               onBack={() => setView({ name: "menu" })}
               onStart={(code) =>
-                setView({ name: "game", isHost: true, code, walls: view.walls })
+                setView({
+                  name: "game",
+                  isHost: true,
+                  code,
+                  walls: view.walls,
+                  rounds: view.rounds,
+                })
               }
             />
           )}
@@ -53,7 +64,7 @@ function Home() {
             <JoinRoom
               onBack={() => setView({ name: "menu" })}
               onJoin={(code) =>
-                setView({ name: "game", isHost: false, code, walls: 10 })
+                setView({ name: "game", isHost: false, code, walls: 10, rounds: 5 })
               }
             />
           )}
@@ -63,6 +74,7 @@ function Home() {
               code={view.code}
               isHost={view.isHost}
               initialWalls={view.walls}
+              initialRounds={view.rounds}
               onLeave={() => setView({ name: "menu" })}
             />
           )}
