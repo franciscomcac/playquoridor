@@ -32,17 +32,15 @@
   --color-ring-offset-background: var(--background);
 }
 
-/* Classic light wood / parchment palette. */
 :root {
   --radius: 0.625rem;
-
   --background: oklch(0.95 0.025 85);
   --foreground: oklch(0.24 0.03 55);
   --card: oklch(0.98 0.02 85);
   --card-foreground: oklch(0.24 0.03 55);
   --popover: oklch(0.98 0.02 85);
   --popover-foreground: oklch(0.24 0.03 55);
-  --primary: oklch(0.5 0.11 55);             /* warm brown */
+  --primary: oklch(0.5 0.11 55);
   --primary-foreground: oklch(0.98 0.02 85);
   --secondary: oklch(0.9 0.03 85);
   --secondary-foreground: oklch(0.28 0.04 55);
@@ -56,13 +54,11 @@
   --input: oklch(0.86 0.03 75);
   --ring: oklch(0.6 0.11 60);
 
-  /* Board */
   --board-bg: oklch(0.86 0.05 75);
   --board-cell: oklch(0.9 0.045 80);
   --board-cell-alt: oklch(0.86 0.05 78);
   --board-line: oklch(0.42 0.08 55 / 0.35);
 
-  /* Player colors — gold / slate / crimson / jade */
   --p1: oklch(0.82 0.16 85);
   --p2: oklch(0.62 0.14 250);
   --p3: oklch(0.6 0.2 25);
@@ -73,9 +69,7 @@
 }
 
 @layer base {
-  * {
-    border-color: var(--color-border);
-  }
+  * { border-color: var(--color-border); }
   body {
     background:
       radial-gradient(1200px 800px at 20% 0%, oklch(0.92 0.04 80 / 0.7), transparent 60%),
@@ -86,14 +80,9 @@
     font-family: var(--font-body);
     min-height: 100vh;
   }
-  h1, h2, h3, h4 {
-    font-family: var(--font-display);
-    letter-spacing: -0.01em;
-    font-weight: 600;
-  }
+  h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -0.01em; font-weight: 600; }
 }
 
-/* Wooden bevelled frame around the board. */
 .wood-frame {
   padding: 14px;
   border-radius: 16px;
@@ -107,7 +96,7 @@
     0 20px 40px -14px oklch(0.2 0.03 40 / 0.45);
 }
 
-/* Coinflip animation */
+/* Coinflip */
 @keyframes coin-spin {
   0%   { transform: rotateY(0deg)    scale(0.9); }
   50%  { transform: rotateY(1440deg) scale(1.15); }
@@ -126,21 +115,19 @@
   100% { transform: translate3d(var(--dx, 0), 110vh, 0) rotate(720deg); opacity: 0.9; }
 }
 .confetti-piece { animation: confetti-fall linear forwards; }
-
 @keyframes win-pop {
   0%   { transform: scale(0.6); opacity: 0; }
   60%  { transform: scale(1.08); opacity: 1; }
   100% { transform: scale(1);    opacity: 1; }
 }
 .win-pop { animation: win-pop 0.55s cubic-bezier(.2,.9,.3,1.2) forwards; }
-
 @keyframes lose-fade {
   0%   { transform: scale(0.9); opacity: 0; }
   100% { transform: scale(1);   opacity: 1; }
 }
 .lose-fade { animation: lose-fade 0.5s ease-out forwards; }
 
-/* Pawn glide (smooth movement) */
+/* Pawn glide */
 .pawn-glide { transition: left 160ms ease-out, top 160ms ease-out; }
 
 /* Move-target pulse on hover */
@@ -150,20 +137,50 @@
 }
 .move-target-hover { animation: move-pulse 1.1s ease-in-out infinite; }
 
-/* Last placed wall glow + fade */
+/* Wall placement: bouncy slide-in + latest glow */
+@keyframes wall-drop-h {
+  0%   { transform: translateY(-50%) scaleX(0); }
+  70%  { transform: translateY(-50%) scaleX(1.06); }
+  100% { transform: translateY(-50%) scaleX(1); }
+}
+@keyframes wall-drop-v {
+  0%   { transform: translateX(-50%) scaleY(0); }
+  70%  { transform: translateX(-50%) scaleY(1.06); }
+  100% { transform: translateX(-50%) scaleY(1); }
+}
 @keyframes wall-fade-glow {
   0%   { filter: drop-shadow(0 0 14px currentColor) brightness(1.35); }
   100% { filter: drop-shadow(0 0 4px  currentColor) brightness(1); }
 }
-@keyframes wall-drop-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+.wall-h.wall-latest { animation: wall-drop-h 0.28s cubic-bezier(.2,.9,.3,1.4), wall-fade-glow 2s ease-out 0.28s forwards; transform-origin: left center; }
+.wall-v.wall-latest { animation: wall-drop-v 0.28s cubic-bezier(.2,.9,.3,1.4), wall-fade-glow 2s ease-out 0.28s forwards; transform-origin: center top; }
+
+/* Dust puff for wall landing */
+@keyframes dust-puff {
+  0%   { opacity: 0.55; transform: translate(-50%, -50%) scale(0.4); }
+  100% { opacity: 0;    transform: translate(-50%, -50%) scale(1.8); }
 }
-.wall-latest {
-  animation:
-    wall-drop-in 0.22s ease-out,
-    wall-fade-glow 2s ease-out 0.22s forwards;
+.dust-puff { animation: dust-puff 0.5s ease-out forwards; pointer-events: none; }
+
+/* Pawn elimination pop + particle burst */
+@keyframes pawn-pop {
+  0%   { transform: translate(-50%,-50%) scale(1);   opacity: 1; }
+  40%  { transform: translate(-50%,-50%) scale(1.4); opacity: 1; }
+  100% { transform: translate(-50%,-50%) scale(0.3); opacity: 0; }
 }
+.pawn-pop { animation: pawn-pop 0.28s cubic-bezier(.2,.7,.4,1) forwards; }
+
+@keyframes pop-flash {
+  0%   { opacity: 0.85; transform: translate(-50%,-50%) scale(0.6); }
+  100% { opacity: 0;    transform: translate(-50%,-50%) scale(2.4); }
+}
+.pop-flash { animation: pop-flash 0.28s ease-out forwards; }
+
+@keyframes shard-fly {
+  0%   { opacity: 1; transform: translate(-50%,-50%) translate(0,0) scale(1); }
+  100% { opacity: 0; transform: translate(-50%,-50%) translate(var(--sx,0), var(--sy,0)) scale(0.3); }
+}
+.pop-shard { animation: shard-fly 0.32s cubic-bezier(.2,.7,.4,1) forwards; }
 
 /* Spinner */
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -175,3 +192,10 @@
   to   { opacity: 1; transform: translateY(0);   }
 }
 .toast-in { animation: toast-in 0.18s ease-out; }
+
+/* AFK banner pulse */
+@keyframes afk-pulse {
+  0%,100% { box-shadow: 0 0 0 0 oklch(0.6 0.2 25 / 0.4); }
+  50%     { box-shadow: 0 0 0 8px oklch(0.6 0.2 25 / 0); }
+}
+.afk-pulse { animation: afk-pulse 1.2s ease-out infinite; }
