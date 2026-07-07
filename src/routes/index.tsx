@@ -133,7 +133,7 @@ function Menu({ onChoose }: { onChoose: (v: View) => void }) {
       <div className="mt-8 flex flex-col gap-3">
         <button
           type="button"
-          onClick={() => onChoose({ name: "create", walls: 10 })}
+          onClick={() => onChoose({ name: "create", walls: 10, rounds: 5 })}
           className="rounded-lg bg-primary px-5 py-3 text-sm font-medium text-primary-foreground transition-transform hover:-translate-y-0.5"
         >
           Create a room
@@ -152,12 +152,16 @@ function Menu({ onChoose }: { onChoose: (v: View) => void }) {
 
 function CreateRoom({
   walls,
+  rounds,
   setWalls,
+  setRounds,
   onBack,
   onStart,
 }: {
   walls: number;
+  rounds: number;
   setWalls: (n: number) => void;
+  setRounds: (n: number) => void;
   onBack: () => void;
   onStart: (code: string) => void;
 }) {
@@ -173,7 +177,7 @@ function CreateRoom({
       </button>
       <h2 className="mt-3 text-2xl">Create a room</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Choose how many walls each player gets, then share the code.
+        Set the walls per player and match length, then share the code.
       </p>
 
       <div className="mt-6">
@@ -194,6 +198,29 @@ function CreateRoom({
           <span>0 (pure race)</span>
           <span>10 (standard)</span>
           <span>20 (fortress)</span>
+        </div>
+      </div>
+
+      <div className="mt-6">
+        <label className="flex items-baseline justify-between text-xs uppercase tracking-[0.15em] text-muted-foreground">
+          Rounds (best of)
+          <span className="text-base font-semibold text-foreground">
+            {rounds === 1 ? "1 (single)" : `${rounds} — first to ${Math.floor(rounds / 2) + 1}`}
+          </span>
+        </label>
+        <input
+          type="range"
+          min={1}
+          max={10}
+          step={1}
+          value={rounds}
+          onChange={(e) => setRounds(Number(e.target.value))}
+          className="mt-2 w-full accent-[color:var(--accent)]"
+        />
+        <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
+          <span>1</span>
+          <span>5</span>
+          <span>10</span>
         </div>
       </div>
 
