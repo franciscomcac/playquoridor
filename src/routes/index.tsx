@@ -1228,16 +1228,23 @@ function ClocksCard({ state, you, nameOf }: {
   state: GameState; you: PlayerId; nameOf: (s: PlayerId) => string;
 }) {
   if (!state.clocks) return null;
-  // Chess.com layout: opponent(s) on top, you on bottom.
+  // Chess.com layout: opponent(s) on top, you on bottom. Spectators pass a
+  // sentinel `you` that never matches a slot, so we render every clock in
+  // the top stack and drop the divider.
   const others: PlayerId[] = [];
   for (let i = 0; i < state.mode; i++) if (i !== you) others.push(i as PlayerId);
+  const showYou = you >= 0 && you < state.mode;
   return (
     <div className="flex flex-col gap-2">
       {others.map((o) => (
         <ChessClock key={o} state={state} playerId={o} nameOf={nameOf} compact={state.mode === 4} />
       ))}
-      <div className="h-px bg-border/50" />
-      <ChessClock state={state} playerId={you} nameOf={nameOf} />
+      {showYou && (
+        <>
+          <div className="h-px bg-border/50" />
+          <ChessClock state={state} playerId={you} nameOf={nameOf} />
+        </>
+      )}
     </div>
   );
 }
