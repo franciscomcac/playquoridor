@@ -404,19 +404,6 @@ function Menu({ ident, onChoose, onEditName }: {
   onEditName: () => void;
 }) {
   const [quickMode, setQuickMode] = useState<Mode>(2);
-  // Bot difficulty picker. "auto" reuses randomDifficulty() so returning
-  // players get a bit of variety; explicit levels lock the value.
-  type BotLevel = "auto" | "easy" | "medium" | "hard";
-  const [botLevel, setBotLevel] = useState<BotLevel>("auto");
-  const startBot = () => {
-    play("click");
-    const diff =
-      botLevel === "auto" ? randomDifficulty()
-      : botLevel === "easy"   ? { label: "Easy",   value: 0.25 } as const
-      : botLevel === "medium" ? { label: "Medium", value: 0.58 } as const
-      :                         { label: "Hard",   value: 0.9  } as const;
-    onChoose({ name: "bot", difficulty: diff.value, opponentName: randomGamerName() });
-  };
   return (
     <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-2xl">
       <h1 className="text-4xl">A quiet game of Quoridor.</h1>
@@ -441,25 +428,6 @@ function Menu({ ident, onChoose, onEditName }: {
           className="mt-3 w-full rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
         >
           Find a match →
-        </button>
-      </div>
-
-      <div className="mt-4 rounded-lg border border-dashed border-border bg-background/40 p-3">
-        <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Practice vs Bot</p>
-        <div className="mt-2 grid grid-cols-4 gap-2">
-          {(["auto", "easy", "medium", "hard"] as const).map((lv) => (
-            <button key={lv} onClick={() => setBotLevel(lv)}
-              className={"rounded-md border px-2 py-1.5 text-[11px] font-medium capitalize " +
-                (botLevel === lv ? "border-primary bg-primary/10" : "border-border bg-secondary/30 text-muted-foreground hover:text-foreground")}>
-              {lv}
-            </button>
-          ))}
-        </div>
-        <button
-          onClick={startBot}
-          className="mt-3 w-full rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
-        >
-          Play solo →
         </button>
       </div>
 
