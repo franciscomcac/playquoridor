@@ -1202,7 +1202,7 @@ function EndScreen({ state, you, onPrimary, onLeave, nameOf }: {
           </table>
         </div>
 
-        <div className="mt-3 flex gap-2">
+        <div className="mt-3 flex flex-wrap justify-center gap-2">
           <button onClick={onPrimary} className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5">
             New match
           </button>
