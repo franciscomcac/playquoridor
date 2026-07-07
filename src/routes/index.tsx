@@ -118,7 +118,7 @@ function Header({ ident, onOpenSettings }: { ident: Identity | null; onOpenSetti
           <span className="block h-4 w-4 rounded-full" style={{ background: "var(--primary)" }} />
         </span>
         <div>
-          <p className="text-xl font-semibold leading-none">Quoridor Parlour</p>
+          <p className="text-xl font-semibold leading-none">playquoridor.online</p>
           <p className="mt-1 text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
             Peer to peer · 2 or 4 players
           </p>
