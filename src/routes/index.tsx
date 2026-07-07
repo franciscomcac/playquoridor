@@ -564,8 +564,10 @@ type EventEntry = { key: number; text: string };
 
 type AfkState = { slot: PlayerId; deadline: number } | null;
 
-const AFK_IDLE_MS = 60_000;
-const AFK_COUNTDOWN_MS = 90_000;
+// After 45s of no input we surface the AFK banner as a warning, then forfeit
+// for time after another 15s (60s total idle → auto-forfeit).
+const AFK_IDLE_MS = 45_000;
+const AFK_COUNTDOWN_MS = 15_000;
 
 function GameScreen({
   ident, code, isHost, mode: initialMode, initialWalls, initialRounds, onLeave,
@@ -643,9 +645,14 @@ function GameScreen({
     hostStartRound(initialState(mode, totalWalls, totalRounds));
   }, [hostStartRound]);
 
-  const hostApplyForfeit = useCallback((who: PlayerId, permanent = false) => {
+  const hostApplyForfeit = useCallback((
+    who: PlayerId,
+    permanent = false,
+    reason: "time" | "forfeit" | "afk" = "forfeit",
+  ) => {
     const ns = applyForfeit(stateRef.current, who, permanent);
     if (!ns) return;
+    if (ns.winner !== null) { ns.endReason = reason; ns.endLoser = who; }
     setState(ns);
     roomRef.current?.send({ type: "state", payload: ns });
     play("pop");
@@ -708,16 +715,20 @@ function GameScreen({
             if (stateRef.current.clocks) {
               next.clocks = endTurn(stateRef.current.clocks, p.from, Date.now());
             }
+            if (next.winner !== null) {
+              next.endReason = "goal";
+              next.endLoser = (next.winner === 0 ? 1 : 0) as PlayerId;
+            }
             setState(next);
             roomRef.current?.send({ type: "state", payload: next });
           }
         } else if (msg.type === "forfeit" && isHost) {
           const p = msg.payload as { from: PlayerId };
           pushLog(`${nameOf(p.from)} forfeited the round`);
-          hostApplyForfeit(p.from);
+          hostApplyForfeit(p.from, false, "forfeit");
         } else if (msg.type === "leave" && isHost) {
           const p = msg.payload as { slot: number };
-          hostApplyForfeit(p.slot as PlayerId, true);
+          hostApplyForfeit(p.slot as PlayerId, true, "forfeit");
         } else if (msg.type === "nextRound" && isHost) {
           if (stateRef.current.matchWinner === null) hostStartRound();
         } else if (msg.type === "newMatch" && isHost) {
@@ -834,9 +845,9 @@ function GameScreen({
         pushLog(`${nameOf(turn)} is idle — forfeit countdown started`);
         play("afkWarn");
       } else if (afk && Date.now() > afk.deadline) {
-        pushLog(`${nameOf(afk.slot)} timed out and was removed from the match`);
+        pushLog(`${nameOf(afk.slot)} was idle for too long — forfeited on time`);
         setAfk(null);
-        hostApplyForfeit(afk.slot, true);
+        hostApplyForfeit(afk.slot, true, "afk");
       }
     }, 1000);
     return () => window.clearInterval(iv);
@@ -858,8 +869,8 @@ function GameScreen({
       if (!s.active[turn]) return;
       const remain = liveRemaining(s.clocks, turn, turn, Date.now());
       if (remain <= 0) {
-        pushLog(`${nameOf(turn)} ran out of time`);
-        hostApplyForfeit(turn);
+        pushLog(`${nameOf(turn)}'s clock ran out`);
+        hostApplyForfeit(turn, false, "time");
       }
     }, 250);
     return () => window.clearInterval(iv);
@@ -906,6 +917,10 @@ function GameScreen({
         if (stateRef.current.clocks) {
           next.clocks = endTurn(stateRef.current.clocks, 0, Date.now());
         }
+        if (next.winner !== null) {
+          next.endReason = "goal";
+          next.endLoser = (next.winner === 0 ? 1 : 0) as PlayerId;
+        }
         setState(next);
         roomRef.current?.send({ type: "state", payload: next });
       }
@@ -925,7 +940,7 @@ function GameScreen({
     if (!state.active[you]) return;
     const ok = window.confirm("Forfeit this round?");
     if (!ok) return;
-    if (isHost) { pushLog(`${ident.name} forfeited the round`); hostApplyForfeit(0); }
+    if (isHost) { pushLog(`${ident.name} forfeited the round`); hostApplyForfeit(0, false, "forfeit"); }
     else roomRef.current?.send({ type: "forfeit", payload: { from: slotRef.current } });
   }, [isHost, status, state, you, hostApplyForfeit, pushLog, ident.name]);
 
@@ -1256,6 +1271,23 @@ function ChessClock({ state, playerId, nameOf, compact = false }: {
   const seconds = remaining / 1000;
   const danger = seconds <= 15;
   const warn = !danger && seconds <= 45;
+  // Audible low-time cue: one alarm on entering danger, then a tick each
+  // whole second while the clock is red and this player is on the move.
+  const dangerActive = active && danger && remaining > 0;
+  const wasDangerRef = useRef(false);
+  useEffect(() => {
+    if (dangerActive && !wasDangerRef.current) play("lowTime");
+    wasDangerRef.current = dangerActive;
+  }, [dangerActive]);
+  const lastTickSecRef = useRef<number>(-1);
+  useEffect(() => {
+    if (!dangerActive) { lastTickSecRef.current = -1; return; }
+    const sec = Math.ceil(seconds);
+    if (sec !== lastTickSecRef.current && sec > 0 && sec <= 15) {
+      lastTickSecRef.current = sec;
+      play("tick");
+    }
+  }, [dangerActive, seconds]);
   const color = PLAYER_COLORS[playerId];
   const label = nameOf(playerId);
   const cls =
@@ -1458,9 +1490,31 @@ function WinOverlay({ state, you, matchOver, onPrimary, primaryLabel, onLeave, n
   const winnerColor = PLAYER_COLORS[winner];
   const pieces = Array.from({ length: youWon ? (matchOver ? 90 : 45) : 0 }, (_, i) => i);
   const title = matchOver ? (youWon ? "Match won!" : "Match over") : (youWon ? "Round won" : "Round lost");
+  const reason = state.endReason;
+  const loser = state.endLoser;
+  const loserName = loser !== undefined ? nameOf(loser) : "Opponent";
+  const youLost = loser === you;
+  const roundSub = (() => {
+    if (reason === "time") {
+      return youLost
+        ? "Your clock hit zero — round lost on time."
+        : `${loserName}'s clock hit zero. Round taken on time.`;
+    }
+    if (reason === "afk") {
+      return youLost
+        ? "You were idle too long — auto-forfeit on time."
+        : `${loserName} went idle and forfeited on time.`;
+    }
+    if (reason === "forfeit") {
+      return youLost
+        ? "You forfeited the round."
+        : `${loserName} forfeited the round.`;
+    }
+    return youWon ? "You reached your goal." : `${nameOf(winner)} reached their goal first.`;
+  })();
   const sub = matchOver
     ? youWon ? `You took the match.` : `${nameOf(winner)} took the match.`
-    : youWon ? "You reached your goal." : `${nameOf(winner)} reached their goal first.`;
+    : roundSub;
 
   return (
     <div className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden rounded-lg bg-background/70 backdrop-blur-sm">
@@ -1684,6 +1738,10 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
     if (cur.clocks) {
       ns.clocks = endTurn(cur.clocks, mover, Date.now());
     }
+    if (ns.winner !== null) {
+      ns.endReason = "goal";
+      ns.endLoser = (mover === YOU ? BOT : YOU);
+    }
     return ns;
   }, []);
 
@@ -1697,7 +1755,10 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
     const move = pickBotMove(state, BOT, difficulty);
     if (!move) {
       const ns = applyForfeit(state, BOT, false);
-      if (ns) { setState(ns); play("pop"); }
+      if (ns) {
+        if (ns.winner !== null) { ns.endReason = "forfeit"; ns.endLoser = BOT; }
+        setState(ns); play("pop");
+      }
       return;
     }
     let delay = humanThinkTimeMs(state, move, difficulty);
@@ -1732,6 +1793,7 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
         const loser = cur.turn;
         const ns = applyForfeit(cur, loser, false);
         if (ns) {
+          if (ns.winner !== null) { ns.endReason = "time"; ns.endLoser = loser; }
           setState(ns);
           play("pop");
           setToast(loser === YOU ? "You ran out of time" : `${opponentName} ran out of time`);
@@ -1757,7 +1819,10 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
     if (!state.active[YOU]) return;
     if (!window.confirm("Forfeit this round?")) return;
     const ns = applyForfeit(state, YOU, false);
-    if (ns) { setState(ns); play("pop"); setToast("You forfeited the round"); window.setTimeout(() => setToast(null), 1400); }
+    if (ns) {
+      if (ns.winner !== null) { ns.endReason = "forfeit"; ns.endLoser = YOU; }
+      setState(ns); play("pop"); setToast("You forfeited the round"); window.setTimeout(() => setToast(null), 1400);
+    }
   }, [state]);
 
   const nextRound = useCallback(() => {

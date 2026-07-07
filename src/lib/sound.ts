@@ -1,5 +1,5 @@
 // Web Audio SFX — synthesized, no assets. Lazy-init on first user gesture.
-type SfxName = "pop"|"wall"|"join"|"matchStart"|"roundWin"|"matchWin"|"afkWarn"|"click";
+type SfxName = "pop"|"wall"|"join"|"matchStart"|"roundWin"|"matchWin"|"afkWarn"|"click"|"lowTime"|"tick";
 const MUTE_KEY = "quoridor.mute";
 const VOL_KEY = "quoridor.volume";
 let ctx: AudioContext | null = null;
@@ -90,5 +90,12 @@ export function play(name: SfxName) {
       break;
     case "afkWarn": beep({ freq: 660, dur: 0.14, type: "square", vol: 0.3 }); beep({ freq: 660, dur: 0.14, type: "square", vol: 0.3, delay: 0.22 }); break;
     case "click": beep({ freq: 1200, dur: 0.04, vol: 0.22 }); break;
+    case "lowTime":
+      beep({ freq: 880, dur: 0.11, type: "square", vol: 0.32 });
+      beep({ freq: 660, dur: 0.14, type: "square", vol: 0.32, delay: 0.14 });
+      break;
+    case "tick":
+      beep({ freq: 1500, dur: 0.05, type: "square", vol: 0.22 });
+      break;
   }
 }
