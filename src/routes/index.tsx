@@ -710,12 +710,22 @@ function CoinflipOverlay({ starter, you }: { starter: 0 | 1; you: 0 | 1 }) {
 }
 
 function WinOverlay({
+  matchOver,
   youWon,
-  onRestart,
+  score,
+  you,
+  target,
+  onPrimary,
+  primaryLabel,
   onLeave,
 }: {
+  matchOver: boolean;
   youWon: boolean;
-  onRestart: () => void;
+  score: [number, number];
+  you: 0 | 1;
+  target: number;
+  onPrimary: () => void;
+  primaryLabel: string;
   onLeave: () => void;
 }) {
   const colors = [
@@ -725,7 +735,23 @@ function WinOverlay({
     "oklch(0.7 0.2 220)",
     "oklch(0.7 0.2 320)",
   ];
-  const pieces = Array.from({ length: youWon ? 60 : 0 }, (_, i) => i);
+  const pieces = Array.from({ length: youWon && matchOver ? 90 : youWon ? 40 : 0 }, (_, i) => i);
+  const youScore = score[you];
+  const oppScore = score[1 - you];
+  const title = matchOver
+    ? youWon
+      ? "Match won!"
+      : "Match over"
+    : youWon
+      ? "Round won"
+      : "Round lost";
+  const sub = matchOver
+    ? youWon
+      ? `You took the match ${youScore}–${oppScore}.`
+      : `Opponent won the match ${oppScore}–${youScore}.`
+    : youWon
+      ? "You reached the other side first."
+      : "Your opponent made it across.";
   return (
     <div className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden rounded-lg bg-background/70 backdrop-blur-sm">
       {pieces.map((i) => {
@@ -762,20 +788,21 @@ function WinOverlay({
           className="text-4xl"
           style={{ fontFamily: "var(--font-display)" }}
         >
-          {youWon ? "Victory!" : "Good game"}
+          {title}
         </p>
         <p className="text-sm text-muted-foreground">
-          {youWon
-            ? "You reached the other side first."
-            : "Your opponent made it across."}
+          {sub}
+        </p>
+        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+          {youScore} – {oppScore} · first to {target}
         </p>
         <div className="mt-2 flex gap-2">
           <button
             type="button"
-            onClick={onRestart}
+            onClick={onPrimary}
             className="rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-foreground transition-transform hover:-translate-y-0.5"
           >
-            Play again
+            {primaryLabel}
           </button>
           <button
             type="button"
