@@ -98,3 +98,29 @@ export function pickBotMove(state: GameState, bot: PlayerId, difficulty: number)
   }
   return bestPawn;
 }
+
+// How long a real person would look at the board before playing `move`.
+// Bigger for walls (strategic decisions), for wall-rich positions, and for
+// the first few moves of a round. Adds jitter, occasional "big think",
+// and rare "snap" moves so it never feels metronomic.
+export function humanThinkTimeMs(state: GameState, move: Move, difficulty: number): number {
+  let base: number;
+  if (move.kind === "wall") {
+    base = 1400 + Math.random() * 1800;                   // walls: 1.4–3.2s
+  } else {
+    base = 550 + Math.random() * 950;                      // pawns: 0.55–1.5s
+  }
+  // Complex boards take longer to read.
+  const clutter = Math.min(1, state.walls.length / 12);    // 0..1
+  base += clutter * 700;
+  // Higher-difficulty "player" looks a touch longer on strategic turns.
+  base += difficulty * 250;
+  // Warm-up: first two plies of a round are quicker (fresh position).
+  if (state.walls.length < 2 && move.kind === "pawn") base *= 0.55;
+  // Rare big think.
+  if (Math.random() < 0.05) base += 1500 + Math.random() * 2200;
+  // Rare snap decision.
+  if (Math.random() < 0.08) base = Math.min(base, 350 + Math.random() * 250);
+  // Cap so the game never stalls.
+  return Math.max(300, Math.min(base, 5500));
+}

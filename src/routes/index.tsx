@@ -20,7 +20,12 @@ import {
 import {
   getVolume, initSoundOnGesture, isMuted, play, setMuted, setVolume,
 } from "@/lib/sound";
-import { pickBotMove, randomDifficulty, type BotDifficulty } from "@/lib/bot";
+import { humanThinkTimeMs, pickBotMove, randomDifficulty } from "@/lib/bot";
+import { randomGamerName } from "@/lib/names";
+import {
+  DEFAULT_CLOCK_MS, endTurn, formatClock, initClocks, liveRemaining,
+  type ClockState,
+} from "@/lib/clock";
 
 const SEO_TITLE = "Play Quoridor Online Free – Wall Blocking Strategy Game";
 const SEO_DESCRIPTION =
@@ -106,7 +111,7 @@ type View =
   | { name: "join" }
   | { name: "quick"; mode: Mode }
   | { name: "game"; isHost: boolean; code: string; mode: Mode; walls: number; rounds: number; quickMatch?: boolean }
-  | { name: "bot"; difficulty: BotDifficulty; botName: string };
+  | { name: "bot"; difficulty: number; opponentName: string };
 
 function Home() {
   const [ident, setIdent] = useState<Identity | null>(null);
@@ -171,7 +176,11 @@ function Home() {
                 initialWalls={view.walls}
                 initialRounds={view.rounds}
                 quickMatch={view.quickMatch}
-                onBotFallback={() => setView({ name: "bot", difficulty: randomDifficulty(), botName: randomBotName() })}
+                onBotFallback={() => setView({
+                  name: "bot",
+                  difficulty: randomDifficulty().value,
+                  opponentName: randomGamerName(),
+                })}
                 onLeave={() => setView({ name: "menu" })}
               />
             )}
@@ -179,7 +188,7 @@ function Home() {
               <BotGame
                 ident={ident}
                 difficulty={view.difficulty}
-                botName={view.botName}
+                opponentName={view.opponentName}
                 onLeave={() => setView({ name: "menu" })}
               />
             )}
@@ -586,7 +595,16 @@ function GameScreen({
     const active = src.leftMatch.map((l) => !l);
     const candidates = active.map((v, i) => (v ? i : -1)).filter((i) => i >= 0);
     const starter = (candidates[Math.floor(Math.random() * candidates.length)] ?? 0) as PlayerId;
-    const ns = newRound(src, starter);
+    const rawNs = newRound(src, starter);
+    // Fresh clocks each round; countdown begins once the coinflip settles.
+    const ns: GameState = {
+      ...rawNs,
+      clocks: {
+        remaining: Array.from({ length: rawNs.mode }, () => DEFAULT_CLOCK_MS),
+        turnStartedAt: Date.now() + 2000,
+        total: DEFAULT_CLOCK_MS,
+      },
+    };
     setState(ns);
     roomRef.current?.send({ type: "state", payload: ns });
     roomRef.current?.send({ type: "coinflip", payload: { starter } });
@@ -641,7 +659,13 @@ function GameScreen({
         } else if (msg.type === "move" && isHost) {
           const p = msg.payload as { from: PlayerId; move: Move };
           const next = applyMove(stateRef.current, p.from, p.move);
-          if (next) { setState(next); roomRef.current?.send({ type: "state", payload: next }); }
+          if (next) {
+            if (stateRef.current.clocks) {
+              next.clocks = endTurn(stateRef.current.clocks, p.from, Date.now());
+            }
+            setState(next);
+            roomRef.current?.send({ type: "state", payload: next });
+          }
         } else if (msg.type === "forfeit" && isHost) {
           const p = msg.payload as { from: PlayerId };
           pushLog(`${nameOf(p.from)} forfeited the round`);
@@ -768,6 +792,28 @@ function GameScreen({
   }, [isHost, afk, hostApplyForfeit, pushLog, nameOf, status, coinflip]);
 
   // ---------- Moves ----------
+  // (see handleMove below)
+  // Clock enforcement — host authoritative. If the active player runs out
+  // of time, they forfeit the round.
+  useEffect(() => {
+    if (!isHost) return;
+    const iv = window.setInterval(() => {
+      const s = stateRef.current;
+      if (!s.clocks) return;
+      if (status !== "connected") return;
+      if (coinflip?.animating) return;
+      if (s.winner !== null || s.matchWinner !== null) return;
+      const turn = s.turn;
+      if (!s.active[turn]) return;
+      const remain = liveRemaining(s.clocks, turn, turn, Date.now());
+      if (remain <= 0) {
+        pushLog(`${nameOf(turn)} ran out of time`);
+        hostApplyForfeit(turn);
+      }
+    }, 250);
+    return () => window.clearInterval(iv);
+  }, [isHost, status, coinflip, hostApplyForfeit, pushLog, nameOf]);
+
   const handleMove = useCallback((move: Move) => {
     if (status !== "connected") return;
     initSoundOnGesture();
@@ -775,7 +821,13 @@ function GameScreen({
     markActivity(slotRef.current);
     if (isHost) {
       const next = applyMove(stateRef.current, 0, move);
-      if (next) { setState(next); roomRef.current?.send({ type: "state", payload: next }); }
+      if (next) {
+        if (stateRef.current.clocks) {
+          next.clocks = endTurn(stateRef.current.clocks, 0, Date.now());
+        }
+        setState(next);
+        roomRef.current?.send({ type: "state", payload: next });
+      }
     } else {
       roomRef.current?.send({ type: "move", payload: { from: slotRef.current, move } });
     }
@@ -871,7 +923,7 @@ function GameScreen({
         )}
         <div className="relative">
           <QuoridorBoard state={state} you={you} onMove={handleMove} interactive={boardInteractive} onActivity={() => markActivity(you)} />
-          {coinflip?.animating && <CoinflipOverlay starter={coinflip.starter} you={you} name={nameOf(coinflip.starter)} />}
+          {coinflip?.animating && <CoinflipOverlay starter={coinflip.starter} you={you} mode={state.mode as Mode} name={nameOf(coinflip.starter)} />}
           {status === "waiting" && presence.count < presence.expected && (
             <WaitingOverlay count={presence.count} expected={presence.expected} isHost={isHost} onStart={hostStartMatch} />
           )}
@@ -904,6 +956,7 @@ function GameScreen({
         </div>
 
         <ScoreCard state={state} you={you} nameOf={nameOf} />
+        <ClocksCard state={state} you={you} nameOf={nameOf} />
         <PlayersCard state={state} you={you} nameOf={nameOf} />
         <EventLog entries={log} />
 
@@ -1066,19 +1119,103 @@ function EventLog({ entries }: { entries: EventEntry[] }) {
   );
 }
 
-function CoinflipOverlay({ starter, you, name }: { starter: PlayerId; you: PlayerId; name: string }) {
+function CoinflipOverlay({ starter, you, mode, name }: {
+  starter: PlayerId; you: PlayerId; mode: Mode; name: string;
+}) {
   const youStart = starter === you;
+  // Two-face coin: front = starter's color, back = the other featured player.
+  // In 2p that's the opponent. In 4p we pick the next player round-robin so
+  // both faces still have a distinct color.
+  const other = ((starter + 1) % mode) as PlayerId;
+  const frontColor = PLAYER_COLORS[starter];
+  const backColor = PLAYER_COLORS[other];
+  // Always LAND on the front face by construction. 5 full X-rotations = 1800°.
+  const endDeg = 1800;
+  const faceStyle = (color: string): React.CSSProperties => ({
+    background: `radial-gradient(circle at 32% 28%, color-mix(in oklab, ${color} 55%, white 50%), ${color} 55%, color-mix(in oklab, ${color} 60%, black 40%) 100%)`,
+    color: "oklch(0.15 0.02 55)",
+  });
   return (
     <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-background/70 backdrop-blur-sm">
-      <div className="coin-spin coin-hue grid h-28 w-28 place-items-center rounded-full text-3xl font-bold shadow-2xl"
-        style={{
-          background: "conic-gradient(from 0deg, oklch(0.82 0.16 85), oklch(0.62 0.14 250), oklch(0.6 0.2 25), oklch(0.66 0.14 155), oklch(0.82 0.16 85))",
-          color: "oklch(0.15 0.02 55)",
-        }}>
-        <span style={{ textShadow: "0 2px 6px rgba(0,0,0,0.35)" }}>?</span>
+      <div className="coin-stage relative h-32 w-32">
+        <div className="coin-3d h-32 w-32 rounded-full"
+          style={{ ["--end" as string]: `${endDeg}deg` } as React.CSSProperties}>
+          <div className="coin-face front text-4xl" style={faceStyle(frontColor)}>
+            {starter + 1}
+          </div>
+          <div className="coin-face back text-4xl" style={faceStyle(backColor)}>
+            {other + 1}
+          </div>
+          <div className="coin-edge" />
+        </div>
+        <div className="coin-shadow absolute left-1/2 -bottom-4 h-2 w-24 rounded-full"
+          style={{ background: "radial-gradient(ellipse at center, rgba(0,0,0,0.5), transparent 70%)" }} />
       </div>
-      <p className="mt-4 text-sm uppercase tracking-[0.25em] text-foreground">Coin flip…</p>
+      <p className="mt-6 text-sm uppercase tracking-[0.25em] text-foreground">Coin flip…</p>
       <p className="mt-1 text-xs text-muted-foreground">{youStart ? "You move first" : `${name} moves first`}</p>
+    </div>
+  );
+}
+
+// ---------------- CHESS CLOCK ----------------
+
+function ChessClock({ state, playerId, nameOf, compact = false }: {
+  state: GameState; playerId: PlayerId;
+  nameOf: (s: PlayerId) => string; compact?: boolean;
+}) {
+  const [now, setNow] = useState<number>(() => Date.now());
+  const active = state.turn === playerId && state.winner === null
+    && state.matchWinner === null && state.active[playerId];
+  useEffect(() => {
+    if (!state.clocks) return;
+    const iv = window.setInterval(() => setNow(Date.now()), 200);
+    return () => window.clearInterval(iv);
+  }, [state.clocks]);
+  if (!state.clocks) return null;
+  const remaining = liveRemaining(state.clocks, state.turn, playerId, now);
+  const seconds = remaining / 1000;
+  const danger = seconds <= 15;
+  const warn = !danger && seconds <= 45;
+  const color = PLAYER_COLORS[playerId];
+  const label = nameOf(playerId);
+  const cls =
+    "rounded-lg border px-3 py-2 transition " +
+    (active ? "clock-active " : "opacity-60 ") +
+    (active && danger ? "clock-danger " : active && warn ? "clock-warn " : "");
+  return (
+    <div className={cls}
+      style={{
+        borderColor: active ? color : "var(--border)",
+        background: active ? `color-mix(in oklab, ${color} 12%, var(--card))` : "var(--card)",
+      }}>
+      <div className="flex items-center justify-between gap-2">
+        <span className="truncate text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+          {label}
+        </span>
+        <span className="h-2 w-2 rounded-full" style={{ background: color }} />
+      </div>
+      <p className={"font-mono tabular-nums " + (compact ? "text-lg" : "text-2xl") + " leading-tight"}
+        style={{ color: danger ? "var(--destructive)" : "inherit" }}>
+        {formatClock(remaining)}
+      </p>
+    </div>
+  );
+}
+
+function ClocksCard({ state, you, nameOf }: {
+  state: GameState; you: PlayerId; nameOf: (s: PlayerId) => string;
+}) {
+  if (!state.clocks) return null;
+  // Chess.com layout: opponent(s) on top, you on bottom.
+  const others: PlayerId[] = [];
+  for (let i = 0; i < state.mode; i++) if (i !== you) others.push(i as PlayerId);
+  return (
+    <div className="flex flex-col gap-2">
+      {others.map((o) => (
+        <ChessClock key={o} state={state} playerId={o} nameOf={nameOf} compact={state.mode === 4} />
+      ))}
+      <div className="h-px bg-border/50" />
+      <ChessClock state={state} playerId={you} nameOf={nameOf} />
     </div>
   );
 }
@@ -1280,45 +1417,58 @@ function SettingsDrawer({ onClose }: { onClose: () => void }) {
   );
 }
 
-// ---------------- BOT GAME ----------------
+// ---------------- BOT GAME (opponent presented as a human player) ----------------
 
-const BOT_NAMES = ["Aria", "Bishop", "Nyx", "Turing", "Echo", "Rook", "Vex", "Juno", "Kilo", "Zephyr"];
-function randomBotName(): string {
-  return BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)];
-}
-
-function BotGame({ ident, difficulty, botName, onLeave }: {
+function BotGame({ ident, difficulty, opponentName, onLeave }: {
   ident: Identity;
-  difficulty: BotDifficulty;
-  botName: string;
+  difficulty: number;
+  opponentName: string;
   onLeave: () => void;
 }) {
   const YOU: PlayerId = 0;
   const BOT: PlayerId = 1;
-  const [state, setState] = useState<GameState>(() => initialState(2, defaultWallsFor(2), 5));
+
+  const initial = useCallback((): GameState => {
+    const s = initialState(2, defaultWallsFor(2), 5);
+    return { ...s, clocks: initClocks(2, DEFAULT_CLOCK_MS) };
+  }, []);
+
+  const [state, setState] = useState<GameState>(initial);
   const stateRef = useRef(state); stateRef.current = state;
   const [coinflip, setCoinflip] = useState<{ starter: PlayerId; animating: boolean } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
-  const nameOf = useCallback((s: PlayerId) => (s === YOU ? ident.name : `${botName} (${difficulty.label} bot)`), [ident.name, botName, difficulty.label]);
+  const nameOf = useCallback(
+    (s: PlayerId) => (s === YOU ? ident.name : opponentName),
+    [ident.name, opponentName],
+  );
 
   const startCoinflip = useCallback((starter: PlayerId) => {
     setCoinflip({ starter, animating: true });
     play("matchStart");
-    window.setTimeout(() => setCoinflip((cf) => (cf ? { ...cf, animating: false } : cf)), 1800);
+    window.setTimeout(() => setCoinflip((cf) => (cf ? { ...cf, animating: false } : cf)), 1900);
   }, []);
 
   const startRound = useCallback((base?: GameState) => {
     const src = base ?? stateRef.current;
     const starter = (Math.random() < 0.5 ? 0 : 1) as PlayerId;
     const ns = newRound(src, starter);
-    setState(ns);
+    // Fresh clocks + timestamp starts once the coinflip finishes.
+    const withClocks: GameState = {
+      ...ns,
+      clocks: {
+        remaining: [DEFAULT_CLOCK_MS, DEFAULT_CLOCK_MS],
+        turnStartedAt: Date.now() + 1900,
+        total: DEFAULT_CLOCK_MS,
+      },
+    };
+    setState(withClocks);
     startCoinflip(starter);
   }, [startCoinflip]);
 
   const startMatch = useCallback(() => {
-    startRound(initialState(2, defaultWallsFor(2), 5));
-  }, [startRound]);
+    startRound(initial());
+  }, [startRound, initial]);
 
   // Kick off the first round on mount.
   useEffect(() => { startMatch(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
@@ -1333,39 +1483,81 @@ function BotGame({ ident, difficulty, botName, onLeave }: {
     prevMatchWinnerRef.current = state.matchWinner;
   }, [state.winner, state.matchWinner]);
 
-  // Bot's turn — think for a moment, then move.
+  // Helper: apply a move and roll the clock over to the next player.
+  const applyLocalMove = useCallback((mover: PlayerId, move: Move): GameState | null => {
+    const cur = stateRef.current;
+    const ns = applyMove(cur, mover, move);
+    if (!ns) return null;
+    if (cur.clocks) {
+      ns.clocks = endTurn(cur.clocks, mover, Date.now());
+    }
+    return ns;
+  }, []);
+
+  // Bot's turn — think for a human amount of time, then move.
   useEffect(() => {
     if (state.winner !== null || state.matchWinner !== null) return;
     if (coinflip?.animating) return;
     if (state.turn !== BOT || !state.active[BOT]) return;
-    const delay = 500 + Math.random() * 900;
+
+    // Pick a move up front so we can size the "thinking" time to it.
+    const move = pickBotMove(state, BOT, difficulty);
+    if (!move) {
+      const ns = applyForfeit(state, BOT, false);
+      if (ns) { setState(ns); play("pop"); }
+      return;
+    }
+    let delay = humanThinkTimeMs(state, move, difficulty);
+    // Never spend more time than the bot has on its clock.
+    if (state.clocks) {
+      const remaining = liveRemaining(state.clocks, state.turn, BOT, Date.now());
+      delay = Math.min(delay, Math.max(120, remaining - 400));
+    }
     const t = window.setTimeout(() => {
       const cur = stateRef.current;
       if (cur.turn !== BOT || cur.winner !== null || cur.matchWinner !== null) return;
-      const move = pickBotMove(cur, BOT, difficulty.value);
-      if (!move) {
-        const ns = applyForfeit(cur, BOT, false);
-        if (ns) { setState(ns); play("pop"); }
-        return;
-      }
-      const ns = applyMove(cur, BOT, move);
+      const ns = applyLocalMove(BOT, move);
       if (ns) {
         setState(ns);
         play(move.kind === "wall" ? "wall" : "click");
       }
     }, delay);
     return () => window.clearTimeout(t);
-  }, [state.turn, state.active, state.winner, state.matchWinner, coinflip?.animating, difficulty.value]);
+  }, [state, coinflip?.animating, difficulty, applyLocalMove]);
+
+  // Clock enforcement — if either side runs out of time, they lose the round.
+  useEffect(() => {
+    if (!state.clocks) return;
+    if (state.winner !== null || state.matchWinner !== null) return;
+    if (coinflip?.animating) return;
+    const iv = window.setInterval(() => {
+      const cur = stateRef.current;
+      if (!cur.clocks || cur.winner !== null || cur.matchWinner !== null) return;
+      if (!cur.active[cur.turn]) return;
+      const remain = liveRemaining(cur.clocks, cur.turn, cur.turn, Date.now());
+      if (remain <= 0) {
+        const loser = cur.turn;
+        const ns = applyForfeit(cur, loser, false);
+        if (ns) {
+          setState(ns);
+          play("pop");
+          setToast(loser === YOU ? "You ran out of time" : `${opponentName} ran out of time`);
+          window.setTimeout(() => setToast(null), 1800);
+        }
+      }
+    }, 250);
+    return () => window.clearInterval(iv);
+  }, [state.clocks, state.winner, state.matchWinner, coinflip?.animating, opponentName]);
 
   const handleMove = useCallback((move: Move) => {
     initSoundOnGesture();
     const cur = stateRef.current;
     if (cur.turn !== YOU) return;
-    const ns = applyMove(cur, YOU, move);
+    const ns = applyLocalMove(YOU, move);
     if (!ns) return;
     play(move.kind === "wall" ? "wall" : "click");
     setState(ns);
-  }, []);
+  }, [applyLocalMove]);
 
   const forfeit = useCallback(() => {
     if (state.winner !== null || state.matchWinner !== null) return;
@@ -1393,7 +1585,9 @@ function BotGame({ ident, difficulty, botName, onLeave }: {
         />
         <div className="relative">
           <QuoridorBoard state={state} you={YOU} onMove={handleMove} interactive={boardInteractive} />
-          {coinflip?.animating && <CoinflipOverlay starter={coinflip.starter} you={YOU} name={nameOf(coinflip.starter)} />}
+          {coinflip?.animating && (
+            <CoinflipOverlay starter={coinflip.starter} you={YOU} mode={2 as Mode} name={nameOf(coinflip.starter)} />
+          )}
           {roundOver && !matchOver && (
             <WinOverlay state={state} you={YOU} matchOver={false} nameOf={nameOf}
               onPrimary={nextRound} primaryLabel="Next round" onLeave={onLeave} />
@@ -1406,17 +1600,15 @@ function BotGame({ ident, difficulty, botName, onLeave }: {
       </div>
 
       <aside className="order-2 flex min-w-0 flex-col gap-3">
-        <div className="rounded-xl border border-border bg-card p-3 sm:p-4">
-          <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Bot match</p>
-          <p className="mt-1 font-mono text-xl tracking-[0.2em] text-primary sm:text-2xl">{difficulty.label}</p>
-          <p className="mt-2 text-[11px] text-muted-foreground">
-            No opponents found — playing a {difficulty.label.toLowerCase()} bot ({botName}).
-          </p>
-          {toast && <p className="toast-in mt-2 text-[10px] uppercase tracking-widest text-primary">{toast}</p>}
-        </div>
-
+        <ClocksCard state={state} you={YOU} nameOf={nameOf} />
         <ScoreCard state={state} you={YOU} nameOf={nameOf} />
         <PlayersCard state={state} you={YOU} nameOf={nameOf} />
+
+        {toast && (
+          <div className="toast-in rounded-xl border border-border bg-card p-3 text-xs uppercase tracking-widest text-primary">
+            {toast}
+          </div>
+        )}
 
         <div className="flex flex-col gap-2">
           <button onClick={forfeit}
