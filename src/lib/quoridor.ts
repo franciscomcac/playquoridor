@@ -31,6 +31,10 @@ export type GameState = {
   // Optional chess-style clocks. Host manages transitions; when present
   // every client renders live remaining time. Absent = no clock UI.
   clocks?: ClockState;
+  // Why the current round ended (set when winner !== null). Used purely for
+  // UI messaging; the engine never reads it back.
+  endReason?: "goal" | "time" | "forfeit" | "afk";
+  endLoser?: PlayerId;
 };
 
 export const BOARD = 9;
@@ -83,6 +87,7 @@ export function newRound(state: GameState, starter: PlayerId): GameState {
     active,
     wallsLeft: state.wallsLeft.map((_, i) => (active[i] ? state.totalWalls : 0)),
     walls: [], lastWall: null, turn: s, winner: null,
+    endReason: undefined, endLoser: undefined,
   };
 }
 
