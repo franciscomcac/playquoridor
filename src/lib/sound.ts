@@ -63,7 +63,7 @@ function beep(opts: { freq: number; dur: number; type?: OscillatorType; vol?: nu
   osc.connect(g); g.connect(master);
   osc.start(t0); osc.stop(t0 + opts.dur + 0.02);
 }
-function noiseBurst(dur: number, vol = 0.3) {
+function noiseBurst(dur: number, vol = 0.3, delay = 0) {
   const c = ensureCtx();
   if (!c || muted || !master) return;
   const buffer = c.createBuffer(1, Math.floor(c.sampleRate * dur), c.sampleRate);
@@ -73,8 +73,15 @@ function noiseBurst(dur: number, vol = 0.3) {
   const g = c.createGain(); g.gain.value = vol;
   const filter = c.createBiquadFilter(); filter.type = "lowpass"; filter.frequency.value = 1400;
   src.connect(filter).connect(g).connect(master);
-  src.start();
+  src.start(c.currentTime + delay);
 }
+
+// Per-sfx rate limits (ms). Prevents rapid double-clicks from stacking voices.
+const MIN_GAP_MS: Partial<Record<SfxName, number>> = {
+  pop: 60, wall: 60, click: 30, denied: 80, tick: 40,
+  lowTime: 800, afkWarn: 400,
+};
+const lastPlayed: Partial<Record<SfxName, number>> = {};
 export function play(name: SfxName) {
   ensureCtx();
   if (!ctx || muted) return;
