@@ -538,3 +538,107 @@ function PlayerRow({
     </div>
   );
 }
+
+function CoinflipOverlay({ starter, you }: { starter: 0 | 1; you: 0 | 1 }) {
+  const youStart = starter === you;
+  return (
+    <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-background/70 backdrop-blur-sm">
+      <div
+        className="coin-spin coin-hue grid h-28 w-28 place-items-center rounded-full text-3xl font-bold text-white shadow-2xl"
+        style={{
+          background:
+            "conic-gradient(from 0deg, oklch(0.7 0.2 30), oklch(0.75 0.2 90), oklch(0.7 0.2 150), oklch(0.7 0.2 250), oklch(0.7 0.2 320), oklch(0.7 0.2 30))",
+        }}
+      >
+        <span style={{ textShadow: "0 2px 6px rgba(0,0,0,0.4)" }}>?</span>
+      </div>
+      <p className="mt-4 text-sm uppercase tracking-[0.25em] text-foreground">
+        Coin flip…
+      </p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        {youStart ? "You'll move first" : "Opponent moves first"}
+      </p>
+    </div>
+  );
+}
+
+function WinOverlay({
+  youWon,
+  onRestart,
+  onLeave,
+}: {
+  youWon: boolean;
+  onRestart: () => void;
+  onLeave: () => void;
+}) {
+  const colors = [
+    "oklch(0.7 0.2 30)",
+    "oklch(0.78 0.2 90)",
+    "oklch(0.7 0.2 150)",
+    "oklch(0.7 0.2 220)",
+    "oklch(0.7 0.2 320)",
+  ];
+  const pieces = Array.from({ length: youWon ? 60 : 0 }, (_, i) => i);
+  return (
+    <div className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden rounded-lg bg-background/70 backdrop-blur-sm">
+      {pieces.map((i) => {
+        const left = Math.random() * 100;
+        const dx = (Math.random() - 0.5) * 40;
+        const delay = Math.random() * 0.6;
+        const dur = 1.6 + Math.random() * 1.4;
+        const size = 6 + Math.random() * 8;
+        const color = colors[i % colors.length];
+        return (
+          <span
+            key={i}
+            className="confetti-piece absolute top-0 block rounded-sm"
+            style={{
+              left: `${left}%`,
+              width: size,
+              height: size * 1.6,
+              background: color,
+              animationDelay: `${delay}s`,
+              animationDuration: `${dur}s`,
+              // @ts-expect-error CSS custom property
+              "--dx": `${dx}vw`,
+            }}
+          />
+        );
+      })}
+      <div
+        className={
+          (youWon ? "win-pop" : "lose-fade") +
+          " relative flex flex-col items-center gap-4 rounded-2xl border border-border bg-card px-8 py-7 shadow-2xl"
+        }
+      >
+        <p
+          className="text-4xl"
+          style={{ fontFamily: "var(--font-display)" }}
+        >
+          {youWon ? "Victory!" : "Good game"}
+        </p>
+        <p className="text-sm text-muted-foreground">
+          {youWon
+            ? "You reached the other side first."
+            : "Your opponent made it across."}
+        </p>
+        <div className="mt-2 flex gap-2">
+          <button
+            type="button"
+            onClick={onRestart}
+            className="rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-foreground transition-transform hover:-translate-y-0.5"
+          >
+            Play again
+          </button>
+          <button
+            type="button"
+            onClick={onLeave}
+            className="rounded-lg border border-border bg-background px-5 py-2 text-sm font-medium hover:bg-secondary"
+          >
+            Leave
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
