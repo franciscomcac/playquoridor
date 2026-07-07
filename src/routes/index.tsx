@@ -139,7 +139,7 @@ function Home() {
             <NamePrompt onSubmit={onSetName} />
           </div>
         ) : (
-          <div className="flex flex-1 items-center justify-center py-4 sm:py-6">
+          <div key={view.name} className="view-fade flex flex-1 items-center justify-center py-4 sm:py-6">
             {view.name === "menu" && (
               <Menu ident={ident} onChoose={setView} onEditName={() => setIdent(null)} />
             )}
