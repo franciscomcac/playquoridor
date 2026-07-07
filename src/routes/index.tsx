@@ -956,6 +956,7 @@ function GameScreen({
         </div>
 
         <ScoreCard state={state} you={you} nameOf={nameOf} />
+        <ClocksCard state={state} you={you} nameOf={nameOf} />
         <PlayersCard state={state} you={you} nameOf={nameOf} />
         <EventLog entries={log} />
 
