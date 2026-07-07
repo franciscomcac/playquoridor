@@ -264,8 +264,26 @@ function GameScreen({
   const stateRef = useRef(state);
   stateRef.current = state;
 
+  // Coinflip: null = not run yet, otherwise the chosen starter.
+  const [coinflip, setCoinflip] = useState<{
+    starter: 0 | 1;
+    animating: boolean;
+  } | null>(null);
+  const coinflipRef = useRef(coinflip);
+  coinflipRef.current = coinflip;
+
   const roomRef = useRef<Room | null>(null);
   const you: 0 | 1 = isHost ? 0 : 1;
+
+  const startCoinflip = useCallback(
+    (starter: 0 | 1) => {
+      setCoinflip({ starter, animating: true });
+      window.setTimeout(() => {
+        setCoinflip((cf) => (cf ? { ...cf, animating: false } : cf));
+      }, 2000);
+    },
+    [],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -279,7 +297,12 @@ function GameScreen({
         if (cancelled) return;
         setStatus("connected");
         if (isHost) {
-          roomRef.current?.send({ type: "state", payload: stateRef.current });
+          const starter: 0 | 1 = Math.random() < 0.5 ? 0 : 1;
+          const ns: GameState = { ...stateRef.current, turn: starter };
+          setState(ns);
+          roomRef.current?.send({ type: "state", payload: ns });
+          roomRef.current?.send({ type: "coinflip", payload: { starter } });
+          startCoinflip(starter);
         }
       },
       onDisconnect: () => {
@@ -298,9 +321,17 @@ function GameScreen({
           }
         } else if (msg.type === "restart") {
           const p = msg.payload as { totalWalls: number };
-          const ns = initialState(p.totalWalls);
-          setState(ns);
-          if (isHost) roomRef.current?.send({ type: "state", payload: ns });
+          if (isHost) {
+            const starter: 0 | 1 = Math.random() < 0.5 ? 0 : 1;
+            const ns: GameState = { ...initialState(p.totalWalls), turn: starter };
+            setState(ns);
+            roomRef.current?.send({ type: "state", payload: ns });
+            roomRef.current?.send({ type: "coinflip", payload: { starter } });
+            startCoinflip(starter);
+          }
+        } else if (msg.type === "coinflip") {
+          const p = msg.payload as { starter: 0 | 1 };
+          startCoinflip(p.starter);
         }
       },
       onError: (err: Error) => {
@@ -360,14 +391,17 @@ function GameScreen({
   );
 
   const restart = useCallback(() => {
-    const ns = initialState(state.totalWalls);
     if (isHost) {
+      const starter: 0 | 1 = Math.random() < 0.5 ? 0 : 1;
+      const ns: GameState = { ...initialState(state.totalWalls), turn: starter };
       setState(ns);
       roomRef.current?.send({ type: "state", payload: ns });
+      roomRef.current?.send({ type: "coinflip", payload: { starter } });
+      startCoinflip(starter);
     } else {
       roomRef.current?.send({ type: "restart", payload: { totalWalls: state.totalWalls } });
     }
-  }, [isHost, state.totalWalls]);
+  }, [isHost, state.totalWalls, startCoinflip]);
 
   const copyCode = () => {
     navigator.clipboard?.writeText(code).catch(() => {});
@@ -381,21 +415,28 @@ function GameScreen({
     if (status === "waiting") return "Waiting for your opponent to join…";
     if (status === "disconnected") return "Opponent disconnected.";
     if (status === "error") return errorMsg ?? "Something went wrong.";
-    if (state.winner !== null) {
-      return state.winner === you ? "You won! 🎉" : "Your opponent won.";
-    }
+    if (coinflip?.animating) return "Flipping the coin…";
     return null;
-  }, [status, errorMsg, state.winner, you]);
+  }, [status, errorMsg, coinflip]);
+
+  const gameOver = state.winner !== null;
+  const youWon = gameOver && state.winner === you;
+  const boardInteractive =
+    status === "connected" && state.winner === null && !coinflip?.animating;
 
   return (
     <div className="grid w-full max-w-5xl gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
-      <div className="order-2 lg:order-1">
+      <div className="relative order-2 lg:order-1">
         <QuoridorBoard
           state={state}
           you={you}
           onMove={handleMove}
-          interactive={status === "connected" && state.winner === null}
+          interactive={boardInteractive}
         />
+        {coinflip?.animating && <CoinflipOverlay starter={coinflip.starter} you={you} />}
+        {gameOver && (
+          <WinOverlay youWon={youWon} onRestart={restart} onLeave={onLeave} />
+        )}
       </div>
       <aside className="order-1 flex flex-col gap-4 lg:order-2">
         <div className="rounded-xl border border-border bg-card p-4">
@@ -450,7 +491,7 @@ function GameScreen({
           <button
             type="button"
             onClick={restart}
-            disabled={status !== "connected"}
+            disabled={status !== "connected" || coinflip?.animating}
             className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary disabled:opacity-50"
           >
             New game
