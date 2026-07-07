@@ -122,15 +122,15 @@ function Home() {
 
   return (
     <main className="min-h-screen" onPointerDown={() => initSoundOnGesture()}>
-      <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-4 py-6 sm:px-6 sm:py-10">
+      <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-3 py-4 sm:px-6 sm:py-10">
         <Header onOpenSettings={() => setSettingsOpen(true)} ident={ident} />
 
         {!ident ? (
-          <div className="flex flex-1 items-center justify-center py-6">
+          <div className="flex flex-1 items-center justify-center py-4 sm:py-6">
             <NamePrompt onSubmit={onSetName} />
           </div>
         ) : (
-          <div className="flex flex-1 items-center justify-center py-6">
+          <div className="flex flex-1 items-center justify-center py-4 sm:py-6">
             {view.name === "menu" && (
               <Menu ident={ident} onChoose={setView} onEditName={() => setIdent(null)} />
             )}
@@ -185,30 +185,31 @@ function Home() {
 
 function Header({ ident, onOpenSettings }: { ident: Identity | null; onOpenSettings: () => void }) {
   return (
-    <header className="flex items-center justify-between gap-3">
-      <div className="flex items-center gap-3">
+    <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         <img
           src="/favicon.png"
           alt="Play Quoridor free in browser — place walls to block opponent"
           width={40}
           height={40}
-          className="h-10 w-10 rounded-md"
+          className="h-9 w-9 shrink-0 rounded-md sm:h-10 sm:w-10"
           style={{ boxShadow: "0 6px 14px -6px oklch(0 0 0 / 0.6)" }}
         />
-        <div>
-          <p className="text-xl font-semibold leading-none">playquoridor.online</p>
-          <p className="mt-1 text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+        <div className="min-w-0">
+          <p className="truncate text-base font-semibold leading-none sm:text-xl">playquoridor.online</p>
+          <p className="mt-1 hidden text-[10px] uppercase tracking-[0.25em] text-muted-foreground sm:block">
             Peer to peer · 2 or 4 players
           </p>
         </div>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
         {ident && <WinsBadge playerId={ident.id} />}
-        <Link to="/stats" className="rounded-md border border-border bg-secondary/40 px-3 py-1.5 text-[10px] uppercase tracking-widest hover:bg-secondary">
+        <Link to="/stats" className="rounded-md border border-border bg-secondary/40 px-2.5 py-1.5 text-[10px] uppercase tracking-widest hover:bg-secondary sm:px-3">
           Stats
         </Link>
-        <button onClick={onOpenSettings} className="rounded-md border border-border bg-secondary/40 px-3 py-1.5 text-[10px] uppercase tracking-widest hover:bg-secondary">
-          Settings
+        <button onClick={onOpenSettings} aria-label="Settings" className="rounded-md border border-border bg-secondary/40 px-2.5 py-1.5 text-[10px] uppercase tracking-widest hover:bg-secondary sm:px-3">
+          <span className="hidden sm:inline">Settings</span>
+          <span className="sm:hidden" aria-hidden>⚙</span>
         </button>
       </div>
     </header>
@@ -239,7 +240,7 @@ function SeoContent() {
   return (
     <section
       aria-labelledby="seo-heading"
-      className="mx-auto mt-32 max-w-2xl space-y-3 border-t border-border/40 pt-8 text-xs leading-relaxed text-muted-foreground/80"
+      className="mx-auto mt-16 max-w-2xl space-y-3 border-t border-border/40 pt-8 text-xs leading-relaxed text-muted-foreground/80 sm:mt-32"
     >
       <h1 id="seo-heading" className="text-[10px] font-medium uppercase tracking-[0.25em] text-muted-foreground">
         Play Quoridor Online — Free Wall Blocking Strategy Game
@@ -829,8 +830,8 @@ function GameScreen({
   const boardInteractive = status === "connected" && state.winner === null && !coinflip?.animating;
 
   return (
-    <div className="grid w-full max-w-6xl gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="order-2 flex min-w-0 flex-col gap-3 lg:order-1">
+    <div className="grid w-full max-w-6xl gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="order-1 flex min-w-0 flex-col gap-3">
         <TurnBar state={state} you={you} status={status} presence={presence} coinAnimating={!!coinflip?.animating} nameOf={nameOf} />
         {afk && state.winner === null && state.matchWinner === null && (
           <AfkBanner slot={afk.slot} deadline={afk.deadline} name={nameOf(afk.slot)} />
@@ -856,12 +857,12 @@ function GameScreen({
         </div>
       </div>
 
-      <aside className="order-1 flex flex-col gap-3 lg:order-2">
-        <div className="rounded-xl border border-border bg-card p-4">
+      <aside className="order-2 flex min-w-0 flex-col gap-3">
+        <div className="rounded-xl border border-border bg-card p-3 sm:p-4">
           <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Room code</p>
           <div className="mt-1 flex items-center justify-between gap-2">
-            <p className="font-mono text-2xl tracking-[0.3em] text-primary">{code}</p>
-            <button onClick={copyCode} className="rounded-md border border-border px-2 py-1 text-[10px] uppercase tracking-widest text-muted-foreground hover:bg-secondary">Copy</button>
+            <p className="font-mono text-xl tracking-[0.3em] text-primary sm:text-2xl">{code}</p>
+            <button onClick={copyCode} className="shrink-0 rounded-md border border-border px-2 py-1 text-[10px] uppercase tracking-widest text-muted-foreground hover:bg-secondary">Copy</button>
           </div>
           <p className="mt-2 text-[11px] text-muted-foreground">
             {isHost ? "Share this code." : "Connected to host."} · {presence.count}/{presence.expected} in
@@ -1120,7 +1121,7 @@ function WinOverlay({ state, you, matchOver, onPrimary, primaryLabel, onLeave, n
             } as React.CSSProperties} />
         );
       })}
-      <div className={(youWon ? "win-pop" : "lose-fade") + " relative flex flex-col items-center gap-3 rounded-2xl border border-border bg-card px-8 py-7 text-center shadow-2xl"}>
+      <div className={(youWon ? "win-pop" : "lose-fade") + " relative mx-4 flex flex-col items-center gap-3 rounded-2xl border border-border bg-card px-6 py-6 text-center shadow-2xl sm:mx-0 sm:px-8 sm:py-7"}>
         <span className="grid h-14 w-14 place-items-center rounded-full text-xl font-semibold"
           style={{ background: winnerColor, color: "oklch(0.15 0.02 55)", boxShadow: `0 0 26px color-mix(in oklab, ${winnerColor} 60%, transparent)` }}>
           {winner + 1}
@@ -1201,7 +1202,7 @@ function EndScreen({ state, you, onPrimary, onLeave, nameOf }: {
           </table>
         </div>
 
-        <div className="mt-3 flex gap-2">
+        <div className="mt-3 flex flex-wrap justify-center gap-2">
           <button onClick={onPrimary} className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5">
             New match
           </button>
