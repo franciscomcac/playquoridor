@@ -1699,6 +1699,10 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
     if (cur.clocks) {
       ns.clocks = endTurn(cur.clocks, mover, Date.now());
     }
+    if (ns.winner !== null) {
+      ns.endReason = "goal";
+      ns.endLoser = (mover === YOU ? BOT : YOU);
+    }
     return ns;
   }, []);
 
@@ -1712,7 +1716,10 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
     const move = pickBotMove(state, BOT, difficulty);
     if (!move) {
       const ns = applyForfeit(state, BOT, false);
-      if (ns) { setState(ns); play("pop"); }
+      if (ns) {
+        if (ns.winner !== null) { ns.endReason = "forfeit"; ns.endLoser = BOT; }
+        setState(ns); play("pop");
+      }
       return;
     }
     let delay = humanThinkTimeMs(state, move, difficulty);
@@ -1747,6 +1754,7 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
         const loser = cur.turn;
         const ns = applyForfeit(cur, loser, false);
         if (ns) {
+          if (ns.winner !== null) { ns.endReason = "time"; ns.endLoser = loser; }
           setState(ns);
           play("pop");
           setToast(loser === YOU ? "You ran out of time" : `${opponentName} ran out of time`);
@@ -1772,7 +1780,10 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
     if (!state.active[YOU]) return;
     if (!window.confirm("Forfeit this round?")) return;
     const ns = applyForfeit(state, YOU, false);
-    if (ns) { setState(ns); play("pop"); setToast("You forfeited the round"); window.setTimeout(() => setToast(null), 1400); }
+    if (ns) {
+      if (ns.winner !== null) { ns.endReason = "forfeit"; ns.endLoser = YOU; }
+      setState(ns); play("pop"); setToast("You forfeited the round"); window.setTimeout(() => setToast(null), 1400);
+    }
   }, [state]);
 
   const nextRound = useCallback(() => {
