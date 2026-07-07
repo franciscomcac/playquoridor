@@ -53,15 +53,27 @@ export function pickBotMove(state: GameState, bot: PlayerId, difficulty: number)
   const scored = legal
     .map((to) => ({ to, d: bfsDist(to, myGoal, state.walls) }))
     .sort((a, b) => a.d - b.d);
-  const bestPawn: Move = { kind: "pawn", to: scored[0].to };
-  const randomPawn: Move = { kind: "pawn", to: legal[Math.floor(Math.random() * legal.length)] };
-
-  // Add pure randomness for lower difficulty tiers.
-  const blunderChance = Math.max(0, 0.55 - difficulty * 0.55); // easy ~0.43, hard ~0.05
-  if (Math.random() < blunderChance) return randomPawn;
+  const bestD = scored[0].d;
+  const bestGroup = scored.filter((s) => s.d === bestD);
+  const bestPawn: Move = {
+    kind: "pawn",
+    to: bestGroup[Math.floor(Math.random() * bestGroup.length)].to,
+  };
+  // A "sound" pawn choice: always the best-by-distance move, but sometimes
+  // (on easier difficulties) a move that costs only one extra step. Never
+  // a backwards or clearly losing move.
+  const nearBest = scored.filter((s) => s.d <= bestD + 1);
+  const subOptChance = Math.max(0, 0.28 - difficulty * 0.24);
+  const pickPawn = (): Move => {
+    if (nearBest.length > bestGroup.length && Math.random() < subOptChance) {
+      const alt = nearBest[Math.floor(Math.random() * nearBest.length)];
+      return { kind: "pawn", to: alt.to };
+    }
+    return bestPawn;
+  };
 
   // Decide whether to consider a wall this turn.
-  const wallChance = 0.1 + difficulty * 0.55; // easy ~0.22, hard ~0.65
+  const wallChance = 0.15 + difficulty * 0.5; // easy ~0.26, hard ~0.65
   if (state.wallsLeft[bot] > 0 && Math.random() < wallChance) {
     const opps: PlayerId[] = [];
     for (let i = 0; i < state.mode; i++) {
@@ -80,6 +92,9 @@ export function pickBotMove(state: GameState, bot: PlayerId, difficulty: number)
             if (!canPlaceWall(state, bot, w)) continue;
             const walls2: Wall[] = [...state.walls, { ...w, by: bot }];
             const myD2 = bfsDist(state.pawns[bot], myGoal, walls2);
+            // Never build a wall that lengthens our own path — that always
+            // looks like a blunder to an observer.
+            if (myD2 > myDNow) continue;
             let gain = -(myD2 - myDNow);
             for (let i = 0; i < opps.length; i++) {
               const oppD2 = bfsDist(state.pawns[opps[i]], goals[opps[i]], walls2);
@@ -89,14 +104,16 @@ export function pickBotMove(state: GameState, bot: PlayerId, difficulty: number)
           }
         }
       }
-      // Higher difficulty demands the wall be more clearly worth it.
-      const threshold = difficulty < 0.4 ? 0 : difficulty < 0.75 ? 1 : 2;
+      // Only spend a wall when it clearly slows the opponent more than the
+      // (already zero-or-better) cost to us. Easier players demand a
+      // stronger gain because they lean on walking.
+      const threshold = difficulty < 0.4 ? 2 : 1;
       if (bestWall && bestGain >= threshold) {
         return { kind: "wall", wall: bestWall };
       }
     }
   }
-  return bestPawn;
+  return pickPawn();
 }
 
 // How long a real person would look at the board before playing `move`.
@@ -106,21 +123,25 @@ export function pickBotMove(state: GameState, bot: PlayerId, difficulty: number)
 export function humanThinkTimeMs(state: GameState, move: Move, difficulty: number): number {
   let base: number;
   if (move.kind === "wall") {
-    base = 1400 + Math.random() * 1800;                   // walls: 1.4–3.2s
+    base = 1800 + Math.random() * 1900;                   // walls: 1.8–3.7s
   } else {
-    base = 550 + Math.random() * 950;                      // pawns: 0.55–1.5s
+    base = 900 + Math.random() * 1200;                     // pawns: 0.9–2.1s
   }
   // Complex boards take longer to read.
   const clutter = Math.min(1, state.walls.length / 12);    // 0..1
   base += clutter * 700;
   // Higher-difficulty "player" looks a touch longer on strategic turns.
   base += difficulty * 250;
-  // Warm-up: first two plies of a round are quicker (fresh position).
-  if (state.walls.length < 2 && move.kind === "pawn") base *= 0.55;
+  // First couple of moves in a round: a real player sizes up the board
+  // before committing, so we linger a bit rather than snap-moving.
+  if (state.walls.length < 3) base += 900 + Math.random() * 900;
   // Rare big think.
   if (Math.random() < 0.05) base += 1500 + Math.random() * 2200;
-  // Rare snap decision.
-  if (Math.random() < 0.08) base = Math.min(base, 350 + Math.random() * 250);
+  // Occasional quick reply (only after the opening — a real player never
+  // slams out an instant move on move 1).
+  if (state.walls.length >= 3 && Math.random() < 0.06) {
+    base = Math.min(base, 650 + Math.random() * 300);
+  }
   // Cap so the game never stalls.
-  return Math.max(300, Math.min(base, 5500));
+  return Math.max(750, Math.min(base, 6000));
 }
