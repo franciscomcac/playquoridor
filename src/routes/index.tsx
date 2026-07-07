@@ -1305,8 +1305,8 @@ function ChessClock({ state, playerId, nameOf, compact = false }: {
       style={{
         borderColor: active ? color : "var(--border)",
         background: active ? `color-mix(in oklab, ${color} 12%, var(--card))` : "var(--card)",
-        color,
-      }}>
+        ["--pulse-color" as string]: color,
+      } as React.CSSProperties}>
       <div className="flex items-center justify-between gap-2">
         <span className="truncate text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
           {label}
