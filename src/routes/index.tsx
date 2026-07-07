@@ -2,6 +2,17 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PLAYER_COLORS, QuoridorBoard } from "@/components/QuoridorBoard";
+
+// Warm palette for celebratory confetti — browns, creams, blues, yellows
+// pulled from the app's existing tokens (kept in-sync with styles.css).
+const WARM_CONFETTI = [
+  "oklch(0.82 0.16 85)",   // warm gold
+  "oklch(0.72 0.09 75)",   // cream tan
+  "oklch(0.55 0.09 55)",   // deep brown
+  "oklch(0.62 0.14 250)",  // slate blue
+  "oklch(0.88 0.06 80)",   // pale cream
+  "oklch(0.66 0.14 70)",   // amber
+];
 import {
   applyForfeit, applyMove, defaultWallsFor, initialState, newRound, winsNeeded,
   type GameState, type Mode, type Move, type PlayerId,
