@@ -2,36 +2,50 @@ import { useRef, useState } from "react";
 import {
   BOARD,
   canPlaceWall,
+  goalsFor,
   legalPawnMoves,
   type GameState,
   type Move,
   type Orient,
+  type PlayerId,
   type Wall,
+  type WallSpec,
 } from "@/lib/quoridor";
 
 type Props = {
   state: GameState;
-  you: 0 | 1;
+  you: PlayerId;
   onMove: (m: Move) => void;
   interactive: boolean;
 };
 
+export const PLAYER_COLORS = [
+  "oklch(0.82 0.16 85)",   // gold
+  "oklch(0.62 0.14 250)",  // slate blue
+  "oklch(0.6 0.2 25)",     // crimson
+  "oklch(0.66 0.14 155)",  // jade
+];
+export const PLAYER_NAMES = ["Gold", "Slate", "Crimson", "Jade"];
+
 type HoverTarget =
   | { kind: "cell"; r: number; c: number }
-  | { kind: "wall"; wall: Wall };
+  | { kind: "wall"; wall: WallSpec };
 
-// How close (in cell-widths) to a gridline before we snap to a wall.
-// Small radius = most of a cell is a "safe" pawn-move zone, only a thin
-// strip right on the gridline registers as a wall — snappier, fewer misclicks.
-const WALL_SNAP_RADIUS = 0.18;
+const WALL_SNAP_RADIUS = 0.2;
 
 export function QuoridorBoard({ state, you, onMove, interactive }: Props) {
   const [hover, setHover] = useState<HoverTarget | null>(null);
   const boardRef = useRef<HTMLDivElement>(null);
 
-  const isYourTurn = interactive && state.turn === you && state.winner === null;
+  const isYourTurn =
+    interactive &&
+    state.turn === you &&
+    state.winner === null &&
+    state.active[you];
   const legal = isYourTurn ? legalPawnMoves(state, you) : [];
   const legalSet = new Set(legal.map(([r, c]) => `${r},${c}`));
+  const goals = goalsFor(state.mode);
+  const yourColor = PLAYER_COLORS[you];
 
   function targetFor(e: { clientX: number; clientY: number }): HoverTarget | null {
     const el = boardRef.current;
@@ -40,30 +54,21 @@ export function QuoridorBoard({ state, you, onMove, interactive }: Props) {
     const x = ((e.clientX - rect.left) / rect.width) * BOARD;
     const y = ((e.clientY - rect.top) / rect.height) * BOARD;
     if (x < 0 || x > BOARD || y < 0 || y > BOARD) return null;
-
-    // Nearest interior gridline (1..8) in each axis
     const gy = Math.min(BOARD - 1, Math.max(1, Math.round(y)));
     const gx = Math.min(BOARD - 1, Math.max(1, Math.round(x)));
     const dy = Math.abs(y - gy);
     const dx = Math.abs(x - gx);
-
     if (Math.min(dx, dy) < WALL_SNAP_RADIUS) {
-      let o: Orient;
-      let r: number;
-      let c: number;
       if (dy <= dx) {
-        // Cursor is close to a horizontal gridline → horizontal wall
-        o = "h";
-        r = gy - 1;
-        c = Math.min(BOARD - 2, Math.max(0, Math.round(x) - 1));
+        const r = gy - 1;
+        const c = Math.min(BOARD - 2, Math.max(0, Math.round(x) - 1));
+        return { kind: "wall", wall: { r, c, o: "h" as Orient } };
       } else {
-        o = "v";
-        c = gx - 1;
-        r = Math.min(BOARD - 2, Math.max(0, Math.round(y) - 1));
+        const c = gx - 1;
+        const r = Math.min(BOARD - 2, Math.max(0, Math.round(y) - 1));
+        return { kind: "wall", wall: { r, c, o: "v" as Orient } };
       }
-      return { kind: "wall", wall: { r, c, o } };
     }
-
     const c = Math.min(BOARD - 1, Math.max(0, Math.floor(x)));
     const r = Math.min(BOARD - 1, Math.max(0, Math.floor(y)));
     return { kind: "cell", r, c };
@@ -75,7 +80,6 @@ export function QuoridorBoard({ state, you, onMove, interactive }: Props) {
       return;
     }
     const t = targetFor(e);
-    // Avoid noisy state updates
     setHover((prev) => {
       if (!t && !prev) return prev;
       if (!t || !prev) return t;
@@ -109,52 +113,57 @@ export function QuoridorBoard({ state, you, onMove, interactive }: Props) {
     hover && hover.kind === "wall" && state.wallsLeft[you] > 0 && canPlaceWall(state, you, hover.wall)
       ? hover.wall
       : null;
-  const invalidGhost =
-    hover && hover.kind === "wall" && !ghostWall ? hover.wall : null;
+  const invalidGhost = hover && hover.kind === "wall" && !ghostWall ? hover.wall : null;
   const hoverCell = hover && hover.kind === "cell" ? hover : null;
   const cursor =
     ghostWall || (hoverCell && legalSet.has(`${hoverCell.r},${hoverCell.c}`))
       ? "pointer"
       : "default";
 
-  // Render 9x9 cells
+  // Tint each player's goal edge with their color.
+  const goalTint: Record<string, string> = {};
+  for (let i = 0; i < state.mode; i++) {
+    const g = goals[i];
+    if (g.kind === "row") {
+      for (let c = 0; c < BOARD; c++) goalTint[`${g.value},${c}`] = PLAYER_COLORS[i];
+    } else {
+      for (let r = 0; r < BOARD; r++) goalTint[`${r},${g.value}`] = PLAYER_COLORS[i];
+    }
+  }
+
   const cells: React.ReactNode[] = [];
   for (let r = 0; r < BOARD; r++) {
     for (let c = 0; c < BOARD; c++) {
-      const p1 = state.pawns[0][0] === r && state.pawns[0][1] === c;
-      const p2 = state.pawns[1][0] === r && state.pawns[1][1] === c;
       const isLegal = legalSet.has(`${r},${c}`);
-      const isGoal1 = r === 0;
-      const isGoal2 = r === BOARD - 1;
-      const bg = isGoal1
-        ? "var(--goal-1)"
-        : isGoal2
-          ? "var(--goal-2)"
-          : (r + c) % 2 === 0
-            ? "var(--board-cell)"
-            : "var(--board-cell-alt)";
       const isHovered = hoverCell && hoverCell.r === r && hoverCell.c === c;
+      const alt = (r + c) % 2 === 0;
+      const tint = goalTint[`${r},${c}`];
       cells.push(
         <div
           key={`${r}-${c}`}
           style={{
             gridRow: r + 1,
             gridColumn: c + 1,
-            background: bg,
-            boxShadow: "inset 0 0 0 1px var(--board-line)",
+            background: alt ? "var(--board-cell)" : "var(--board-cell-alt)",
+            boxShadow:
+              `inset 0 0 0 1px var(--board-line)` +
+              (tint ? `, inset 0 0 0 3px color-mix(in oklab, ${tint} 22%, transparent)` : ""),
           }}
-          className="relative flex items-center justify-center"
+          className="relative"
         >
-          {p1 && <Pawn player={0} you={you} />}
-          {p2 && <Pawn player={1} you={you} />}
-          {isLegal && !p1 && !p2 && (
+          {isLegal && (
             <span
-              className="pointer-events-none block rounded-full transition-all"
+              className={
+                "pointer-events-none absolute left-1/2 top-1/2 block rounded-full " +
+                (isHovered ? "move-target-hover" : "")
+              }
               style={{
-                width: isHovered ? "44%" : "18%",
-                height: isHovered ? "44%" : "18%",
-                background: you === 0 ? "var(--pawn-1)" : "var(--pawn-2)",
-                opacity: isHovered ? 0.55 : 0.32,
+                width: isHovered ? "52%" : "24%",
+                height: isHovered ? "52%" : "24%",
+                background: yourColor,
+                opacity: isHovered ? 0.75 : 0.4,
+                transform: "translate(-50%,-50%)",
+                transition: "width 120ms ease-out, height 120ms ease-out, opacity 120ms ease-out",
               }}
             />
           )}
@@ -164,72 +173,106 @@ export function QuoridorBoard({ state, you, onMove, interactive }: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between text-xs uppercase tracking-[0.15em] text-muted-foreground">
-        <span>
-          {isYourTurn
-            ? "Your move"
-            : state.winner !== null
-              ? "Game over"
-              : "Opponent's turn"}
-        </span>
-        <span>Walls left: {state.wallsLeft[you]}</span>
-      </div>
+    <div className="wood-frame aspect-square w-full">
       <div
-        className="aspect-square w-full rounded-lg p-2 shadow-inner"
-        style={{ background: "var(--board-bg)" }}
+        ref={boardRef}
+        onPointerMove={handlePointerMove}
+        onPointerLeave={() => setHover(null)}
+        onClick={handleClick}
+        className="relative h-full w-full select-none overflow-hidden rounded-md"
+        style={{ cursor, background: "var(--board-bg)" }}
       >
         <div
-          ref={boardRef}
-          onPointerMove={handlePointerMove}
-          onPointerLeave={() => setHover(null)}
-          onClick={handleClick}
-          className="relative h-full w-full select-none"
-          style={{ cursor }}
+          className="grid h-full w-full"
+          style={{
+            gridTemplateColumns: `repeat(${BOARD}, 1fr)`,
+            gridTemplateRows: `repeat(${BOARD}, 1fr)`,
+          }}
         >
-          <div
-            className="grid h-full w-full overflow-hidden rounded-[4px]"
-            style={{
-              gridTemplateColumns: `repeat(${BOARD}, 1fr)`,
-              gridTemplateRows: `repeat(${BOARD}, 1fr)`,
-            }}
-          >
-            {cells}
-          </div>
-          {state.walls.map((w) => (
-            <WallSpan key={`w-${w.o}-${w.r}-${w.c}`} wall={w} tone="solid" />
-          ))}
-          {ghostWall && <WallSpan wall={ghostWall} tone="ghost" />}
-          {invalidGhost && <WallSpan wall={invalidGhost} tone="invalid" />}
+          {cells}
         </div>
+
+        {/* Pawns — absolute so they glide between cells */}
+        {state.pawns.map((p, i) =>
+          state.active[i] ? (
+            <div
+              key={`pawn-${i}`}
+              className="pawn-glide pointer-events-none absolute grid place-items-center"
+              style={{
+                left: `${(p[1] / BOARD) * 100}%`,
+                top: `${(p[0] / BOARD) * 100}%`,
+                width: `${(1 / BOARD) * 100}%`,
+                height: `${(1 / BOARD) * 100}%`,
+                zIndex: 3,
+              }}
+            >
+              <Pawn
+                player={i as PlayerId}
+                you={you}
+                active={state.turn === i && state.winner === null}
+              />
+            </div>
+          ) : null,
+        )}
+
+        {/* Placed walls */}
+        {state.walls.map((w) => (
+          <WallView
+            key={`w-${w.o}-${w.r}-${w.c}`}
+            wall={w}
+            tone="solid"
+            latest={
+              state.lastWall !== null &&
+              state.lastWall.o === w.o &&
+              state.lastWall.r === w.r &&
+              state.lastWall.c === w.c
+            }
+          />
+        ))}
+
+        {/* Hover ghost */}
+        {ghostWall && <WallView wall={{ ...ghostWall, by: you }} tone="ghost" />}
+        {invalidGhost && <WallView wall={{ ...invalidGhost, by: you }} tone="invalid" />}
       </div>
-      <p className="text-center text-[11px] text-muted-foreground">
-        Hover a square to move · hover between cells to place a wall — orientation snaps automatically
-      </p>
     </div>
   );
 }
 
-function WallSpan({ wall, tone }: { wall: Wall; tone: "solid" | "ghost" | "invalid" }) {
-  const thickness = 12; // px — chunky, clearly visible
+function WallView({
+  wall,
+  tone,
+  latest,
+}: {
+  wall: Wall;
+  tone: "solid" | "ghost" | "invalid";
+  latest?: boolean;
+}) {
+  const color = PLAYER_COLORS[wall.by ?? 0];
+  const thickness = 14;
   const bg =
     tone === "solid"
-      ? "var(--wall)"
+      ? `linear-gradient(180deg, color-mix(in oklab, ${color} 100%, white 12%), ${color} 55%, color-mix(in oklab, ${color} 70%, black 25%))`
       : tone === "ghost"
-        ? "var(--wall-ghost)"
+        ? `color-mix(in oklab, ${color} 55%, transparent)`
         : "oklch(0.55 0.2 25 / 0.35)";
-  const shadow = tone === "solid" ? "0 1px 2px rgba(0,0,0,0.25)" : "none";
+  const shadow =
+    tone === "solid"
+      ? `0 2px 4px rgba(0,0,0,0.55), 0 0 12px color-mix(in oklab, ${color} 35%, transparent)`
+      : "none";
   const common: React.CSSProperties = {
     position: "absolute",
     background: bg,
-    borderRadius: "3px",
+    borderRadius: "4px",
     boxShadow: shadow,
     pointerEvents: "none",
     zIndex: 2,
+    color, // for currentColor drop-shadow in .wall-latest
   };
+  const className = latest ? "wall-latest" : "";
   if (wall.o === "h") {
     return (
       <div
+        className={className}
         style={{
           ...common,
           top: `${((wall.r + 1) / BOARD) * 100}%`,
@@ -243,6 +286,7 @@ function WallSpan({ wall, tone }: { wall: Wall; tone: "solid" | "ghost" | "inval
   }
   return (
     <div
+      className={className}
       style={{
         ...common,
         left: `${((wall.c + 1) / BOARD) * 100}%`,
@@ -255,18 +299,32 @@ function WallSpan({ wall, tone }: { wall: Wall; tone: "solid" | "ghost" | "inval
   );
 }
 
-function Pawn({ player, you }: { player: 0 | 1; you: 0 | 1 }) {
-  const color = player === 0 ? "var(--pawn-1)" : "var(--pawn-2)";
+function Pawn({
+  player,
+  you,
+  active,
+}: {
+  player: PlayerId;
+  you: PlayerId;
+  active: boolean;
+}) {
+  const color = PLAYER_COLORS[player];
   const isYou = player === you;
   return (
     <span
-      className="block h-[68%] w-[68%] rounded-full"
+      className="grid h-[72%] w-[72%] place-items-center rounded-full text-sm font-semibold"
       style={{
-        background: color,
-        boxShadow: isYou
-          ? "0 2px 6px rgba(0,0,0,0.3), inset 0 -2px 4px rgba(0,0,0,0.25), 0 0 0 2px oklch(0.98 0.02 82)"
-          : "0 2px 6px rgba(0,0,0,0.3), inset 0 -2px 4px rgba(0,0,0,0.25)",
+        background: `radial-gradient(circle at 30% 25%, color-mix(in oklab, ${color} 60%, white 45%), ${color} 60%, color-mix(in oklab, ${color} 70%, black 35%) 100%)`,
+        boxShadow:
+          `0 5px 12px rgba(0,0,0,0.6), inset 0 -3px 5px rgba(0,0,0,0.35)` +
+          (isYou ? `, 0 0 0 2px oklch(0.98 0.02 82)` : "") +
+          (active
+            ? `, 0 0 16px color-mix(in oklab, ${color} 65%, transparent)`
+            : ""),
+        color: "oklch(0.15 0.02 55)",
       }}
-    />
+    >
+      {player + 1}
+    </span>
   );
 }
