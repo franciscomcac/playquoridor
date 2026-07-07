@@ -539,8 +539,8 @@ function GameScreen({
       const s = stateRef.current;
       if (s.matchWinner !== null || s.winner !== null) return;
       // Don't run the AFK timer while waiting for players or during the coinflip intro.
-      if (statusRef.current !== "connected") return;
-      if (coinflipRef.current?.animating) return;
+      if (status !== "connected") return;
+      if (coinflip?.animating) return;
       const turn = s.turn;
       if (!s.active[turn]) return;
       const idle = Date.now() - (lastInputRef.current[turn] ?? Date.now());
@@ -557,7 +557,7 @@ function GameScreen({
       }
     }, 1000);
     return () => window.clearInterval(iv);
-  }, [isHost, afk, hostApplyForfeit, pushLog, nameOf]);
+  }, [isHost, afk, hostApplyForfeit, pushLog, nameOf, status, coinflip]);
 
   // ---------- Moves ----------
   const handleMove = useCallback((move: Move) => {
