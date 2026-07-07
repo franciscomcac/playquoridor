@@ -1271,6 +1271,23 @@ function ChessClock({ state, playerId, nameOf, compact = false }: {
   const seconds = remaining / 1000;
   const danger = seconds <= 15;
   const warn = !danger && seconds <= 45;
+  // Audible low-time cue: one alarm on entering danger, then a tick each
+  // whole second while the clock is red and this player is on the move.
+  const dangerActive = active && danger && remaining > 0;
+  const wasDangerRef = useRef(false);
+  useEffect(() => {
+    if (dangerActive && !wasDangerRef.current) play("lowTime");
+    wasDangerRef.current = dangerActive;
+  }, [dangerActive]);
+  const lastTickSecRef = useRef<number>(-1);
+  useEffect(() => {
+    if (!dangerActive) { lastTickSecRef.current = -1; return; }
+    const sec = Math.ceil(seconds);
+    if (sec !== lastTickSecRef.current && sec > 0 && sec <= 15) {
+      lastTickSecRef.current = sec;
+      play("tick");
+    }
+  }, [dangerActive, seconds]);
   const color = PLAYER_COLORS[playerId];
   const label = nameOf(playerId);
   const cls =
