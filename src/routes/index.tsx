@@ -533,6 +533,15 @@ function GameScreen({
     lastInputRef.current = Array.from({ length: state.mode }, (_, i) => lastInputRef.current[i] ?? Date.now());
   }, [state.mode]);
 
+  // Reset idle timestamps whenever the match becomes playable, so time spent
+  // waiting in the lobby or watching the coinflip doesn't count as AFK.
+  useEffect(() => {
+    if (status !== "connected") return;
+    if (coinflip?.animating) return;
+    const now = Date.now();
+    lastInputRef.current = lastInputRef.current.map(() => now);
+  }, [status, coinflip?.animating]);
+
   useEffect(() => {
     if (!isHost) return;
     const iv = window.setInterval(() => {
