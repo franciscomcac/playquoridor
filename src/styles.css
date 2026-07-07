@@ -172,8 +172,8 @@
 
 /* Turn-change pulse for the active clock card */
 @keyframes clock-turn-pulse {
-  0%   { box-shadow: 0 0 0 0 color-mix(in oklab, currentColor 45%, transparent); }
-  100% { box-shadow: 0 0 0 10px transparent; }
+  0%   { box-shadow: 0 0 0 0 color-mix(in oklab, var(--pulse-color, oklch(0.75 0.12 75)) 55%, transparent); }
+  100% { box-shadow: 0 0 0 12px transparent; }
 }
 .clock-turn-pulse { animation: clock-turn-pulse 300ms ease-out; }
 
