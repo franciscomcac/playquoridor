@@ -702,6 +702,23 @@ function GameScreen({
 
   // ---------- Activity + AFK (host authoritative) ----------
   const lastInputRef = useRef<number[]>(Array.from({ length: initialMode }, () => Date.now()));
+
+  // ---------- Quick Match → bot fallback ----------
+  // If we hosted via Quick Match and nobody joins within 10s, drop the room
+  // and hand off to a local bot game so the player isn't left staring at a
+  // spinner. Only fires when we're still waiting for players.
+  useEffect(() => {
+    if (!quickMatch || !isHost || !onBotFallback) return;
+    const t = window.setTimeout(() => {
+      if (presenceRef.current.count >= presenceRef.current.expected) return;
+      if (stateRef.current.matchWinner !== null) return;
+      void removeOpenRoom(code);
+      roomRef.current?.close();
+      roomRef.current = null;
+      onBotFallback();
+    }, 10_000);
+    return () => window.clearTimeout(t);
+  }, [quickMatch, isHost, onBotFallback, code]);
   const markActivity = useCallback((who: PlayerId) => {
     lastInputRef.current[who] = Date.now();
     if (afk && afk.slot === who) {
