@@ -686,6 +686,40 @@ function PlayerRow({
   );
 }
 
+function ScorePill({
+  label,
+  color,
+  value,
+  highlight,
+}: {
+  label: string;
+  color: string;
+  value: number;
+  highlight: boolean;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <span
+        className="text-[10px] uppercase tracking-[0.2em]"
+        style={{ color: highlight ? color : "var(--muted-foreground)" }}
+      >
+        {label}
+      </span>
+      <span
+        className="grid h-12 w-12 place-items-center rounded-full text-xl font-semibold text-white"
+        style={{
+          background: color,
+          boxShadow: highlight
+            ? "0 0 0 3px oklch(0.55 0.12 40 / 0.35)"
+            : "0 1px 2px rgba(0,0,0,0.15)",
+        }}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
 function CoinflipOverlay({ starter, you }: { starter: 0 | 1; you: 0 | 1 }) {
   const youStart = starter === you;
   return (
