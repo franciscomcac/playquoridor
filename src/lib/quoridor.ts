@@ -180,11 +180,20 @@ export function applyMove(state: GameState, player: 0 | 1, move: Move): GameStat
     pawns[player] = move.to;
     const goal = player === 0 ? 0 : BOARD - 1;
     const winner = move.to[0] === goal ? player : null;
+    let score = state.score;
+    let matchWinner = state.matchWinner;
+    if (winner !== null) {
+      score = [...state.score] as [number, number];
+      score[winner] += 1;
+      if (score[winner] >= winsNeeded(state.totalRounds)) matchWinner = winner;
+    }
     return {
       ...state,
       pawns,
       turn: (1 - player) as 0 | 1,
       winner,
+      score,
+      matchWinner,
     };
   } else {
     if (!canPlaceWall(state, player, move.wall)) return null;
