@@ -919,7 +919,7 @@ function GameScreen({
   const handleMove = useCallback((move: Move) => {
     if (status !== "connected") return;
     initSoundOnGesture();
-    play(move.kind === "wall" ? "wall" : "click");
+    play(move.kind === "wall" ? "wall" : "pop");
     markActivity(slotRef.current);
     if (isHost) {
       const next = applyMove(stateRef.current, 0, move);
@@ -955,6 +955,7 @@ function GameScreen({
   }, [isHost, status, state, you, hostApplyForfeit, pushLog, ident.name]);
 
   const copyCode = useCallback(() => {
+    play("click");
     navigator.clipboard?.writeText(code).catch(() => {});
     setToast("Code copied"); window.setTimeout(() => setToast(null), 1400);
   }, [code]);
@@ -963,11 +964,15 @@ function GameScreen({
   const prevWinnerRef = useRef<PlayerId | null>(null);
   const prevMatchWinnerRef = useRef<PlayerId | null>(null);
   useEffect(() => {
-    if (state.winner !== null && prevWinnerRef.current === null) play("roundWin");
+    if (state.winner !== null && prevWinnerRef.current === null) {
+      const r = state.endReason;
+      if (r === "time" || r === "afk" || r === "forfeit") play("afkWarn");
+      play("roundWin");
+    }
     if (state.matchWinner !== null && prevMatchWinnerRef.current === null) play("matchWin");
     prevWinnerRef.current = state.winner;
     prevMatchWinnerRef.current = state.matchWinner;
-  }, [state.winner, state.matchWinner]);
+  }, [state.winner, state.matchWinner, state.endReason]);
 
   // ---------- Record match to Supabase (host only, once per match) ----------
   useEffect(() => {
@@ -1281,21 +1286,17 @@ function ChessClock({ state, playerId, nameOf, compact = false }: {
   const seconds = remaining / 1000;
   const danger = seconds <= 15;
   const warn = !danger && seconds <= 45;
-  // Audible low-time cue: one alarm on entering danger, then a tick each
-  // whole second while the clock is red and this player is on the move.
+  // Audible low-time cue: soft repeating pulse while the clock is red and
+  // this player is on the move. Cadence tightens as time runs out.
   const dangerActive = active && danger && remaining > 0;
-  const wasDangerRef = useRef(false);
+  const lastCueRef = useRef(0);
   useEffect(() => {
-    if (dangerActive && !wasDangerRef.current) play("lowTime");
-    wasDangerRef.current = dangerActive;
-  }, [dangerActive]);
-  const lastTickSecRef = useRef<number>(-1);
-  useEffect(() => {
-    if (!dangerActive) { lastTickSecRef.current = -1; return; }
-    const sec = Math.ceil(seconds);
-    if (sec !== lastTickSecRef.current && sec > 0 && sec <= 15) {
-      lastTickSecRef.current = sec;
-      play("tick");
+    if (!dangerActive) { lastCueRef.current = 0; return; }
+    const cadence = seconds <= 5 ? 700 : seconds <= 10 ? 1200 : 1800;
+    const now = Date.now();
+    if (now - lastCueRef.current >= cadence) {
+      lastCueRef.current = now;
+      play("lowTime");
     }
   }, [dangerActive, seconds]);
   const color = PLAYER_COLORS[playerId];
@@ -1744,11 +1745,15 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
   const prevWinnerRef = useRef<PlayerId | null>(null);
   const prevMatchWinnerRef = useRef<PlayerId | null>(null);
   useEffect(() => {
-    if (state.winner !== null && prevWinnerRef.current === null) play("roundWin");
+    if (state.winner !== null && prevWinnerRef.current === null) {
+      const r = state.endReason;
+      if (r === "time" || r === "afk" || r === "forfeit") play("afkWarn");
+      play("roundWin");
+    }
     if (state.matchWinner !== null && prevMatchWinnerRef.current === null) play("matchWin");
     prevWinnerRef.current = state.winner;
     prevMatchWinnerRef.current = state.matchWinner;
-  }, [state.winner, state.matchWinner]);
+  }, [state.winner, state.matchWinner, state.endReason]);
 
   // Helper: apply a move and roll the clock over to the next player.
   const applyLocalMove = useCallback((mover: PlayerId, move: Move): GameState | null => {
@@ -1793,7 +1798,7 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
       const ns = applyLocalMove(BOT, move);
       if (ns) {
         setState(ns);
-        play(move.kind === "wall" ? "wall" : "click");
+        play(move.kind === "wall" ? "wall" : "pop");
       }
     }, delay);
     return () => window.clearTimeout(t);
@@ -1830,7 +1835,7 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
     if (cur.turn !== YOU) return;
     const ns = applyLocalMove(YOU, move);
     if (!ns) return;
-    play(move.kind === "wall" ? "wall" : "click");
+    play(move.kind === "wall" ? "wall" : "pop");
     setState(ns);
   }, [applyLocalMove]);
 
