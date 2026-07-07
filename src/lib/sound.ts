@@ -5,7 +5,7 @@ const VOL_KEY = "quoridor.volume";
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 let muted = false;
-let volume = 0.6;
+let volume = 0.5;
 let initialized = false;
 
 function loadPrefs() {
