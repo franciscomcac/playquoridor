@@ -564,8 +564,10 @@ type EventEntry = { key: number; text: string };
 
 type AfkState = { slot: PlayerId; deadline: number } | null;
 
-const AFK_IDLE_MS = 60_000;
-const AFK_COUNTDOWN_MS = 90_000;
+// After 45s of no input we surface the AFK banner as a warning, then forfeit
+// for time after another 15s (60s total idle → auto-forfeit).
+const AFK_IDLE_MS = 45_000;
+const AFK_COUNTDOWN_MS = 15_000;
 
 function GameScreen({
   ident, code, isHost, mode: initialMode, initialWalls, initialRounds, onLeave,
@@ -643,9 +645,14 @@ function GameScreen({
     hostStartRound(initialState(mode, totalWalls, totalRounds));
   }, [hostStartRound]);
 
-  const hostApplyForfeit = useCallback((who: PlayerId, permanent = false) => {
+  const hostApplyForfeit = useCallback((
+    who: PlayerId,
+    permanent = false,
+    reason: "time" | "forfeit" | "afk" = "forfeit",
+  ) => {
     const ns = applyForfeit(stateRef.current, who, permanent);
     if (!ns) return;
+    if (ns.winner !== null) { ns.endReason = reason; ns.endLoser = who; }
     setState(ns);
     roomRef.current?.send({ type: "state", payload: ns });
     play("pop");
@@ -708,16 +715,20 @@ function GameScreen({
             if (stateRef.current.clocks) {
               next.clocks = endTurn(stateRef.current.clocks, p.from, Date.now());
             }
+            if (next.winner !== null) {
+              next.endReason = "goal";
+              next.endLoser = (next.winner === 0 ? 1 : 0) as PlayerId;
+            }
             setState(next);
             roomRef.current?.send({ type: "state", payload: next });
           }
         } else if (msg.type === "forfeit" && isHost) {
           const p = msg.payload as { from: PlayerId };
           pushLog(`${nameOf(p.from)} forfeited the round`);
-          hostApplyForfeit(p.from);
+          hostApplyForfeit(p.from, false, "forfeit");
         } else if (msg.type === "leave" && isHost) {
           const p = msg.payload as { slot: number };
-          hostApplyForfeit(p.slot as PlayerId, true);
+          hostApplyForfeit(p.slot as PlayerId, true, "forfeit");
         } else if (msg.type === "nextRound" && isHost) {
           if (stateRef.current.matchWinner === null) hostStartRound();
         } else if (msg.type === "newMatch" && isHost) {
@@ -834,9 +845,9 @@ function GameScreen({
         pushLog(`${nameOf(turn)} is idle — forfeit countdown started`);
         play("afkWarn");
       } else if (afk && Date.now() > afk.deadline) {
-        pushLog(`${nameOf(afk.slot)} timed out and was removed from the match`);
+        pushLog(`${nameOf(afk.slot)} was idle for too long — forfeited on time`);
         setAfk(null);
-        hostApplyForfeit(afk.slot, true);
+        hostApplyForfeit(afk.slot, true, "afk");
       }
     }, 1000);
     return () => window.clearInterval(iv);
@@ -858,8 +869,8 @@ function GameScreen({
       if (!s.active[turn]) return;
       const remain = liveRemaining(s.clocks, turn, turn, Date.now());
       if (remain <= 0) {
-        pushLog(`${nameOf(turn)} ran out of time`);
-        hostApplyForfeit(turn);
+        pushLog(`${nameOf(turn)}'s clock ran out`);
+        hostApplyForfeit(turn, false, "time");
       }
     }, 250);
     return () => window.clearInterval(iv);
@@ -906,6 +917,10 @@ function GameScreen({
         if (stateRef.current.clocks) {
           next.clocks = endTurn(stateRef.current.clocks, 0, Date.now());
         }
+        if (next.winner !== null) {
+          next.endReason = "goal";
+          next.endLoser = (next.winner === 0 ? 1 : 0) as PlayerId;
+        }
         setState(next);
         roomRef.current?.send({ type: "state", payload: next });
       }
@@ -925,7 +940,7 @@ function GameScreen({
     if (!state.active[you]) return;
     const ok = window.confirm("Forfeit this round?");
     if (!ok) return;
-    if (isHost) { pushLog(`${ident.name} forfeited the round`); hostApplyForfeit(0); }
+    if (isHost) { pushLog(`${ident.name} forfeited the round`); hostApplyForfeit(0, false, "forfeit"); }
     else roomRef.current?.send({ type: "forfeit", payload: { from: slotRef.current } });
   }, [isHost, status, state, you, hostApplyForfeit, pushLog, ident.name]);
 
