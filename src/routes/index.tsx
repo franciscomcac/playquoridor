@@ -1627,6 +1627,10 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
   const [coinflip, setCoinflip] = useState<{ starter: PlayerId; animating: boolean } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
+  // Ready-up between rounds. Bot auto-readies after a short beat.
+  const [readySlots, setReadySlots] = useState<PlayerId[]>([]);
+  const [merging, setMerging] = useState(false);
+
   const nameOf = useCallback(
     (s: PlayerId) => (s === YOU ? ident.name : opponentName),
     [ident.name, opponentName],
@@ -1760,6 +1764,49 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
     if (stateRef.current.matchWinner === null) startRound();
   }, [startRound]);
 
+  const requestReady = useCallback(() => {
+    if (stateRef.current.winner === null) return;
+    if (stateRef.current.matchWinner !== null) return;
+    setReadySlots((prev) => (prev.includes(YOU) ? prev : [...prev, YOU]));
+  }, []);
+
+  // Reset ready roster whenever a new round begins.
+  const prevWinnerReadyRef = useRef<PlayerId | null>(state.winner);
+  useEffect(() => {
+    if (prevWinnerReadyRef.current !== null && state.winner === null) {
+      setReadySlots([]);
+      setMerging(false);
+    }
+    prevWinnerReadyRef.current = state.winner;
+  }, [state.winner]);
+
+  // Bot auto-readies a beat after the round ends so the player never waits
+  // on nothing. Random delay keeps it feeling human.
+  useEffect(() => {
+    if (state.winner === null || state.matchWinner !== null) return;
+    if (state.leftMatch[BOT]) return;
+    if (readySlots.includes(BOT)) return;
+    const delay = 1400 + Math.random() * 2200;
+    const t = window.setTimeout(() => {
+      setReadySlots((prev) => (prev.includes(BOT) ? prev : [...prev, BOT]));
+    }, delay);
+    return () => window.clearTimeout(t);
+  }, [state.winner, state.matchWinner, state.leftMatch, readySlots]);
+
+  // When both sides are ready, play the merge animation then start next round.
+  useEffect(() => {
+    if (state.winner === null || state.matchWinner !== null) return;
+    const need: PlayerId[] = [];
+    if (!state.leftMatch[YOU]) need.push(YOU);
+    if (!state.leftMatch[BOT]) need.push(BOT);
+    if (need.length === 0) return;
+    const allReady = need.every((i) => readySlots.includes(i));
+    if (!allReady || merging) return;
+    setMerging(true);
+    const t = window.setTimeout(() => { nextRound(); }, 900);
+    return () => window.clearTimeout(t);
+  }, [state.winner, state.matchWinner, state.leftMatch, readySlots, merging, nextRound]);
+
   const roundOver = state.winner !== null;
   const matchOver = state.matchWinner !== null;
   const boardInteractive = state.winner === null && !coinflip?.animating && state.turn === YOU;
@@ -1772,24 +1819,29 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
           presence={{ count: 2, expected: 2 }}
           coinAnimating={!!coinflip?.animating} nameOf={nameOf}
         />
-        <div className="relative">
-          <QuoridorBoard state={state} you={YOU} onMove={handleMove} interactive={boardInteractive} />
-          {coinflip?.animating && (
-            <CoinflipOverlay starter={coinflip.starter} you={YOU} mode={2 as Mode} name={nameOf(coinflip.starter)} />
-          )}
-          {roundOver && !matchOver && (
-            <WinOverlay state={state} you={YOU} matchOver={false} nameOf={nameOf}
-              onPrimary={nextRound} primaryLabel="Next round" onLeave={onLeave} />
-          )}
-          {matchOver && (
-            <EndScreen state={state} you={YOU} nameOf={nameOf}
-              onPrimary={startMatch} onLeave={onLeave} />
-          )}
+        <div className="flex gap-2 sm:gap-3">
+          <div className="relative min-w-0 flex-1">
+            <QuoridorBoard state={state} you={YOU} onMove={handleMove} interactive={boardInteractive} />
+            {coinflip?.animating && (
+              <CoinflipOverlay starter={coinflip.starter} you={YOU} mode={2 as Mode} name={nameOf(coinflip.starter)} />
+            )}
+            {roundOver && !matchOver && !coinflip?.animating && (
+              <RoundEndReady
+                state={state} you={YOU} nameOf={nameOf}
+                readySlots={readySlots} merging={merging}
+                onReady={requestReady} onLeave={onLeave}
+              />
+            )}
+            {matchOver && (
+              <EndScreen state={state} you={YOU} nameOf={nameOf}
+                onPrimary={startMatch} onLeave={onLeave} />
+            )}
+          </div>
+          <BoardSideClocks state={state} you={YOU} nameOf={nameOf} />
         </div>
       </div>
 
       <aside className="order-2 flex min-w-0 flex-col gap-3">
-        <ClocksCard state={state} you={YOU} nameOf={nameOf} />
         <ScoreCard state={state} you={YOU} nameOf={nameOf} />
         <PlayersCard state={state} you={YOU} nameOf={nameOf} />
 
