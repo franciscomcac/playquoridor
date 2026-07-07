@@ -1774,7 +1774,7 @@ function SpectatorGame({ ident, code, onLeave }: {
       try {
         const room = await createSpectatorRoom(
           code,
-          { name: ident.name, playerId: ident.playerId },
+          { name: ident.name, playerId: ident.id },
           handlers,
         );
         if (cancelled) { room.close(); return; }
