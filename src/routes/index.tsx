@@ -1794,7 +1794,7 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
       const ns = applyLocalMove(BOT, move);
       if (ns) {
         setState(ns);
-        play(move.kind === "wall" ? "wall" : "click");
+        play(move.kind === "wall" ? "wall" : "pop");
       }
     }, delay);
     return () => window.clearTimeout(t);
@@ -1831,7 +1831,7 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
     if (cur.turn !== YOU) return;
     const ns = applyLocalMove(YOU, move);
     if (!ns) return;
-    play(move.kind === "wall" ? "wall" : "click");
+    play(move.kind === "wall" ? "wall" : "pop");
     setState(ns);
   }, [applyLocalMove]);
 
