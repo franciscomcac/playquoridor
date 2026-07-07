@@ -77,25 +77,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Quoridor Parlour — Play Quoridor Online With Friends" },
-      {
-        name: "description",
-        content:
-          "A quiet, peer-to-peer Quoridor board for two. Create a room, share a code, choose your walls, and play.",
-      },
-      { property: "og:title", content: "Quoridor Parlour — Play Quoridor Online With Friends" },
-      {
-        property: "og:description",
-        content: "Play Quoridor online with a friend — no accounts, just a room code.",
-      },
+      { property: "og:site_name", content: "playquoridor.online" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Quoridor Parlour — Play Quoridor Online With Friends" },
-      { name: "description", content: "A quiet, peer-to-peer Quoridor board for two. Create a room, share a code, choose your walls, and play." },
-      { property: "og:description", content: "A quiet, peer-to-peer Quoridor board for two. Create a room, share a code, choose your walls, and play." },
-      { name: "twitter:description", content: "A quiet, peer-to-peer Quoridor board for two. Create a room, share a code, choose your walls, and play." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/15a5d3b2-7197-4fb8-8f0c-1446ab1e8d7f/id-preview-89a845a8--a392012d-c840-4a22-8504-eababc701d1f.lovable.app-1783359041936.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/15a5d3b2-7197-4fb8-8f0c-1446ab1e8d7f/id-preview-89a845a8--a392012d-c840-4a22-8504-eababc701d1f.lovable.app-1783359041936.png" },
     ],
     links: [
       {
@@ -108,6 +92,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap",
+      },
+    ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "playquoridor.online",
+          url: "https://playquoridor.online",
+        }),
       },
     ],
   }),
