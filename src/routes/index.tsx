@@ -1473,9 +1473,31 @@ function WinOverlay({ state, you, matchOver, onPrimary, primaryLabel, onLeave, n
   const winnerColor = PLAYER_COLORS[winner];
   const pieces = Array.from({ length: youWon ? (matchOver ? 90 : 45) : 0 }, (_, i) => i);
   const title = matchOver ? (youWon ? "Match won!" : "Match over") : (youWon ? "Round won" : "Round lost");
+  const reason = state.endReason;
+  const loser = state.endLoser;
+  const loserName = loser !== undefined ? nameOf(loser) : "Opponent";
+  const youLost = loser === you;
+  const roundSub = (() => {
+    if (reason === "time") {
+      return youLost
+        ? "Your clock hit zero — round lost on time."
+        : `${loserName}'s clock hit zero. Round taken on time.`;
+    }
+    if (reason === "afk") {
+      return youLost
+        ? "You were idle too long — auto-forfeit on time."
+        : `${loserName} went idle and forfeited on time.`;
+    }
+    if (reason === "forfeit") {
+      return youLost
+        ? "You forfeited the round."
+        : `${loserName} forfeited the round.`;
+    }
+    return youWon ? "You reached your goal." : `${nameOf(winner)} reached their goal first.`;
+  })();
   const sub = matchOver
     ? youWon ? `You took the match.` : `${nameOf(winner)} took the match.`
-    : youWon ? "You reached your goal." : `${nameOf(winner)} reached their goal first.`;
+    : roundSub;
 
   return (
     <div className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden rounded-lg bg-background/70 backdrop-blur-sm">
