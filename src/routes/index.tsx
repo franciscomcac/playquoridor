@@ -2039,27 +2039,30 @@ function SpectatorGame({ ident, code, onLeave }: {
           <AfkBanner slot={afk.slot} deadline={afk.deadline} name={nameOf(afk.slot)} />
         )}
 
-        <div className="relative">
-          {state ? (
-            <QuoridorBoard
-              state={state}
-              you={SPECTATOR_YOU}
-              onMove={() => { /* read-only */ }}
-              interactive={false}
-            />
-          ) : (
-            <div className="grid aspect-square w-full place-items-center rounded-2xl border border-dashed border-border bg-card/50 text-sm text-muted-foreground">
-              {status === "error" ? (errorMsg ?? "No match here") : "Waiting for the match…"}
-            </div>
-          )}
-          {state && coinflip?.animating && (
-            <CoinflipOverlay
-              starter={coinflip.starter}
-              you={SPECTATOR_YOU}
-              mode={state.mode as Mode}
-              name={nameOf(coinflip.starter)}
-            />
-          )}
+        <div className="flex gap-2 sm:gap-3">
+          <div className="relative min-w-0 flex-1">
+            {state ? (
+              <QuoridorBoard
+                state={state}
+                you={SPECTATOR_YOU}
+                onMove={() => { /* read-only */ }}
+                interactive={false}
+              />
+            ) : (
+              <div className="grid aspect-square w-full place-items-center rounded-2xl border border-dashed border-border bg-card/50 text-sm text-muted-foreground">
+                {status === "error" ? (errorMsg ?? "No match here") : "Waiting for the match…"}
+              </div>
+            )}
+            {state && coinflip?.animating && (
+              <CoinflipOverlay
+                starter={coinflip.starter}
+                you={SPECTATOR_YOU}
+                mode={state.mode as Mode}
+                name={nameOf(coinflip.starter)}
+              />
+            )}
+          </div>
+          {state && <BoardSideClocks state={state} you={SPECTATOR_YOU} nameOf={nameOf} />}
         </div>
       </div>
 
@@ -2078,7 +2081,6 @@ function SpectatorGame({ ident, code, onLeave }: {
         </div>
 
         {state && <ScoreCard state={state} you={SPECTATOR_YOU} nameOf={nameOf} />}
-        {state && <ClocksCard state={state} you={SPECTATOR_YOU} nameOf={nameOf} />}
         {state && <PlayersCard state={state} you={SPECTATOR_YOU} nameOf={nameOf} />}
         <EventLog entries={log} />
 
