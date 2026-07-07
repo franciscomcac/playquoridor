@@ -150,7 +150,7 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
             (tint ? `, inset 0 0 0 3px color-mix(in oklab, ${tint} 22%, transparent)` : ""),
         }} className="relative">
           {isLegal && (
-            <span className={"pointer-events-none absolute left-1/2 top-1/2 block rounded-full " + (isHovered ? "move-target-hover" : "")}
+            <span className={"pointer-events-none absolute left-1/2 top-1/2 block rounded-full " + (isHovered ? "move-target-hover" : "legal-breathe")}
               style={{
                 width: isHovered ? "52%" : "24%", height: isHovered ? "52%" : "24%",
                 background: yourColor, opacity: isHovered ? 0.75 : 0.4,
@@ -191,7 +191,7 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
                 left: `${(p[1] / BOARD) * 100}%`, top: `${(p[0] / BOARD) * 100}%`,
                 width: `${(1 / BOARD) * 100}%`, height: `${(1 / BOARD) * 100}%`, zIndex: 3,
               }}>
-              <Pawn player={i as PlayerId} you={you} active={state.turn === i && state.winner === null} />
+              <Pawn key={`${p[0]}-${p[1]}`} player={i as PlayerId} you={you} active={state.turn === i && state.winner === null} />
             </div>
           ) : null,
         )}
@@ -266,7 +266,7 @@ function Pawn({ player, you, active }: { player: PlayerId; you: PlayerId; active
   const color = PLAYER_COLORS[player];
   const isYou = player === you;
   return (
-    <span className="grid h-[72%] w-[72%] place-items-center rounded-full text-sm font-semibold"
+    <span className="pawn-land grid h-[72%] w-[72%] place-items-center rounded-full text-sm font-semibold"
       style={{
         background: `radial-gradient(circle at 30% 25%, color-mix(in oklab, ${color} 60%, white 45%), ${color} 60%, color-mix(in oklab, ${color} 70%, black 35%) 100%)`,
         boxShadow:

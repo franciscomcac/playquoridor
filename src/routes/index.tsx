@@ -2,6 +2,17 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PLAYER_COLORS, QuoridorBoard } from "@/components/QuoridorBoard";
+
+// Warm palette for celebratory confetti — browns, creams, blues, yellows
+// pulled from the app's existing tokens (kept in-sync with styles.css).
+const WARM_CONFETTI = [
+  "oklch(0.82 0.16 85)",   // warm gold
+  "oklch(0.72 0.09 75)",   // cream tan
+  "oklch(0.55 0.09 55)",   // deep brown
+  "oklch(0.62 0.14 250)",  // slate blue
+  "oklch(0.88 0.06 80)",   // pale cream
+  "oklch(0.66 0.14 70)",   // amber
+];
 import {
   applyForfeit, applyMove, defaultWallsFor, initialState, newRound, winsNeeded,
   type GameState, type Mode, type Move, type PlayerId,
@@ -139,7 +150,7 @@ function Home() {
             <NamePrompt onSubmit={onSetName} />
           </div>
         ) : (
-          <div className="flex flex-1 items-center justify-center py-4 sm:py-6">
+          <div key={view.name} className="view-fade flex flex-1 items-center justify-center py-4 sm:py-6">
             {view.name === "menu" && (
               <Menu ident={ident} onChoose={setView} onEditName={() => setIdent(null)} />
             )}
@@ -1289,16 +1300,24 @@ function ChessClock({ state, playerId, nameOf, compact = false }: {
   }, [dangerActive, seconds]);
   const color = PLAYER_COLORS[playerId];
   const label = nameOf(playerId);
+  // One-shot pulse when this clock becomes active (turn change signal)
+  const [pulseKey, setPulseKey] = useState(0);
+  const wasActiveRef = useRef(active);
+  useEffect(() => {
+    if (active && !wasActiveRef.current) setPulseKey((k) => k + 1);
+    wasActiveRef.current = active;
+  }, [active]);
   const cls =
     "rounded-lg border px-3 py-2 transition " +
     (active ? "clock-active " : "opacity-60 ") +
     (active && danger ? "clock-danger " : active && warn ? "clock-warn " : "");
   return (
-    <div className={cls}
+    <div key={pulseKey ? `p-${pulseKey}` : "p-0"} className={cls + (active ? " clock-turn-pulse" : "")}
       style={{
         borderColor: active ? color : "var(--border)",
         background: active ? `color-mix(in oklab, ${color} 12%, var(--card))` : "var(--card)",
-      }}>
+        ["--pulse-color" as string]: color,
+      } as React.CSSProperties}>
       <div className="flex items-center justify-between gap-2">
         <span className="truncate text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
           {label}
@@ -1309,6 +1328,12 @@ function ChessClock({ state, playerId, nameOf, compact = false }: {
         style={{ color: danger ? "var(--destructive)" : "inherit" }}>
         {formatClock(remaining)}
       </p>
+      {active && danger && remaining > 0 && (
+        <p className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.18em]"
+          style={{ color: "var(--destructive)" }}>
+          {Math.max(1, Math.ceil(seconds))}s left
+        </p>
+      )}
     </div>
   );
 }
@@ -1522,7 +1547,7 @@ function WinOverlay({ state, you, matchOver, onPrimary, primaryLabel, onLeave, n
         const delay = Math.random() * 0.6;
         const dur = 1.6 + Math.random() * 1.4;
         const size = 6 + Math.random() * 8;
-        const color = PLAYER_COLORS[i % PLAYER_COLORS.length];
+        const color = WARM_CONFETTI[i % WARM_CONFETTI.length];
         return (
           <span key={i} className="confetti-piece absolute top-0 block rounded-sm"
             style={{
@@ -1532,7 +1557,7 @@ function WinOverlay({ state, you, matchOver, onPrimary, primaryLabel, onLeave, n
             } as React.CSSProperties} />
         );
       })}
-      <div className={(youWon ? "win-pop" : "lose-fade") + " relative mx-4 flex flex-col items-center gap-3 rounded-2xl border border-border bg-card px-6 py-6 text-center shadow-2xl sm:mx-0 sm:px-8 sm:py-7"}>
+      <div className={"results-in relative mx-4 flex flex-col items-center gap-3 rounded-2xl border border-border bg-card px-6 py-6 text-center shadow-2xl sm:mx-0 sm:px-8 sm:py-7"}>
         <span className="grid h-14 w-14 place-items-center rounded-full text-xl font-semibold"
           style={{ background: winnerColor, color: "oklch(0.15 0.02 55)", boxShadow: `0 0 26px color-mix(in oklab, ${winnerColor} 60%, transparent)` }}>
           {winner + 1}
@@ -1569,7 +1594,7 @@ function EndScreen({ state, you, onPrimary, onLeave, nameOf }: {
         const delay = Math.random() * 0.6;
         const dur = 1.6 + Math.random() * 1.4;
         const size = 6 + Math.random() * 8;
-        const color = PLAYER_COLORS[i % PLAYER_COLORS.length];
+        const color = WARM_CONFETTI[i % WARM_CONFETTI.length];
         return (
           <span key={i} className="confetti-piece absolute top-0 block rounded-sm"
             style={{
@@ -1579,7 +1604,7 @@ function EndScreen({ state, you, onPrimary, onLeave, nameOf }: {
             } as React.CSSProperties} />
         );
       })}
-      <div className={(youWon ? "win-pop" : "lose-fade") + " relative flex w-[min(92vw,520px)] flex-col items-center gap-3 rounded-2xl border border-border bg-card px-6 py-6 text-center shadow-2xl"}>
+      <div className={"results-in relative flex w-[min(92vw,520px)] flex-col items-center gap-3 rounded-2xl border border-border bg-card px-6 py-6 text-center shadow-2xl"}>
         <span className="grid h-14 w-14 place-items-center rounded-full text-xl font-semibold"
           style={{ background: winnerColor, color: "oklch(0.15 0.02 55)", boxShadow: `0 0 26px color-mix(in oklab, ${winnerColor} 60%, transparent)` }}>
           {winner + 1}

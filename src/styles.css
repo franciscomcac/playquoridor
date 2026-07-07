@@ -128,7 +128,22 @@
 .lose-fade { animation: lose-fade 0.5s ease-out forwards; }
 
 /* Pawn glide */
-.pawn-glide { transition: left 160ms ease-out, top 160ms ease-out; }
+.pawn-glide { transition: left 200ms cubic-bezier(.2,.7,.3,1), top 200ms cubic-bezier(.2,.7,.3,1); }
+
+/* Pawn landing bounce — plays once when the inner pawn re-mounts on move */
+@keyframes pawn-land {
+  0%   { transform: scale(1); }
+  55%  { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+.pawn-land { animation: pawn-land 220ms cubic-bezier(.2,.9,.3,1.2); }
+
+/* Legal-move indicator: slow breathing pulse so the board feels alive */
+@keyframes legal-breathe {
+  0%,100% { transform: translate(-50%,-50%) scale(1);    opacity: 0.4; }
+  50%     { transform: translate(-50%,-50%) scale(1.15); opacity: 0.62; }
+}
+.legal-breathe { animation: legal-breathe 1.5s ease-in-out infinite; }
 
 /* Move-target pulse on hover */
 @keyframes move-pulse {
@@ -152,8 +167,39 @@
   0%   { filter: drop-shadow(0 0 14px currentColor) brightness(1.35); }
   100% { filter: drop-shadow(0 0 4px  currentColor) brightness(1); }
 }
-.wall-h.wall-latest { animation: wall-drop-h 0.28s cubic-bezier(.2,.9,.3,1.4), wall-fade-glow 2s ease-out 0.28s forwards; transform-origin: left center; }
-.wall-v.wall-latest { animation: wall-drop-v 0.28s cubic-bezier(.2,.9,.3,1.4), wall-fade-glow 2s ease-out 0.28s forwards; transform-origin: center top; }
+.wall-h.wall-latest { animation: wall-drop-h 150ms cubic-bezier(.2,.9,.3,1.4), wall-fade-glow 2s ease-out 150ms forwards; transform-origin: center center; }
+.wall-v.wall-latest { animation: wall-drop-v 150ms cubic-bezier(.2,.9,.3,1.4), wall-fade-glow 2s ease-out 150ms forwards; transform-origin: center center; }
+
+/* Turn-change pulse for the active clock card */
+@keyframes clock-turn-pulse {
+  0%   { box-shadow: 0 0 0 0 color-mix(in oklab, var(--pulse-color, oklch(0.75 0.12 75)) 55%, transparent); }
+  100% { box-shadow: 0 0 0 12px transparent; }
+}
+.clock-turn-pulse { animation: clock-turn-pulse 300ms ease-out; }
+
+/* Results card entrance: fade + slight scale + slide-up */
+@keyframes results-in {
+  0%   { opacity: 0; transform: translateY(12px) scale(0.96); }
+  100% { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+.results-in { animation: results-in 250ms cubic-bezier(.2,.8,.3,1.05) forwards; }
+
+/* Page/view crossfade — soft entrance between menu/lobby/game states */
+@keyframes view-fade {
+  0%   { opacity: 0; transform: translateY(4px); }
+  100% { opacity: 1; transform: translateY(0);   }
+}
+.view-fade { animation: view-fade 180ms ease-out; }
+
+/* Respect users who ask for less motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 
 /* Dust puff for wall landing */
 @keyframes dust-puff {
