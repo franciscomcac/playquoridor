@@ -919,7 +919,7 @@ function GameScreen({
   const handleMove = useCallback((move: Move) => {
     if (status !== "connected") return;
     initSoundOnGesture();
-    play(move.kind === "wall" ? "wall" : "click");
+    play(move.kind === "wall" ? "wall" : "pop");
     markActivity(slotRef.current);
     if (isHost) {
       const next = applyMove(stateRef.current, 0, move);
@@ -955,6 +955,7 @@ function GameScreen({
   }, [isHost, status, state, you, hostApplyForfeit, pushLog, ident.name]);
 
   const copyCode = useCallback(() => {
+    play("click");
     navigator.clipboard?.writeText(code).catch(() => {});
     setToast("Code copied"); window.setTimeout(() => setToast(null), 1400);
   }, [code]);
