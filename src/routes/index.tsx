@@ -687,6 +687,7 @@ function PlayerRow({
 }
 
 function CoinflipOverlay({ starter, you }: { starter: 0 | 1; you: 0 | 1 }) {
+  void 0;
   const youStart = starter === you;
   return (
     <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-background/70 backdrop-blur-sm">
