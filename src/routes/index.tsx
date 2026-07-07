@@ -964,11 +964,15 @@ function GameScreen({
   const prevWinnerRef = useRef<PlayerId | null>(null);
   const prevMatchWinnerRef = useRef<PlayerId | null>(null);
   useEffect(() => {
-    if (state.winner !== null && prevWinnerRef.current === null) play("roundWin");
+    if (state.winner !== null && prevWinnerRef.current === null) {
+      const r = state.endReason;
+      if (r === "time" || r === "afk" || r === "forfeit") play("afkWarn");
+      play("roundWin");
+    }
     if (state.matchWinner !== null && prevMatchWinnerRef.current === null) play("matchWin");
     prevWinnerRef.current = state.winner;
     prevMatchWinnerRef.current = state.matchWinner;
-  }, [state.winner, state.matchWinner]);
+  }, [state.winner, state.matchWinner, state.endReason]);
 
   // ---------- Record match to Supabase (host only, once per match) ----------
   useEffect(() => {
