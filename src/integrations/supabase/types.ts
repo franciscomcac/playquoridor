@@ -14,7 +14,181 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      match_players: {
+        Row: {
+          forfeited: boolean
+          match_id: string
+          name: string
+          pawns_eliminated: number
+          player_id: string | null
+          result: string
+          rounds_won: number
+          slot: number
+          walls_placed: number
+        }
+        Insert: {
+          forfeited?: boolean
+          match_id: string
+          name: string
+          pawns_eliminated?: number
+          player_id?: string | null
+          result: string
+          rounds_won?: number
+          slot: number
+          walls_placed?: number
+        }
+        Update: {
+          forfeited?: boolean
+          match_id?: string
+          name?: string
+          pawns_eliminated?: number
+          player_id?: string | null
+          result?: string
+          rounds_won?: number
+          slot?: number
+          walls_placed?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_players_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_players_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      matches: {
+        Row: {
+          ended_at: string
+          id: string
+          mode: number
+          rounds: number
+          winner_player_id: string | null
+        }
+        Insert: {
+          ended_at?: string
+          id?: string
+          mode: number
+          rounds: number
+          winner_player_id?: string | null
+        }
+        Update: {
+          ended_at?: string
+          id?: string
+          mode?: number
+          rounds?: number
+          winner_player_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "matches_winner_player_id_fkey"
+            columns: ["winner_player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      open_rooms: {
+        Row: {
+          code: string
+          created_at: string
+          host_name: string
+          mode: number
+          seats_taken: number
+          seats_total: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          host_name: string
+          mode: number
+          seats_taken?: number
+          seats_total: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          host_name?: string
+          mode?: number
+          seats_taken?: number
+          seats_total?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      player_stats: {
+        Row: {
+          forfeits: number
+          losses: number
+          matches: number
+          pawns_eliminated: number
+          player_id: string
+          updated_at: string
+          walls_placed: number
+          wins: number
+        }
+        Insert: {
+          forfeits?: number
+          losses?: number
+          matches?: number
+          pawns_eliminated?: number
+          player_id: string
+          updated_at?: string
+          walls_placed?: number
+          wins?: number
+        }
+        Update: {
+          forfeits?: number
+          losses?: number
+          matches?: number
+          pawns_eliminated?: number
+          player_id?: string
+          updated_at?: string
+          walls_placed?: number
+          wins?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_stats_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: true
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      players: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
