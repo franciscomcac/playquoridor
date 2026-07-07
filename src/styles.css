@@ -32,35 +32,35 @@
   --color-ring-offset-background: var(--background);
 }
 
-/* Dark wood / noir palette — always dark. */
+/* Classic light wood / parchment palette. */
 :root {
   --radius: 0.625rem;
 
-  --background: oklch(0.14 0.015 55);
-  --foreground: oklch(0.94 0.02 82);
-  --card: oklch(0.185 0.02 55);
-  --card-foreground: oklch(0.94 0.02 82);
-  --popover: oklch(0.2 0.025 55);
-  --popover-foreground: oklch(0.94 0.02 82);
-  --primary: oklch(0.78 0.15 82);            /* amber gold */
-  --primary-foreground: oklch(0.15 0.02 55);
-  --secondary: oklch(0.24 0.02 55);
-  --secondary-foreground: oklch(0.9 0.02 82);
-  --muted: oklch(0.22 0.02 55);
-  --muted-foreground: oklch(0.68 0.03 75);
-  --accent: oklch(0.72 0.14 82);
-  --accent-foreground: oklch(0.15 0.02 55);
-  --destructive: oklch(0.65 0.2 25);
-  --destructive-foreground: oklch(0.98 0.02 82);
-  --border: oklch(0.32 0.03 60);
-  --input: oklch(0.28 0.03 60);
-  --ring: oklch(0.72 0.14 82);
+  --background: oklch(0.95 0.025 85);
+  --foreground: oklch(0.24 0.03 55);
+  --card: oklch(0.98 0.02 85);
+  --card-foreground: oklch(0.24 0.03 55);
+  --popover: oklch(0.98 0.02 85);
+  --popover-foreground: oklch(0.24 0.03 55);
+  --primary: oklch(0.5 0.11 55);             /* warm brown */
+  --primary-foreground: oklch(0.98 0.02 85);
+  --secondary: oklch(0.9 0.03 85);
+  --secondary-foreground: oklch(0.28 0.04 55);
+  --muted: oklch(0.92 0.025 85);
+  --muted-foreground: oklch(0.45 0.04 60);
+  --accent: oklch(0.75 0.12 75);
+  --accent-foreground: oklch(0.22 0.03 55);
+  --destructive: oklch(0.6 0.2 25);
+  --destructive-foreground: oklch(0.98 0.02 85);
+  --border: oklch(0.78 0.04 70);
+  --input: oklch(0.86 0.03 75);
+  --ring: oklch(0.6 0.11 60);
 
   /* Board */
-  --board-bg: oklch(0.16 0.02 45);
-  --board-cell: oklch(0.245 0.035 50);
-  --board-cell-alt: oklch(0.22 0.032 48);
-  --board-line: oklch(0.78 0.14 82 / 0.22);
+  --board-bg: oklch(0.86 0.05 75);
+  --board-cell: oklch(0.9 0.045 80);
+  --board-cell-alt: oklch(0.86 0.05 78);
+  --board-line: oklch(0.42 0.08 55 / 0.35);
 
   /* Player colors — gold / slate / crimson / jade */
   --p1: oklch(0.82 0.16 85);
@@ -78,8 +78,8 @@
   }
   body {
     background:
-      radial-gradient(1200px 800px at 20% 0%, oklch(0.22 0.03 55 / 0.55), transparent 60%),
-      radial-gradient(900px 700px at 85% 100%, oklch(0.2 0.03 45 / 0.5), transparent 60%),
+      radial-gradient(1200px 800px at 20% 0%, oklch(0.92 0.04 80 / 0.7), transparent 60%),
+      radial-gradient(900px 700px at 85% 100%, oklch(0.88 0.05 70 / 0.6), transparent 60%),
       var(--color-background);
     background-attachment: fixed;
     color: var(--color-foreground);
@@ -98,13 +98,13 @@
   padding: 14px;
   border-radius: 16px;
   background:
-    linear-gradient(145deg, oklch(0.32 0.05 45), oklch(0.18 0.03 40)) padding-box,
-    linear-gradient(145deg, oklch(0.5 0.07 65), oklch(0.15 0.02 40)) border-box;
+    linear-gradient(145deg, oklch(0.62 0.09 55), oklch(0.42 0.08 45)) padding-box,
+    linear-gradient(145deg, oklch(0.78 0.09 70), oklch(0.35 0.06 45)) border-box;
   border: 2px solid transparent;
   box-shadow:
-    inset 0 1px 0 oklch(0.6 0.09 65 / 0.35),
-    inset 0 -3px 6px oklch(0 0 0 / 0.55),
-    0 24px 48px -14px oklch(0 0 0 / 0.65);
+    inset 0 1px 0 oklch(0.88 0.06 75 / 0.55),
+    inset 0 -3px 6px oklch(0.2 0.03 40 / 0.45),
+    0 20px 40px -14px oklch(0.2 0.03 40 / 0.45);
 }
 
 /* Coinflip animation */
