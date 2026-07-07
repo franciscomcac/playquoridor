@@ -889,6 +889,8 @@ function GameScreen({
 
   // Host: once every still-in-match player is ready, play the merge animation
   // and then kick off the next round (which itself triggers the coinflip).
+  const mergingRef = useRef(false);
+  useEffect(() => { mergingRef.current = merging; }, [merging]);
   useEffect(() => {
     if (!isHost) return;
     if (state.winner === null || state.matchWinner !== null) return;
@@ -898,13 +900,13 @@ function GameScreen({
     }
     if (need.length === 0) return;
     const allReady = need.every((i) => readySlots.includes(i));
-    if (!allReady || merging) return;
+    if (!allReady || mergingRef.current) return;
     setMerging(true);
     const t = window.setTimeout(() => {
       hostStartRound();
     }, 900);
     return () => window.clearTimeout(t);
-  }, [isHost, readySlots, state.winner, state.matchWinner, state.leftMatch, state.mode, merging, hostStartRound]);
+  }, [isHost, readySlots, state.winner, state.matchWinner, state.leftMatch, state.mode, hostStartRound]);
 
   const handleMove = useCallback((move: Move) => {
     if (status !== "connected") return;
