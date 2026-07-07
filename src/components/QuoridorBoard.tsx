@@ -26,6 +26,8 @@ const WALL_SNAP_RADIUS = 0.2;
 
 type Pop = { key: number; player: PlayerId; r: number; c: number };
 
+const FILES = ["a", "b", "c", "d", "e", "f", "g", "h", "i"];
+
 export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: Props) {
   const [hover, setHover] = useState<HoverTarget | null>(null);
   const boardRef = useRef<HTMLDivElement>(null);
@@ -150,7 +152,18 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
   }
 
   return (
-    <div className="wood-frame aspect-square w-full">
+    <div className="w-full" style={{
+      display: "grid",
+      gridTemplateColumns: "1.25rem minmax(0,1fr)",
+      gridTemplateRows: "minmax(0,1fr) 1.25rem",
+      gap: "0.25rem",
+    }}>
+      <div aria-hidden className="flex flex-col justify-around py-[3%] text-[10px] font-medium uppercase tracking-widest text-muted-foreground sm:text-xs">
+        {Array.from({ length: BOARD }, (_, i) => (
+          <span key={i} className="text-center leading-none">{BOARD - i}</span>
+        ))}
+      </div>
+      <div className="wood-frame aspect-square w-full min-w-0">
       <div ref={boardRef} onPointerMove={handlePointerMove} onPointerLeave={() => setHover(null)} onClick={handleClick}
         className="relative h-full w-full select-none overflow-hidden rounded-md"
         style={{ cursor, background: "var(--board-bg)" }}>
@@ -182,6 +195,13 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
         {/* Pawn elimination FX */}
         {pops.map((p) => (
           <PopFX key={p.key} r={p.r} c={p.c} color={PLAYER_COLORS[p.player]} />
+        ))}
+      </div>
+      </div>
+      <div />
+      <div aria-hidden className="flex justify-around px-[3%] text-[10px] font-medium uppercase tracking-widest text-muted-foreground sm:text-xs">
+        {FILES.map((f) => (
+          <span key={f} className="text-center leading-none">{f}</span>
         ))}
       </div>
     </div>
