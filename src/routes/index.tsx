@@ -110,13 +110,14 @@ function Header({ ident, onOpenSettings }: { ident: Identity | null; onOpenSetti
   return (
     <header className="flex items-center justify-between gap-3">
       <div className="flex items-center gap-3">
-        <span aria-hidden className="grid h-10 w-10 place-items-center rounded-md"
-          style={{
-            background: "linear-gradient(145deg, oklch(0.36 0.05 55), oklch(0.18 0.03 45))",
-            boxShadow: "inset 0 1px 0 oklch(0.55 0.08 60 / 0.45), 0 6px 14px -6px oklch(0 0 0 / 0.6)",
-          }}>
-          <span className="block h-4 w-4 rounded-full" style={{ background: "var(--primary)" }} />
-        </span>
+        <img
+          src="/favicon.png"
+          alt="playquoridor.online"
+          width={40}
+          height={40}
+          className="h-10 w-10 rounded-md"
+          style={{ boxShadow: "0 6px 14px -6px oklch(0 0 0 / 0.6)" }}
+        />
         <div>
           <p className="text-xl font-semibold leading-none">playquoridor.online</p>
           <p className="mt-1 text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
