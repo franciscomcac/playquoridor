@@ -793,6 +793,27 @@ function GameScreen({
 
   // ---------- Moves ----------
   // (see handleMove below)
+  // Clock enforcement — host authoritative. If the active player runs out
+  // of time, they forfeit the round.
+  useEffect(() => {
+    if (!isHost) return;
+    const iv = window.setInterval(() => {
+      const s = stateRef.current;
+      if (!s.clocks) return;
+      if (status !== "connected") return;
+      if (coinflip?.animating) return;
+      if (s.winner !== null || s.matchWinner !== null) return;
+      const turn = s.turn;
+      if (!s.active[turn]) return;
+      const remain = liveRemaining(s.clocks, turn, turn, Date.now());
+      if (remain <= 0) {
+        pushLog(`${nameOf(turn)} ran out of time`);
+        hostApplyForfeit(turn);
+      }
+    }, 250);
+    return () => window.clearInterval(iv);
+  }, [isHost, status, coinflip, hostApplyForfeit, pushLog, nameOf]);
+
   const handleMove = useCallback((move: Move) => {
     if (status !== "connected") return;
     initSoundOnGesture();
