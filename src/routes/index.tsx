@@ -865,6 +865,36 @@ function GameScreen({
     return () => window.clearInterval(iv);
   }, [isHost, status, coinflip, hostApplyForfeit, pushLog, nameOf]);
 
+  // Reset the ready roster whenever a new round begins.
+  const prevWinnerReadyRef = useRef<PlayerId | null>(state.winner);
+  useEffect(() => {
+    if (prevWinnerReadyRef.current !== null && state.winner === null) {
+      setReadySlots([]);
+      setMerging(false);
+      if (isHost) roomRef.current?.send({ type: "readyState", payload: { slots: [] } });
+    }
+    prevWinnerReadyRef.current = state.winner;
+  }, [state.winner, isHost]);
+
+  // Host: once every still-in-match player is ready, play the merge animation
+  // and then kick off the next round (which itself triggers the coinflip).
+  useEffect(() => {
+    if (!isHost) return;
+    if (state.winner === null || state.matchWinner !== null) return;
+    const need: PlayerId[] = [];
+    for (let i = 0; i < state.mode; i++) {
+      if (!state.leftMatch[i]) need.push(i as PlayerId);
+    }
+    if (need.length === 0) return;
+    const allReady = need.every((i) => readySlots.includes(i));
+    if (!allReady || merging) return;
+    setMerging(true);
+    const t = window.setTimeout(() => {
+      hostStartRound();
+    }, 900);
+    return () => window.clearTimeout(t);
+  }, [isHost, readySlots, state.winner, state.matchWinner, state.leftMatch, state.mode, merging, hostStartRound]);
+
   const handleMove = useCallback((move: Move) => {
     if (status !== "connected") return;
     initSoundOnGesture();
