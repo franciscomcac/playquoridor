@@ -122,15 +122,15 @@ function Home() {
 
   return (
     <main className="min-h-screen" onPointerDown={() => initSoundOnGesture()}>
-      <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-4 py-6 sm:px-6 sm:py-10">
+      <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-3 py-4 sm:px-6 sm:py-10">
         <Header onOpenSettings={() => setSettingsOpen(true)} ident={ident} />
 
         {!ident ? (
-          <div className="flex flex-1 items-center justify-center py-6">
+          <div className="flex flex-1 items-center justify-center py-4 sm:py-6">
             <NamePrompt onSubmit={onSetName} />
           </div>
         ) : (
-          <div className="flex flex-1 items-center justify-center py-6">
+          <div className="flex flex-1 items-center justify-center py-4 sm:py-6">
             {view.name === "menu" && (
               <Menu ident={ident} onChoose={setView} onEditName={() => setIdent(null)} />
             )}
@@ -185,30 +185,31 @@ function Home() {
 
 function Header({ ident, onOpenSettings }: { ident: Identity | null; onOpenSettings: () => void }) {
   return (
-    <header className="flex items-center justify-between gap-3">
-      <div className="flex items-center gap-3">
+    <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         <img
           src="/favicon.png"
           alt="Play Quoridor free in browser — place walls to block opponent"
           width={40}
           height={40}
-          className="h-10 w-10 rounded-md"
+          className="h-9 w-9 shrink-0 rounded-md sm:h-10 sm:w-10"
           style={{ boxShadow: "0 6px 14px -6px oklch(0 0 0 / 0.6)" }}
         />
-        <div>
-          <p className="text-xl font-semibold leading-none">playquoridor.online</p>
-          <p className="mt-1 text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+        <div className="min-w-0">
+          <p className="truncate text-base font-semibold leading-none sm:text-xl">playquoridor.online</p>
+          <p className="mt-1 hidden text-[10px] uppercase tracking-[0.25em] text-muted-foreground sm:block">
             Peer to peer · 2 or 4 players
           </p>
         </div>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
         {ident && <WinsBadge playerId={ident.id} />}
-        <Link to="/stats" className="rounded-md border border-border bg-secondary/40 px-3 py-1.5 text-[10px] uppercase tracking-widest hover:bg-secondary">
+        <Link to="/stats" className="rounded-md border border-border bg-secondary/40 px-2.5 py-1.5 text-[10px] uppercase tracking-widest hover:bg-secondary sm:px-3">
           Stats
         </Link>
-        <button onClick={onOpenSettings} className="rounded-md border border-border bg-secondary/40 px-3 py-1.5 text-[10px] uppercase tracking-widest hover:bg-secondary">
-          Settings
+        <button onClick={onOpenSettings} aria-label="Settings" className="rounded-md border border-border bg-secondary/40 px-2.5 py-1.5 text-[10px] uppercase tracking-widest hover:bg-secondary sm:px-3">
+          <span className="hidden sm:inline">Settings</span>
+          <span className="sm:hidden" aria-hidden>⚙</span>
         </button>
       </div>
     </header>
