@@ -1289,15 +1289,23 @@ function ChessClock({ state, playerId, nameOf, compact = false }: {
   }, [dangerActive, seconds]);
   const color = PLAYER_COLORS[playerId];
   const label = nameOf(playerId);
+  // One-shot pulse when this clock becomes active (turn change signal)
+  const [pulseKey, setPulseKey] = useState(0);
+  const wasActiveRef = useRef(active);
+  useEffect(() => {
+    if (active && !wasActiveRef.current) setPulseKey((k) => k + 1);
+    wasActiveRef.current = active;
+  }, [active]);
   const cls =
     "rounded-lg border px-3 py-2 transition " +
     (active ? "clock-active " : "opacity-60 ") +
     (active && danger ? "clock-danger " : active && warn ? "clock-warn " : "");
   return (
-    <div className={cls}
+    <div key={pulseKey ? `p-${pulseKey}` : "p-0"} className={cls + (active ? " clock-turn-pulse" : "")}
       style={{
         borderColor: active ? color : "var(--border)",
         background: active ? `color-mix(in oklab, ${color} 12%, var(--card))` : "var(--card)",
+        color,
       }}>
       <div className="flex items-center justify-between gap-2">
         <span className="truncate text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
@@ -1309,6 +1317,12 @@ function ChessClock({ state, playerId, nameOf, compact = false }: {
         style={{ color: danger ? "var(--destructive)" : "inherit" }}>
         {formatClock(remaining)}
       </p>
+      {active && danger && remaining > 0 && (
+        <p className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.18em]"
+          style={{ color: "var(--destructive)" }}>
+          {Math.max(1, Math.ceil(seconds))}s left
+        </p>
+      )}
     </div>
   );
 }
