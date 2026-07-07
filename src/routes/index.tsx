@@ -159,6 +159,20 @@ function Home() {
                 onJoin={(code) => setView({ name: "game", isHost: false, code, mode: 2, walls: 10, rounds: 5 })}
               />
             )}
+            {view.name === "spectate" && (
+              <SpectateRoom
+                onBack={() => setView({ name: "menu" })}
+                onJoin={(code) => setView({ name: "spectating", code })}
+              />
+            )}
+            {view.name === "spectating" && (
+              <SpectatorGame
+                key={"spec-" + view.code}
+                ident={ident}
+                code={view.code}
+                onLeave={() => setView({ name: "menu" })}
+              />
+            )}
             {view.name === "quick" && (
               <QuickMatch
                 mode={view.mode}
