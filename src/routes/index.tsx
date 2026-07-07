@@ -20,6 +20,7 @@ import {
 import {
   getVolume, initSoundOnGesture, isMuted, play, setMuted, setVolume,
 } from "@/lib/sound";
+import { pickBotMove, randomDifficulty, type BotDifficulty } from "@/lib/bot";
 
 const SEO_TITLE = "Play Quoridor Online Free – Wall Blocking Strategy Game";
 const SEO_DESCRIPTION =
@@ -104,7 +105,8 @@ type View =
   | { name: "create"; mode: Mode; walls: number; rounds: number }
   | { name: "join" }
   | { name: "quick"; mode: Mode }
-  | { name: "game"; isHost: boolean; code: string; mode: Mode; walls: number; rounds: number };
+  | { name: "game"; isHost: boolean; code: string; mode: Mode; walls: number; rounds: number; quickMatch?: boolean }
+  | { name: "bot"; difficulty: BotDifficulty; botName: string };
 
 function Home() {
   const [ident, setIdent] = useState<Identity | null>(null);
