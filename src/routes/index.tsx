@@ -189,7 +189,7 @@ function Header({ ident, onOpenSettings }: { ident: Identity | null; onOpenSetti
       <div className="flex items-center gap-3">
         <img
           src="/favicon.png"
-          alt="playquoridor.online"
+          alt="Play Quoridor free in browser — place walls to block opponent"
           width={40}
           height={40}
           className="h-10 w-10 rounded-md"
