@@ -436,6 +436,12 @@ function Menu({ ident, onChoose, onEditName }: {
         >
           Join with code
         </button>
+        <button
+          onClick={() => { play("click"); onChoose({ name: "spectate" }); }}
+          className="rounded-lg border border-border bg-secondary/40 px-5 py-2.5 text-sm font-medium hover:bg-secondary"
+        >
+          Spectate a match
+        </button>
       </div>
     </div>
   );
