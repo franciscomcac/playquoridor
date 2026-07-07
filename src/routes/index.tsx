@@ -7,7 +7,7 @@ import {
   type GameState, type Mode, type Move, type PlayerId,
 } from "@/lib/quoridor";
 import {
-  createGuestRoom, createHostRoom, makeRoomCode,
+  createGuestRoom, createHostRoom, createSpectatorRoom, makeRoomCode,
   type PeerMessage, type Room, type RosterEntry,
 } from "@/lib/peer-room";
 import {
