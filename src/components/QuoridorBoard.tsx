@@ -4,6 +4,7 @@ import {
   type GameState, type Move, type Orient, type PlayerId,
   type Wall, type WallSpec,
 } from "@/lib/quoridor";
+import { play } from "@/lib/sound";
 
 type Props = {
   state: GameState;
@@ -104,9 +105,12 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
     onActivity?.();
     if (t.kind === "cell") {
       if (legalSet.has(`${t.r},${t.c}`)) onMove({ kind: "pawn", to: [t.r, t.c] });
+      else play("denied");
     } else {
       if (state.wallsLeft[you] > 0 && canPlaceWall(state, you, t.wall)) {
         onMove({ kind: "wall", wall: t.wall });
+      } else {
+        play("denied");
       }
     }
   }
