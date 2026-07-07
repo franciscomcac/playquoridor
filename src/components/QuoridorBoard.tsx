@@ -123,6 +123,13 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
     else for (let r = 0; r < BOARD; r++) goalTint[`${r},${g.value}`] = PLAYER_COLORS[i];
   }
 
+  // Subtle tint on the opponent's half so the two sides read as distinct
+  // territory (only in 2-player mode, and only for actual seated players).
+  let oppRowRange: [number, number] | null = null;
+  if (state.mode === 2 && you >= 0 && you < 2) {
+    oppRowRange = you === 0 ? [0, 3] : [5, 8];
+  }
+
   const cells: React.ReactNode[] = [];
   for (let r = 0; r < BOARD; r++) {
     for (let c = 0; c < BOARD; c++) {
@@ -130,10 +137,15 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
       const isHovered = hoverCell && hoverCell.r === r && hoverCell.c === c;
       const alt = (r + c) % 2 === 0;
       const tint = goalTint[`${r},${c}`];
+      const isOpp = !!oppRowRange && r >= oppRowRange[0] && r <= oppRowRange[1];
+      const baseCell = alt ? "var(--board-cell)" : "var(--board-cell-alt)";
+      const bg = isOpp
+        ? `color-mix(in oklab, ${baseCell} 84%, oklch(0.35 0.05 55))`
+        : baseCell;
       cells.push(
         <div key={`${r}-${c}`} style={{
           gridRow: r + 1, gridColumn: c + 1,
-          background: alt ? "var(--board-cell)" : "var(--board-cell-alt)",
+          background: bg,
           boxShadow: `inset 0 0 0 1px var(--board-line)` +
             (tint ? `, inset 0 0 0 3px color-mix(in oklab, ${tint} 22%, transparent)` : ""),
         }} className="relative">
