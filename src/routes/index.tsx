@@ -889,6 +889,8 @@ function GameScreen({
 
   // Host: once every still-in-match player is ready, play the merge animation
   // and then kick off the next round (which itself triggers the coinflip).
+  const mergingRef = useRef(false);
+  useEffect(() => { mergingRef.current = merging; }, [merging]);
   useEffect(() => {
     if (!isHost) return;
     if (state.winner === null || state.matchWinner !== null) return;
@@ -898,13 +900,13 @@ function GameScreen({
     }
     if (need.length === 0) return;
     const allReady = need.every((i) => readySlots.includes(i));
-    if (!allReady || merging) return;
+    if (!allReady || mergingRef.current) return;
     setMerging(true);
     const t = window.setTimeout(() => {
       hostStartRound();
     }, 900);
     return () => window.clearTimeout(t);
-  }, [isHost, readySlots, state.winner, state.matchWinner, state.leftMatch, state.mode, merging, hostStartRound]);
+  }, [isHost, readySlots, state.winner, state.matchWinner, state.leftMatch, state.mode, hostStartRound]);
 
   const handleMove = useCallback((move: Move) => {
     if (status !== "connected") return;
@@ -1380,42 +1382,41 @@ function RoundEndReady({
   const iAmReady = iSeated && readySlots.includes(you);
   return (
     <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/75 backdrop-blur-sm">
-      <div className="mx-4 flex flex-col items-center gap-4 rounded-2xl border border-border bg-card px-6 py-6 text-center shadow-2xl sm:px-8">
-        <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
+      <div className="mx-4 flex flex-col items-center gap-5 rounded-2xl border border-border bg-card px-8 py-7 text-center shadow-2xl sm:px-10">
+        <p className="text-[11px] uppercase tracking-[0.3em] text-muted-foreground">
           {youWon ? "You took the round" : `${nameOf(winner)} took the round`}
         </p>
-        <p className="text-sm text-foreground/80">
-          {merging ? "Starting next round…" : "Ready up to keep playing"}
+        <p className="font-display text-lg text-foreground/90">
+          {merging ? "Starting next round" : "Ready to continue?"}
         </p>
 
         <div
-          className="flex items-center transition-all duration-700 ease-out"
+          className="relative flex items-center justify-center transition-all duration-700 ease-out"
           style={{
-            gap: merging ? "0rem" : "1.5rem",
-            transform: merging ? "scale(0.85)" : "scale(1)",
+            gap: merging ? "0rem" : "2.25rem",
+            transform: merging ? "scale(0.9)" : "scale(1)",
+            minHeight: "4.5rem",
           }}
         >
           {players.map((p) => {
             const isReady = readySlots.includes(p);
-            const ballColor = isReady ? "oklch(0.7 0.18 145)" : "oklch(0.62 0.22 25)";
+            const ballColor = isReady ? "oklch(0.72 0.17 145)" : "oklch(0.62 0.2 25)";
             return (
-              <div key={p} className="flex flex-col items-center gap-1">
+              <div key={p} className="flex flex-col items-center gap-2">
                 <span
+                  aria-label={isReady ? "Ready" : "Waiting"}
                   className={
-                    "grid h-14 w-14 place-items-center rounded-full text-[10px] font-semibold uppercase tracking-widest transition-colors duration-300 " +
+                    "block h-16 w-16 rounded-full transition-all duration-500 " +
                     (isReady ? "ready-glow " : "") +
                     (merging ? "ready-merge" : "")
                   }
                   style={{
-                    background: `radial-gradient(circle at 32% 28%, color-mix(in oklab, ${ballColor} 55%, white 45%), ${ballColor} 60%, color-mix(in oklab, ${ballColor} 60%, black 40%))`,
-                    color: "oklch(0.15 0.02 55)",
-                    boxShadow: `0 6px 16px -4px color-mix(in oklab, ${ballColor} 55%, transparent), inset 0 -3px 5px rgba(0,0,0,0.35)`,
+                    background: `radial-gradient(circle at 30% 25%, color-mix(in oklab, ${ballColor} 40%, white 60%) 0%, ${ballColor} 55%, color-mix(in oklab, ${ballColor} 55%, black 45%) 100%)`,
+                    boxShadow: `0 10px 24px -6px color-mix(in oklab, ${ballColor} 60%, transparent), inset 0 -6px 10px rgba(0,0,0,0.28), inset 0 3px 6px rgba(255,255,255,0.35)`,
                   }}
-                >
-                  {p === you ? "You" : nameOf(p).slice(0, 3)}
-                </span>
-                <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                  {isReady ? "Ready" : "Waiting"}
+                />
+                <span className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+                  {p === you ? "You" : "Opponent"}
                 </span>
               </div>
             );
@@ -1423,15 +1424,15 @@ function RoundEndReady({
         </div>
 
         {!merging && (
-          <div className="flex gap-2">
+          <div className="mt-1 flex gap-2">
             <button
               onClick={onReady}
               disabled={!iSeated || iAmReady}
-              className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:opacity-40 disabled:hover:translate-y-0"
+              className="rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold uppercase tracking-widest text-primary-foreground shadow-md transition-transform hover:-translate-y-0.5 disabled:opacity-40 disabled:hover:translate-y-0"
             >
-              {iAmReady ? "Waiting…" : "Ready"}
+              {iAmReady ? "Waiting" : "Ready"}
             </button>
-            <button onClick={onLeave} className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary">
+            <button onClick={onLeave} className="rounded-lg border border-border bg-secondary/40 px-6 py-2.5 text-sm font-medium uppercase tracking-widest text-muted-foreground hover:bg-secondary">
               Leave
             </button>
           </div>
@@ -1859,6 +1860,8 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
   }, [state.winner, state.matchWinner, state.leftMatch, readySlots]);
 
   // When both sides are ready, play the merge animation then start next round.
+  const botMergingRef = useRef(false);
+  useEffect(() => { botMergingRef.current = merging; }, [merging]);
   useEffect(() => {
     if (state.winner === null || state.matchWinner !== null) return;
     const need: PlayerId[] = [];
@@ -1866,11 +1869,11 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
     if (!state.leftMatch[BOT]) need.push(BOT);
     if (need.length === 0) return;
     const allReady = need.every((i) => readySlots.includes(i));
-    if (!allReady || merging) return;
+    if (!allReady || botMergingRef.current) return;
     setMerging(true);
     const t = window.setTimeout(() => { nextRound(); }, 900);
     return () => window.clearTimeout(t);
-  }, [state.winner, state.matchWinner, state.leftMatch, readySlots, merging, nextRound]);
+  }, [state.winner, state.matchWinner, state.leftMatch, readySlots, nextRound]);
 
   const roundOver = state.winner !== null;
   const matchOver = state.matchWinner !== null;
