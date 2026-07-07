@@ -290,16 +290,20 @@ function GameScreen({
   code,
   isHost,
   initialWalls,
+  initialRounds,
   onLeave,
 }: {
   code: string;
   isHost: boolean;
   initialWalls: number;
+  initialRounds: number;
   onLeave: () => void;
 }) {
   const [status, setStatus] = useState<Status>("connecting");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [state, setState] = useState<GameState>(() => initialState(initialWalls));
+  const [state, setState] = useState<GameState>(() =>
+    initialState(initialWalls, initialRounds),
+  );
   const stateRef = useRef(state);
   stateRef.current = state;
 
@@ -322,6 +326,46 @@ function GameScreen({
       }, 2000);
     },
     [],
+  );
+
+  // Host-only helpers -------------------------------------------------
+  const hostApplyForfeit = useCallback(
+    (forfeiter: 0 | 1) => {
+      const s = stateRef.current;
+      if (s.winner !== null || s.matchWinner !== null) return;
+      const opp = (1 - forfeiter) as 0 | 1;
+      const score: [number, number] = [...s.score] as [number, number];
+      score[opp] += 1;
+      const matchWinner: 0 | 1 | null =
+        score[opp] >= winsNeeded(s.totalRounds) ? opp : null;
+      const ns: GameState = { ...s, winner: opp, score, matchWinner };
+      setState(ns);
+      roomRef.current?.send({ type: "state", payload: ns });
+    },
+    [],
+  );
+
+  const hostStartNextRound = useCallback(() => {
+    const s = stateRef.current;
+    if (s.matchWinner !== null) return;
+    const starter: 0 | 1 = Math.random() < 0.5 ? 0 : 1;
+    const ns = newRound(s, starter);
+    setState(ns);
+    roomRef.current?.send({ type: "state", payload: ns });
+    roomRef.current?.send({ type: "coinflip", payload: { starter } });
+    startCoinflip(starter);
+  }, [startCoinflip]);
+
+  const hostStartNewMatch = useCallback(
+    (totalWalls: number, totalRounds: number) => {
+      const starter: 0 | 1 = Math.random() < 0.5 ? 0 : 1;
+      const ns: GameState = { ...initialState(totalWalls, totalRounds), turn: starter };
+      setState(ns);
+      roomRef.current?.send({ type: "state", payload: ns });
+      roomRef.current?.send({ type: "coinflip", payload: { starter } });
+      startCoinflip(starter);
+    },
+    [startCoinflip],
   );
 
   useEffect(() => {
@@ -358,16 +402,14 @@ function GameScreen({
             setState(next);
             roomRef.current?.send({ type: "state", payload: next });
           }
-        } else if (msg.type === "restart") {
-          const p = msg.payload as { totalWalls: number };
-          if (isHost) {
-            const starter: 0 | 1 = Math.random() < 0.5 ? 0 : 1;
-            const ns: GameState = { ...initialState(p.totalWalls), turn: starter };
-            setState(ns);
-            roomRef.current?.send({ type: "state", payload: ns });
-            roomRef.current?.send({ type: "coinflip", payload: { starter } });
-            startCoinflip(starter);
-          }
+        } else if (msg.type === "forfeit" && isHost) {
+          // Guest forfeited (guest is player 1).
+          hostApplyForfeit(1);
+        } else if (msg.type === "nextRound" && isHost) {
+          hostStartNextRound();
+        } else if (msg.type === "newMatch" && isHost) {
+          const p = msg.payload as { totalWalls: number; totalRounds: number };
+          hostStartNewMatch(p.totalWalls, p.totalRounds);
         } else if (msg.type === "coinflip") {
           const p = msg.payload as { starter: 0 | 1 };
           startCoinflip(p.starter);
@@ -429,18 +471,30 @@ function GameScreen({
     [isHost, status],
   );
 
-  const restart = useCallback(() => {
-    if (isHost) {
-      const starter: 0 | 1 = Math.random() < 0.5 ? 0 : 1;
-      const ns: GameState = { ...initialState(state.totalWalls), turn: starter };
-      setState(ns);
-      roomRef.current?.send({ type: "state", payload: ns });
-      roomRef.current?.send({ type: "coinflip", payload: { starter } });
-      startCoinflip(starter);
-    } else {
-      roomRef.current?.send({ type: "restart", payload: { totalWalls: state.totalWalls } });
-    }
-  }, [isHost, state.totalWalls, startCoinflip]);
+  const nextRound = useCallback(() => {
+    if (isHost) hostStartNextRound();
+    else roomRef.current?.send({ type: "nextRound", payload: {} });
+  }, [isHost, hostStartNextRound]);
+
+  const newMatch = useCallback(() => {
+    if (isHost) hostStartNewMatch(state.totalWalls, state.totalRounds);
+    else
+      roomRef.current?.send({
+        type: "newMatch",
+        payload: { totalWalls: state.totalWalls, totalRounds: state.totalRounds },
+      });
+  }, [isHost, hostStartNewMatch, state.totalWalls, state.totalRounds]);
+
+  const forfeit = useCallback(() => {
+    if (status !== "connected") return;
+    if (state.winner !== null || state.matchWinner !== null) return;
+    const ok = window.confirm(
+      "Forfeit this round? Your opponent will be awarded the point.",
+    );
+    if (!ok) return;
+    if (isHost) hostApplyForfeit(0);
+    else roomRef.current?.send({ type: "forfeit", payload: {} });
+  }, [isHost, status, state.winner, state.matchWinner, hostApplyForfeit]);
 
   const copyCode = () => {
     navigator.clipboard?.writeText(code).catch(() => {});
@@ -458,8 +512,11 @@ function GameScreen({
     return null;
   }, [status, errorMsg, coinflip]);
 
-  const gameOver = state.winner !== null;
-  const youWon = gameOver && state.winner === you;
+  const roundOver = state.winner !== null;
+  const matchOver = state.matchWinner !== null;
+  const youWonRound = roundOver && state.winner === you;
+  const youWonMatch = matchOver && state.matchWinner === you;
+  const target = winsNeeded(state.totalRounds);
   const boardInteractive =
     status === "connected" && state.winner === null && !coinflip?.animating;
 
@@ -473,8 +530,17 @@ function GameScreen({
           interactive={boardInteractive}
         />
         {coinflip?.animating && <CoinflipOverlay starter={coinflip.starter} you={you} />}
-        {gameOver && (
-          <WinOverlay youWon={youWon} onRestart={restart} onLeave={onLeave} />
+        {roundOver && (
+          <WinOverlay
+            matchOver={matchOver}
+            youWon={matchOver ? youWonMatch : youWonRound}
+            score={state.score}
+            you={you}
+            target={target}
+            onPrimary={matchOver ? newMatch : nextRound}
+            primaryLabel={matchOver ? "New match" : "Next round"}
+            onLeave={onLeave}
+          />
         )}
       </div>
       <aside className="order-1 flex flex-col gap-4 lg:order-2">
@@ -493,6 +559,32 @@ function GameScreen({
           <p className="mt-2 text-[11px] text-muted-foreground">
             {isHost ? "Share this code with your friend." : "Connected to host."}
           </p>
+        </div>
+
+        <div className="rounded-xl border border-border bg-card p-4">
+          <div className="flex items-baseline justify-between">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+              Score
+            </p>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+              First to {target} · Best of {state.totalRounds}
+            </p>
+          </div>
+          <div className="mt-2 flex items-end justify-center gap-3">
+            <ScorePill
+              label={you === 0 ? "You" : "Opp"}
+              color="var(--pawn-1)"
+              value={state.score[0]}
+              highlight={state.matchWinner === 0}
+            />
+            <span className="pb-1 text-sm text-muted-foreground">—</span>
+            <ScorePill
+              label={you === 1 ? "You" : "Opp"}
+              color="var(--pawn-2)"
+              value={state.score[1]}
+              highlight={state.matchWinner === 1}
+            />
+          </div>
         </div>
 
         {banner && (
@@ -526,22 +618,38 @@ function GameScreen({
           />
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2">
           <button
             type="button"
-            onClick={restart}
-            disabled={status !== "connected" || coinflip?.animating}
-            className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary disabled:opacity-50"
+            onClick={forfeit}
+            disabled={
+              status !== "connected" ||
+              coinflip?.animating ||
+              state.winner !== null ||
+              state.matchWinner !== null
+            }
+            className="w-full rounded-lg border px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary disabled:opacity-50"
+            style={{ borderColor: "var(--destructive)", color: "var(--destructive)" }}
           >
-            New game
+            Forfeit round
           </button>
-          <button
-            type="button"
-            onClick={onLeave}
-            className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary"
-          >
-            Leave
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={newMatch}
+              disabled={status !== "connected" || coinflip?.animating}
+              className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary disabled:opacity-50"
+            >
+              New match
+            </button>
+            <button
+              type="button"
+              onClick={onLeave}
+              className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary"
+            >
+              Leave
+            </button>
+          </div>
         </div>
       </aside>
     </div>
