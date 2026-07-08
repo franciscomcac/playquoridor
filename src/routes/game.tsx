@@ -2197,19 +2197,23 @@ function SettingsDrawer({ onClose }: { onClose: () => void }) {
 
 // ---------------- BOT GAME (opponent presented as a human player) ----------------
 
-function BotGame({ ident, difficulty, opponentName, onLeave }: {
+function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
   ident: Identity;
+  mode: Mode;
   difficulty: number;
-  opponentName: string;
+  opponentNames: string[];
   onLeave: () => void;
 }) {
   const YOU: PlayerId = 0;
-  const BOT: PlayerId = 1;
+  const BOT_SLOTS = useMemo<PlayerId[]>(
+    () => Array.from({ length: mode - 1 }, (_, i) => (i + 1) as PlayerId),
+    [mode],
+  );
 
   const initial = useCallback((): GameState => {
-    const s = initialState(2, defaultWallsFor(2), 5);
-    return { ...s, clocks: initClocks(2, DEFAULT_CLOCK_MS) };
-  }, []);
+    const s = initialState(mode, defaultWallsFor(mode), 5);
+    return { ...s, clocks: initClocks(mode, DEFAULT_CLOCK_MS) };
+  }, [mode]);
 
   const [state, setState] = useState<GameState>(initial);
   const stateRef = useRef(state); stateRef.current = state;
@@ -2234,8 +2238,12 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
   const [merging, setMerging] = useState(false);
 
   const nameOf = useCallback(
-    (s: PlayerId) => (s === YOU ? ident.name : opponentName),
-    [ident.name, opponentName],
+    (s: PlayerId) => {
+      if (s === YOU) return ident.name;
+      const idx = (s as number) - 1;
+      return opponentNames[idx] ?? `Player ${(s as number) + 1}`;
+    },
+    [ident.name, opponentNames],
   );
 
   const startCoinflip = useCallback((starter: PlayerId) => {
@@ -2246,20 +2254,20 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
 
   const startRound = useCallback((base?: GameState) => {
     const src = base ?? stateRef.current;
-    const starter = (Math.random() < 0.5 ? 0 : 1) as PlayerId;
+    const starter = Math.floor(Math.random() * mode) as PlayerId;
     const ns = newRound(src, starter);
     // Fresh clocks + timestamp starts once the coinflip finishes.
     const withClocks: GameState = {
       ...ns,
       clocks: {
-        remaining: [DEFAULT_CLOCK_MS, DEFAULT_CLOCK_MS],
+        remaining: Array.from({ length: mode }, () => DEFAULT_CLOCK_MS),
         turnStartedAt: Date.now() + 1900,
         total: DEFAULT_CLOCK_MS,
       },
     };
     setState(withClocks);
     startCoinflip(starter);
-  }, [startCoinflip]);
+  }, [startCoinflip, mode]);
 
   const startMatch = useCallback(() => {
     startRound(initial());
@@ -2303,37 +2311,38 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
     }
     if (ns.winner !== null) {
       ns.endReason = "goal";
-      ns.endLoser = (mover === YOU ? BOT : YOU);
+      ns.endLoser = ns.winner === mover ? ((mover === YOU ? BOT_SLOTS[0] : YOU) as PlayerId) : (mover as PlayerId);
     }
     return ns;
-  }, []);
+  }, [BOT_SLOTS]);
 
-  // Bot's turn — think for a human amount of time, then move.
+  // Bot's turn — think for a human amount of time, then move. Works for
+  // any slot that isn't the human (2p or 4p games).
   useEffect(() => {
     if (state.winner !== null || state.matchWinner !== null) return;
     if (coinflip?.animating) return;
-    if (state.turn !== BOT || !state.active[BOT]) return;
+    const slot = state.turn as PlayerId;
+    if (slot === YOU) return;
+    if (!state.active[slot]) return;
 
-    // Pick a move up front so we can size the "thinking" time to it.
-    const move = pickBotMove(state, BOT, difficulty);
+    const move = pickBotMove(state, slot, difficulty);
     if (!move) {
-      const ns = applyForfeit(state, BOT, false);
+      const ns = applyForfeit(state, slot, false);
       if (ns) {
-        if (ns.winner !== null) { ns.endReason = "forfeit"; ns.endLoser = BOT; }
+        if (ns.winner !== null) { ns.endReason = "forfeit"; ns.endLoser = slot; }
         setState(ns); play("pop");
       }
       return;
     }
     let delay = humanThinkTimeMs(state, move, difficulty);
-    // Never spend more time than the bot has on its clock.
     if (state.clocks) {
-      const remaining = liveRemaining(state.clocks, state.turn, BOT, Date.now());
+      const remaining = liveRemaining(state.clocks, state.turn, slot, Date.now());
       delay = Math.min(delay, Math.max(120, remaining - 400));
     }
     const t = window.setTimeout(() => {
       const cur = stateRef.current;
-      if (cur.turn !== BOT || cur.winner !== null || cur.matchWinner !== null) return;
-      const ns = applyLocalMove(BOT, move);
+      if (cur.turn !== slot || cur.winner !== null || cur.matchWinner !== null) return;
+      const ns = applyLocalMove(slot, move);
       if (ns) {
         setState(ns);
         play(move.kind === "wall" ? "wall" : "pop");
@@ -2359,13 +2368,13 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
           if (ns.winner !== null) { ns.endReason = "time"; ns.endLoser = loser; }
           setState(ns);
           play("pop");
-          setToast(loser === YOU ? "You ran out of time" : `${opponentName} ran out of time`);
+          setToast(loser === YOU ? "You ran out of time" : `${nameOf(loser)} ran out of time`);
           window.setTimeout(() => setToast(null), 1800);
         }
       }
     }, 250);
     return () => window.clearInterval(iv);
-  }, [state.clocks, state.winner, state.matchWinner, coinflip?.animating, opponentName]);
+  }, [state.clocks, state.winner, state.matchWinner, coinflip?.animating, nameOf]);
 
   const handleMove = useCallback((move: Move) => {
     initSoundOnGesture();
@@ -2408,18 +2417,21 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
     prevWinnerReadyRef.current = state.winner;
   }, [state.winner]);
 
-  // Bot auto-readies a beat after the round ends so the player never waits
-  // on nothing. Random delay keeps it feeling human.
+  // Bots auto-ready a beat after the round ends so the player never waits
+  // on nothing. Each bot picks its own random delay so it feels human.
   useEffect(() => {
     if (state.winner === null || state.matchWinner !== null) return;
-    if (state.leftMatch[BOT]) return;
-    if (readySlots.includes(BOT)) return;
-    const delay = 1400 + Math.random() * 2200;
-    const t = window.setTimeout(() => {
-      setReadySlots((prev) => (prev.includes(BOT) ? prev : [...prev, BOT]));
-    }, delay);
-    return () => window.clearTimeout(t);
-  }, [state.winner, state.matchWinner, state.leftMatch, readySlots]);
+    const timers: number[] = [];
+    for (const bot of BOT_SLOTS) {
+      if (state.leftMatch[bot]) continue;
+      if (readySlots.includes(bot)) continue;
+      const delay = 1400 + Math.random() * 2200;
+      timers.push(window.setTimeout(() => {
+        setReadySlots((prev) => (prev.includes(bot) ? prev : [...prev, bot]));
+      }, delay));
+    }
+    return () => { for (const t of timers) window.clearTimeout(t); };
+  }, [state.winner, state.matchWinner, state.leftMatch, readySlots, BOT_SLOTS]);
 
   // When both sides are ready, play the merge animation then start next round.
   const botMergingRef = useRef(false);
@@ -2428,14 +2440,14 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
     if (state.winner === null || state.matchWinner !== null) return;
     const need: PlayerId[] = [];
     if (!state.leftMatch[YOU]) need.push(YOU);
-    if (!state.leftMatch[BOT]) need.push(BOT);
+    for (const bot of BOT_SLOTS) { if (!state.leftMatch[bot]) need.push(bot); }
     if (need.length === 0) return;
     const allReady = need.every((i) => readySlots.includes(i));
     if (!allReady || botMergingRef.current) return;
     setMerging(true);
     const t = window.setTimeout(() => { nextRound(); }, 900);
     return () => window.clearTimeout(t);
-  }, [state.winner, state.matchWinner, state.leftMatch, readySlots, nextRound]);
+  }, [state.winner, state.matchWinner, state.leftMatch, readySlots, nextRound, BOT_SLOTS]);
 
   const roundOver = state.winner !== null;
   const matchOver = state.matchWinner !== null;
@@ -2450,14 +2462,14 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
       <div className="order-1 flex min-w-0 flex-col gap-3">
         <TurnBar
           state={state} you={YOU} status={"connected"}
-          presence={{ count: 2, expected: 2 }}
+          presence={{ count: mode, expected: mode }}
           coinAnimating={!!coinflip?.animating} nameOf={nameOf}
         />
         <div className="flex gap-2 sm:gap-3">
           <div className="relative min-w-0 flex-1">
             <QuoridorBoard state={displayState} you={YOU} onMove={handleMove} interactive={boardInteractive} />
             {coinflip?.animating && (
-              <CoinflipOverlay starter={coinflip.starter} you={YOU} mode={2 as Mode} name={nameOf(coinflip.starter)} />
+              <CoinflipOverlay starter={coinflip.starter} you={YOU} mode={mode} name={nameOf(coinflip.starter)} />
             )}
             {roundOver && !matchOver && !coinflip?.animating && (
               <RoundEndReady
