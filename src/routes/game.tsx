@@ -1290,18 +1290,20 @@ function GameScreen({
   // the group can start instead of waiting forever.
   useEffect(() => {
     if (!quickMatch || !isHost) return;
-    // Ranked: no bot fallback. Wait up to 2 minutes for an opponent, then
-    // return to lobby with a "search time exceeded" screen.
+    // Ranked 1v1: if nobody joins in 5s, drop into a ranked bot game with a
+    // bot matched to the player's rating. Falls back to onRankedTimeout only
+    // if no bot handler was provided (e.g. 4p ranked, unsupported).
     if (ranked) {
-      if (!onRankedTimeout) return;
-      const rankedTimeoutMs = initialMode === 4 ? 30_000 : 120_000;
+      const handler = onBotFallback ?? onRankedTimeout;
+      if (!handler) return;
+      const rankedTimeoutMs = 5_000;
       const t = window.setTimeout(() => {
         if (presenceRef.current.count >= presenceRef.current.expected) return;
         if (stateRef.current.matchWinner !== null) return;
         void removeOpenRoom(code);
         roomRef.current?.close();
         roomRef.current = null;
-        onRankedTimeout();
+        handler();
       }, rankedTimeoutMs);
       return () => window.clearTimeout(t);
     }
