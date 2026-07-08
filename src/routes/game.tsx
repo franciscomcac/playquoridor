@@ -1987,6 +1987,7 @@ function CoinflipOverlay({ starter, you, mode, nameOf }: {
 }) {
   // Phase machine driven by mount-time timers.
   //  0 idle → 1 banners land → 2 impact/flash+shake → 3 coin shows → 4 coin spins → 5 reveal
+  //  → 6 exit (frame fades + "Game starting…") → 7 gone (unmounted)
   const [phase, setPhase] = useState(0);
   const [shakeKey, setShakeKey] = useState(0);
   useEffect(() => {
@@ -1997,6 +1998,10 @@ function CoinflipOverlay({ starter, you, mode, nameOf }: {
     t(1350, () => { setPhase(3); play("coinToss"); });  // coin appear
     t(1550, () => setPhase(4));  // coin spin
     t(3350, () => { setPhase(5); play("roundWin"); }); // reveal
+    // Out animation: hold on reveal, then fade the whole frame away while a
+    // "Game starting…" flash appears (matches the 2-player design doc).
+    t(3350 + 1300, () => setPhase(6));
+    t(3350 + 1300 + 650, () => setPhase(7));
     return () => { timers.forEach((id) => window.clearTimeout(id)); };
   }, []);
 
@@ -2026,6 +2031,9 @@ function CoinflipOverlay({ starter, you, mode, nameOf }: {
   if (mode === 4) {
     return <FourPlayerRoundStart starter={starter} you={you} nameOf={nameOf} />;
   }
+
+  const exiting = phase >= 6;
+  if (phase >= 7) return null;
 
   return (
     <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-lg bg-background/85 backdrop-blur-md">
@@ -2064,7 +2072,12 @@ function CoinflipOverlay({ starter, you, mode, nameOf }: {
       <div
         key={shakeKey}
         className="relative flex h-full w-full items-center justify-center px-3"
-        style={phase >= 2 ? { animation: "rs-shake .32s ease" } : undefined}
+        style={{
+          animation: phase === 2 ? "rs-shake .32s ease" : undefined,
+          transform: exiting ? "scale(.95) translateY(-12px)" : "none",
+          opacity: exiting ? 0 : 1,
+          transition: "transform .55s ease, opacity .55s ease",
+        }}
       >
         <div className="flex w-full max-w-3xl flex-col items-stretch gap-4 sm:gap-5">
           <RoundStartBanner
