@@ -94,6 +94,10 @@ function LobbyInner() {
     try { sessionStorage.setItem("quoridor:pendingAction", action); } catch {}
     void navigate({ to: "/game" });
   }
+  function goCpu(diff: "easy" | "medium" | "hard") {
+    try { sessionStorage.setItem("quoridor:pendingAction", `cpu:${diff}`); } catch {}
+    void navigate({ to: "/game" });
+  }
   function goJoin(c: string) {
     if (c.length !== 5) return;
     try { sessionStorage.setItem("quoridor:pendingJoin", c); } catch {}
