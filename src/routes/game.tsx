@@ -210,7 +210,7 @@ function Home() {
                 initialRounds={view.rounds}
                 quickMatch={view.quickMatch}
                 ranked={view.ranked}
-                onBotFallback={() => setView({
+                onBotFallback={view.ranked ? undefined : () => setView({
                   name: "bot",
                   difficulty: randomDifficulty().value,
                   opponentName: randomGamerName(),
@@ -588,7 +588,10 @@ function QuickMatch({ mode, ranked, ident, onBack, onJoin, onHost }: {
   onBack: () => void; onJoin: (code: string) => void; onHost: (code: string) => void;
 }) {
   const [status, setStatus] = useState("Searching…");
+  const [expired, setExpired] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
   const cancelled = useRef(false);
+  const hostedCodeRef = useRef<string | null>(null);
   useEffect(() => {
     cancelled.current = false;
     (async () => {
@@ -599,15 +602,56 @@ function QuickMatch({ mode, ranked, ident, onBack, onJoin, onHost }: {
       setStatus("No matches — hosting a new room…");
       await registerOpenRoom(code, mode, ident.name, !!ranked);
       if (cancelled.current) { await removeOpenRoom(code); return; }
+      if (ranked) { hostedCodeRef.current = code; return; }
       onHost(code);
     })();
     return () => { cancelled.current = true; };
   }, [mode, ranked, ident.name, onJoin, onHost]);
+
+  // Ranked queue: 2-minute cap. No bot fallback — surface a clear timeout.
+  useEffect(() => {
+    if (!ranked) return;
+    const start = Date.now();
+    const iv = window.setInterval(() => {
+      const s = Math.floor((Date.now() - start) / 1000);
+      setElapsed(s);
+      if (s >= 120) {
+        window.clearInterval(iv);
+        cancelled.current = true;
+        const code = hostedCodeRef.current;
+        if (code) { void removeOpenRoom(code); hostedCodeRef.current = null; }
+        setExpired(true);
+      }
+    }, 1000);
+    return () => window.clearInterval(iv);
+  }, [ranked]);
+
+  if (expired) {
+    return (
+      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 text-center shadow-2xl">
+        <p className="text-lg font-semibold">Search time exceeded</p>
+        <p className="mt-2 text-sm text-muted-foreground">Please try again.</p>
+        <div className="mt-6 flex justify-center gap-3">
+          <button onClick={onBack} className="rounded-lg border border-border bg-secondary/40 px-4 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary">
+            Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const remaining = ranked ? Math.max(0, 120 - elapsed) : null;
+  const mm = remaining !== null ? String(Math.floor(remaining / 60)).padStart(1, "0") : null;
+  const ss = remaining !== null ? String(remaining % 60).padStart(2, "0") : null;
+
   return (
     <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-2xl text-center">
       <div className="spinner mx-auto h-12 w-12 rounded-full border-2 border-primary border-t-transparent" />
       <p className="mt-4 text-sm uppercase tracking-[0.25em]">{status}</p>
       <p className="mt-1 text-xs text-muted-foreground">{ranked ? "Ranked · " : ""}{mode} players</p>
+      {ranked && (
+        <p className="mt-3 font-mono text-2xl tabular-nums text-foreground">{mm}:{ss}</p>
+      )}
       <button onClick={onBack} className="mt-6 rounded-lg border border-border bg-secondary/40 px-4 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary">
         Cancel
       </button>
