@@ -275,16 +275,16 @@ function PuzzleBoard({ puzzle, onSolved }: { puzzle: PuzzleEntry; onSolved: () =
   const oppTurn = state.turn === opp && status === "playing";
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3">
+    <div className="flex h-full min-h-0 flex-col gap-2">
+      <div className="flex flex-none flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-2">
         <div className="flex items-center gap-4">
           <div>
             <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Your walls</p>
-            <p className="text-2xl font-semibold">{wallsLeft}</p>
+            <p className="text-xl font-semibold leading-none">{wallsLeft}</p>
           </div>
           <div>
             <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Turn</p>
-            <p className={"text-sm font-semibold " + (oppTurn ? "text-destructive" : "text-emerald-500")}>
+            <p className={"text-sm font-semibold leading-none " + (oppTurn ? "text-destructive" : "text-emerald-500")}>
               {oppTurn ? "Opponent…" : "You"}
             </p>
           </div>
@@ -297,20 +297,18 @@ function PuzzleBoard({ puzzle, onSolved }: { puzzle: PuzzleEntry; onSolved: () =
         </button>
       </div>
 
-      <div className="wood-frame relative">
-        <QuoridorBoard state={state} you={you} onMove={onMove} interactive={status === "playing" && state.turn === you} />
-        {status === "failed" && (
-          <PuzzleOverlay
-            solved={false}
-            you={you}
-            onReset={reset}
-          />
-        )}
+      <div className="relative mx-auto flex min-h-0 w-full flex-1 items-center justify-center">
+        <div className="wood-frame relative aspect-square h-full max-h-full w-auto max-w-full">
+          <QuoridorBoard state={state} you={you} onMove={onMove} interactive={status === "playing" && state.turn === you} />
+          {status === "failed" && (
+            <PuzzleOverlay
+              solved={false}
+              you={you}
+              onReset={reset}
+            />
+          )}
+        </div>
       </div>
-
-      <p className="text-xs text-muted-foreground">
-        You are player 1 (bottom). Place walls to slow the opponent and race them to your goal row. Opponent auto-plays the shortest path — they cannot place walls.
-      </p>
     </div>
   );
 }
