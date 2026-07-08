@@ -137,7 +137,7 @@ function Home() {
     }
     else if (pending.startsWith("spectate:")) {
       const code = pending.slice(9).toUpperCase();
-      if (code.length === 5) setView({ name: "spectate", code });
+      if (code.length === 5) setView({ name: "spectating", code });
       else setView({ name: "spectate" });
     }
     else if (pending === "spectate") {
