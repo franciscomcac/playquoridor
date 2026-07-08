@@ -29,7 +29,7 @@ import {
   type PeerMessage, type Room, type RosterEntry,
 } from "@/lib/peer-room";
 import {
-  getStoredIdentity, isValidName, sanitizeName, setStoredIdentity, type Identity,
+  getStoredIdentity, setStoredIdentity, type Identity,
 } from "@/lib/identity";
 import {
   bumpMyStats, fetchMyStats, fetchMyWinStreak, findOpenRoom, recordMatch,
@@ -75,6 +75,7 @@ export const Route = createFileRoute("/game")({
 
 type View =
   | { name: "boot" }
+  | { name: "resume"; game: SavedGame }
   | { name: "create"; mode: Mode; walls: number; rounds: number }
   | { name: "join" }
   | { name: "quick"; mode: Mode; ranked?: boolean }
@@ -82,6 +83,56 @@ type View =
   | { name: "bot"; difficulty: number; opponentName: string }
   | { name: "spectate" }
   | { name: "spectating"; code: string };
+
+type SavedGame = {
+  isHost: boolean;
+  code: string;
+  mode: Mode;
+  walls: number;
+  rounds: number;
+  quickMatch?: boolean;
+  ranked?: boolean;
+  savedAt: number;
+};
+
+const ACTIVE_GAME_KEY = "quoridor:activeGame";
+const ACTIVE_GAME_TTL_MS = 2 * 60 * 60 * 1000;
+
+function saveInterruptedGame(game: SavedGame) {
+  try { localStorage.setItem(ACTIVE_GAME_KEY, JSON.stringify({ ...game, savedAt: Date.now() })); } catch { /* ignore */ }
+}
+
+function clearInterruptedGame() {
+  try { localStorage.removeItem(ACTIVE_GAME_KEY); } catch { /* ignore */ }
+}
+
+function loadInterruptedGame(): SavedGame | null {
+  try {
+    const raw = localStorage.getItem(ACTIVE_GAME_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<SavedGame>;
+    const code = typeof parsed.code === "string" ? parsed.code.toUpperCase() : "";
+    const mode = parsed.mode === 4 ? 4 : parsed.mode === 2 ? 2 : null;
+    const savedAt = typeof parsed.savedAt === "number" ? parsed.savedAt : 0;
+    if (!mode || code.length !== 5 || Date.now() - savedAt > ACTIVE_GAME_TTL_MS) {
+      clearInterruptedGame();
+      return null;
+    }
+    return {
+      isHost: !!parsed.isHost,
+      code,
+      mode,
+      walls: typeof parsed.walls === "number" ? parsed.walls : defaultWallsFor(mode),
+      rounds: typeof parsed.rounds === "number" ? parsed.rounds : 3,
+      quickMatch: !!parsed.quickMatch,
+      ranked: !!parsed.ranked,
+      savedAt,
+    };
+  } catch {
+    clearInterruptedGame();
+    return null;
+  }
+}
 
 function Home() {
   const [ident, setIdent] = useState<Identity | null>(null);
@@ -116,6 +167,8 @@ function Home() {
     }
     setIdent(stored);
     try {
+      const saved = loadInterruptedGame();
+      if (saved) { setView({ name: "resume", game: saved }); return; }
       const j = sessionStorage.getItem("quoridor:pendingJoin");
       const a = sessionStorage.getItem("quoridor:pendingAction");
       if (j) { sessionStorage.removeItem("quoridor:pendingJoin"); setPending(`join:${j}`); }
@@ -148,24 +201,33 @@ function Home() {
     setPending(null);
   }, [ident, pending]);
 
-  const onSetName = (name: string) => {
-    const i = setStoredIdentity(name);
-    setIdent(i);
-  };
-
   return (
     <main className="min-h-screen" onPointerDown={() => initSoundOnGesture()}>
       <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-3 py-4 sm:px-6 sm:py-10">
         <Header onOpenSettings={() => setSettingsOpen(true)} ident={ident} />
 
         {!ident ? (
-          <div className="flex flex-1 items-center justify-center py-4 sm:py-6">
-            <NamePrompt onSubmit={onSetName} />
-          </div>
+          <div className="flex flex-1 items-center justify-center py-4 sm:py-6 text-sm text-muted-foreground">Opening table…</div>
         ) : (
           <div key={view.name} className="view-fade flex flex-1 items-center justify-center py-4 sm:py-6">
             {view.name === "boot" && (
               <div className="text-sm text-muted-foreground">Opening table…</div>
+            )}
+            {view.name === "resume" && (
+              <ResumeMatchPrompt
+                game={view.game}
+                onReturn={() => setView({
+                  name: "game",
+                  isHost: view.game.isHost,
+                  code: view.game.code,
+                  mode: view.game.mode,
+                  walls: view.game.walls,
+                  rounds: view.game.rounds,
+                  quickMatch: view.game.quickMatch,
+                  ranked: view.game.ranked,
+                })}
+                onAbort={() => { clearInterruptedGame(); void navigate({ to: "/" }); }}
+              />
             )}
             {view.name === "create" && (
               <CreateRoom
