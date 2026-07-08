@@ -2928,7 +2928,7 @@ function SpectatorGame({ ident, code, onLeave }: {
   const startCoinflip = useCallback((starter: PlayerId) => {
     setCoinflip({ starter, animating: true });
     play("matchStart");
-    window.setTimeout(() => setCoinflip((cf) => (cf ? { ...cf, animating: false } : cf)), 2000);
+    window.setTimeout(() => setCoinflip((cf) => (cf ? { ...cf, animating: false } : cf)), 4200);
   }, []);
 
   useEffect(() => {
