@@ -104,7 +104,14 @@ function Home() {
     // redirect away on the second.
     if (bootRan.current) return;
     bootRan.current = true;
-    setIdent(getStoredIdentity());
+    let stored = getStoredIdentity();
+    if (!stored) {
+      // Anonymous session: auto-mint a temporary gamer-style username so
+      // players can jump straight into a game (and use chat) without an
+      // account. They can still rename via the "edit" link in the menu.
+      stored = setStoredIdentity(randomGamerName());
+    }
+    setIdent(stored);
     let hasPending = false;
     try {
       const j = sessionStorage.getItem("quoridor:pendingJoin");
