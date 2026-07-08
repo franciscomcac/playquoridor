@@ -329,22 +329,19 @@ function SaveClipButton({ state, you, nameOf }: {
 function Header({ ident, onOpenSettings }: { ident: Identity | null; onOpenSettings: () => void }) {
   return (
     <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-        <img
-          src="/favicon.png"
-          alt="Play Quoridor free in browser — place walls to block opponent"
-          width={40}
-          height={40}
-          className="h-9 w-9 shrink-0 rounded-md sm:h-10 sm:w-10"
-          style={{ boxShadow: "0 6px 14px -6px oklch(0 0 0 / 0.6)" }}
-        />
-        <div className="min-w-0">
-          <p className="truncate text-base font-semibold leading-none sm:text-xl">playquoridor.online</p>
-          <p className="mt-1 hidden text-[10px] uppercase tracking-[0.25em] text-muted-foreground sm:block">
-            Peer to peer · 2 or 4 players
-          </p>
-        </div>
-      </div>
+      <Link to="/" className="flex min-w-0 items-center gap-3" aria-label="playquoridor.online — home">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[9px] border border-[#2a2a31] bg-gradient-to-br from-[#1d1d22] to-[#101013]">
+          <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden>
+            <rect x="1" y="1" width="7" height="7" rx="1.5" fill="#f5a524" />
+            <rect x="10" y="1" width="7" height="7" rx="1.5" fill="#2e2e36" />
+            <rect x="1" y="10" width="7" height="7" rx="1.5" fill="#2e2e36" />
+            <rect x="10" y="10" width="7" height="7" rx="1.5" fill="#2e2e36" />
+          </svg>
+        </span>
+        <span className="truncate text-[15px] font-bold">
+          playquoridor<span className="text-[#5c5c66]">.online</span>
+        </span>
+      </Link>
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
         {ident && <StreakBadge playerId={ident.id} />}
         <AccountNav compact />
