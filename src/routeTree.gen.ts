@@ -13,7 +13,6 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as StatsRouteImport } from './routes/stats'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as PuzzleRouteImport } from './routes/puzzle'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
@@ -24,6 +23,7 @@ import { Route as ClipsRouteImport } from './routes/clips'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PuzzleIndexRouteImport } from './routes/puzzle.index'
 import { Route as PuzzleDateRouteImport } from './routes/puzzle.$date'
 
 const TermsRoute = TermsRouteImport.update({
@@ -44,11 +44,6 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PuzzleRoute = PuzzleRouteImport.update({
-  id: '/puzzle',
-  path: '/puzzle',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfileRoute = ProfileRouteImport.update({
@@ -101,10 +96,15 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PuzzleIndexRoute = PuzzleIndexRouteImport.update({
+  id: '/puzzle/',
+  path: '/puzzle/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PuzzleDateRoute = PuzzleDateRouteImport.update({
-  id: '/$date',
-  path: '/$date',
-  getParentRoute: () => PuzzleRoute,
+  id: '/puzzle/$date',
+  path: '/puzzle/$date',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -118,12 +118,12 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof OnboardingRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
-  '/puzzle': typeof PuzzleRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
   '/terms': typeof TermsRoute
   '/puzzle/$date': typeof PuzzleDateRoute
+  '/puzzle/': typeof PuzzleIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -136,12 +136,12 @@ export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
-  '/puzzle': typeof PuzzleRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
   '/terms': typeof TermsRoute
   '/puzzle/$date': typeof PuzzleDateRoute
+  '/puzzle': typeof PuzzleIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -155,12 +155,12 @@ export interface FileRoutesById {
   '/onboarding': typeof OnboardingRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
-  '/puzzle': typeof PuzzleRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
   '/terms': typeof TermsRoute
   '/puzzle/$date': typeof PuzzleDateRoute
+  '/puzzle/': typeof PuzzleIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -175,12 +175,12 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/privacy'
     | '/profile'
-    | '/puzzle'
     | '/reset-password'
     | '/sitemap.xml'
     | '/stats'
     | '/terms'
     | '/puzzle/$date'
+    | '/puzzle/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -193,12 +193,12 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/privacy'
     | '/profile'
-    | '/puzzle'
     | '/reset-password'
     | '/sitemap.xml'
     | '/stats'
     | '/terms'
     | '/puzzle/$date'
+    | '/puzzle'
   id:
     | '__root__'
     | '/'
@@ -211,12 +211,12 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/privacy'
     | '/profile'
-    | '/puzzle'
     | '/reset-password'
     | '/sitemap.xml'
     | '/stats'
     | '/terms'
     | '/puzzle/$date'
+    | '/puzzle/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -230,11 +230,12 @@ export interface RootRouteChildren {
   OnboardingRoute: typeof OnboardingRoute
   PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
-  PuzzleRoute: typeof PuzzleRouteWithChildren
   ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StatsRoute: typeof StatsRoute
   TermsRoute: typeof TermsRoute
+  PuzzleDateRoute: typeof PuzzleDateRoute
+  PuzzleIndexRoute: typeof PuzzleIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -265,13 +266,6 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/puzzle': {
-      id: '/puzzle'
-      path: '/puzzle'
-      fullPath: '/puzzle'
-      preLoaderRoute: typeof PuzzleRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/profile': {
@@ -344,26 +338,22 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/puzzle/': {
+      id: '/puzzle/'
+      path: '/puzzle'
+      fullPath: '/puzzle/'
+      preLoaderRoute: typeof PuzzleIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/puzzle/$date': {
       id: '/puzzle/$date'
-      path: '/$date'
+      path: '/puzzle/$date'
       fullPath: '/puzzle/$date'
       preLoaderRoute: typeof PuzzleDateRouteImport
-      parentRoute: typeof PuzzleRoute
+      parentRoute: typeof rootRouteImport
     }
   }
 }
-
-interface PuzzleRouteChildren {
-  PuzzleDateRoute: typeof PuzzleDateRoute
-}
-
-const PuzzleRouteChildren: PuzzleRouteChildren = {
-  PuzzleDateRoute: PuzzleDateRoute,
-}
-
-const PuzzleRouteWithChildren =
-  PuzzleRoute._addFileChildren(PuzzleRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -376,11 +366,12 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingRoute: OnboardingRoute,
   PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
-  PuzzleRoute: PuzzleRouteWithChildren,
   ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StatsRoute: StatsRoute,
   TermsRoute: TermsRoute,
+  PuzzleDateRoute: PuzzleDateRoute,
+  PuzzleIndexRoute: PuzzleIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

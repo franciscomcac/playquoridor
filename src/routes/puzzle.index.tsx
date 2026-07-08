@@ -8,7 +8,7 @@ function todayISO(): string {
   return `${y}-${m}-${day}`;
 }
 
-export const Route = createFileRoute("/puzzle")({
+export const Route = createFileRoute("/puzzle/")({
   beforeLoad: () => {
     throw redirect({ to: "/puzzle/$date", params: { date: todayISO() } });
   },
