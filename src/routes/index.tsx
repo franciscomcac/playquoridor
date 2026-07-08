@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { LobbyChrome } from "@/components/LobbyChrome";
 import { requireRealUser } from "@/lib/auth-gate";
+import { supabase } from "@/integrations/supabase/client";
 import {
   fetchGamesToday,
   fetchLeaderboard,
@@ -145,13 +146,25 @@ function Lobby() {
     void fetchGamesToday().then((n) => alive && setGamesToday(n)).catch(() => {});
     void fetchQueueCount().then((n) => alive && setInQueue(n)).catch(() => {});
     void (async () => {
-      const me = await requireRealUser();
+      // Don't gate on requireRealUser here — that only accepts players who
+      // completed onboarding, but plenty of accounts have onboarded_at=NULL
+      // yet still have real match history. Look up the player row directly.
+      const { data: auth } = await supabase.auth.getUser();
+      const u = auth.user;
+      const anon = !u || u.is_anonymous === true || (u.app_metadata?.provider ?? "") === "anonymous";
       if (!alive) return;
-      setSignedIn(!!me);
-      if (!me) { setRecent([]); return; }
+      setSignedIn(!!u && !anon);
+      if (!u || anon) { setRecent([]); return; }
+      const { data: p } = await supabase
+        .from("players").select("id")
+        .eq("auth_user_id", u.id)
+        .order("created_at", { ascending: false })
+        .limit(1).maybeSingle();
+      if (!alive) return;
+      if (!p) { setRecent([]); return; }
       const [r, st] = await Promise.all([
-        fetchRecentMatches(me.playerId, 4).catch(() => []),
-        fetchMyWinStreak(me.playerId).catch(() => 0),
+        fetchRecentMatches(p.id, 4).catch(() => []),
+        fetchMyWinStreak(p.id).catch(() => 0),
       ]);
       if (!alive) return;
       setRecent(r); setStreak(st);
