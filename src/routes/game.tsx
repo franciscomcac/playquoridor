@@ -283,8 +283,9 @@ function Home() {
                 ranked={view.ranked}
                 onBotFallback={view.ranked ? undefined : () => setView({
                   name: "bot",
+                  mode: view.mode,
                   difficulty: randomDifficulty().value,
-                  opponentName: randomGamerName(),
+                  opponentNames: Array.from({ length: view.mode - 1 }, () => randomGamerName()),
                 })}
                 onRankedTimeout={view.ranked ? () => { void navigate({ to: "/" }); } : undefined}
                 onLeave={goHome}
@@ -293,8 +294,9 @@ function Home() {
             {view.name === "bot" && (
               <BotGame
                 ident={ident}
+                mode={view.mode}
                 difficulty={view.difficulty}
-                opponentName={view.opponentName}
+                opponentNames={view.opponentNames}
                 onLeave={goHome}
               />
             )}
