@@ -1618,7 +1618,8 @@ function GameScreen({
     if (!usesRadar || radarRevealed) return;
     const start = Date.now();
     const id = window.setInterval(() => setWaitElapsed(Math.floor((Date.now() - start) / 1000)), 500);
-    return () => window.clearInterval(id);
+    const ping = window.setInterval(() => play("searchPing"), 2200);
+    return () => { window.clearInterval(id); window.clearInterval(ping); };
   }, [usesRadar, radarRevealed]);
 
   if (usesRadar && !radarRevealed) {
