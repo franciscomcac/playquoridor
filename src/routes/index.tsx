@@ -1706,12 +1706,34 @@ function RoundEndReady({
 
 function WaitingOverlay({ count, expected, isHost, onStart }: { count: number; expected: number; isHost: boolean; onStart: () => void }) {
   return (
-    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-background/80 backdrop-blur-sm">
-      <div className="spinner h-12 w-12 rounded-full border-2 border-primary border-t-transparent" />
-      <p className="mt-4 text-sm uppercase tracking-[0.25em] text-foreground">Waiting for players…</p>
-      <p className="mt-1 text-xs text-muted-foreground">{count}/{expected} connected</p>
+    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-background/40 backdrop-blur-[2px]">
+      <div className="relative grid h-56 w-56 place-items-center">
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            className="absolute inset-0 rounded-full border border-emerald-400/40"
+            style={{ animation: `qm-ping 2.4s cubic-bezier(0,0,0.2,1) ${i * 0.8}s infinite` }}
+          />
+        ))}
+        <span
+          className="absolute inset-0 rounded-full opacity-70"
+          style={{
+            background:
+              "conic-gradient(from 0deg, transparent 0deg, rgba(16,185,129,0) 250deg, rgba(52,211,153,0.55) 330deg, rgba(16,185,129,0) 360deg)",
+            animation: "qm-sweep 2.2s linear infinite",
+            maskImage: "radial-gradient(circle, black 40%, transparent 72%)",
+            WebkitMaskImage: "radial-gradient(circle, black 40%, transparent 72%)",
+          }}
+        />
+        <span className="relative z-10 h-5 w-5 rounded-full bg-emerald-400 shadow-[0_0_30px_8px_rgba(16,185,129,0.55)]" />
+        <span className="absolute inset-0 rounded-full ring-1 ring-inset ring-emerald-400/15" />
+      </div>
+      <p className="mt-6 text-xs font-semibold uppercase tracking-[0.4em] text-emerald-400 drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
+        <span className="qm-dots">Waiting for players</span>
+      </p>
+      <p className="mt-2 text-xs text-zinc-300/90 drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">{count}/{expected} connected</p>
       {isHost && count >= 2 && count < expected && (
-        <button onClick={onStart} className="mt-4 rounded-lg bg-primary px-4 py-2 text-xs font-semibold uppercase tracking-widest text-primary-foreground">
+        <button onClick={onStart} className="mt-4 rounded-lg bg-emerald-500 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-emerald-950 shadow-[0_15px_40px_-15px_rgba(16,185,129,0.7)]">
           Start with {count}
         </button>
       )}
