@@ -1868,6 +1868,57 @@ function BoardSideClocks({ state, you, nameOf }: {
   );
 }
 
+// Compact mobile-only strip that shows each seat's name, remaining clock,
+// and wall count without needing to open the match panel bottom sheet.
+function MobileMatchStrip({ state, you, nameOf }: {
+  state: GameState; you: PlayerId; nameOf: (s: PlayerId) => string;
+}) {
+  const [now, setNow] = useState<number>(() => Date.now());
+  useEffect(() => {
+    if (!state.clocks) return;
+    const iv = window.setInterval(() => setNow(Date.now()), 250);
+    return () => window.clearInterval(iv);
+  }, [state.clocks]);
+  const seats: PlayerId[] = [];
+  for (let i = 0; i < state.mode; i++) seats.push(i as PlayerId);
+  return (
+    <div className="grid gap-1.5 sm:hidden"
+      style={{ gridTemplateColumns: `repeat(${state.mode}, minmax(0, 1fr))` }}>
+      {seats.map((i) => {
+        const color = PLAYER_COLORS[i];
+        const isTurn = state.turn === i && state.winner === null && state.matchWinner === null && state.active[i];
+        const remaining = state.clocks ? liveRemaining(state.clocks, state.turn, i, now) : 0;
+        const seconds = remaining / 1000;
+        const danger = seconds <= 15;
+        return (
+          <div key={i}
+            className={"rounded-lg border px-2 py-1.5 transition " + (isTurn ? "clock-active" : "opacity-70")}
+            style={{
+              borderColor: isTurn ? color : "var(--border)",
+              background: isTurn ? `color-mix(in oklab, ${color} 12%, var(--card))` : "var(--card)",
+            }}>
+            <div className="flex items-center gap-1.5">
+              <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: color }} />
+              <span className="min-w-0 flex-1 truncate text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
+                {i === you ? "You" : nameOf(i)}
+              </span>
+            </div>
+            {state.clocks && (
+              <p className="mt-0.5 font-mono text-base leading-tight tabular-nums"
+                style={{ color: danger && isTurn ? "var(--destructive)" : "inherit" }}>
+                {formatClock(remaining)}
+              </p>
+            )}
+            <p className="mt-0.5 text-[10px] font-medium tracking-wider text-muted-foreground">
+              <span style={{ color }}>{state.wallsLeft[i]}</span> walls
+            </p>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // Round-end "ready up" panel. Each active player is a red ball that turns
 // green when they click Ready; once every player is green the balls merge
 // into the middle and the next round starts (coinflip runs from the parent).
