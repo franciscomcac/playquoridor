@@ -40,7 +40,7 @@ import {
   registerOpenRoom, removeOpenRoom, updateOpenRoomSeats, applyElo1v1,
 } from "@/lib/stats";
 import {
-  getVolume, initSoundOnGesture, isMuted, play, setMuted, setVolume, startSampleLoop,
+  getVolume, initSoundOnGesture, isMuted, play, playWheelSpin, setMuted, setVolume, startSampleLoop,
 } from "@/lib/sound";
 import { humanThinkTimeMs, pickBotMove, randomDifficulty } from "@/lib/bot";
 import { randomGamerName } from "@/lib/names";
@@ -2147,7 +2147,6 @@ function FourPlayerRoundStart({ starter, you, nameOf }: {
     t(100, () => setPhase(1));
     t(900, () => { setPhase(2); setShakeKey((k) => k + 1); play("clash"); });
     // Spinning selector: decelerating cycle that lands on the winner.
-    t(1250, () => { setPhase(3); play("coinToss"); });
     const spinStart = 1250;
     const widx = cycle.indexOf(starter);
     const loops = 2;
@@ -2160,6 +2159,12 @@ function FourPlayerRoundStart({ starter, you, nameOf }: {
       t(spinStart + cumulative, () => setSpinSlot(cardId));
     }
     const spinEnd = spinStart + cumulative;
+    // Wheel-spin SFX synced to the visual: one tick per step, decelerating,
+    // finishing with a landing ding right as the spotlight settles.
+    t(spinStart, () => {
+      setPhase(3);
+      playWheelSpin(totalSteps + 1, cumulative);
+    });
     t(spinEnd + 200, () => { setPhase(4); setRevealedCount(1); play("roundWin"); });
     for (let i = 1; i < revealSeq.length; i++) {
       t(spinEnd + 200 + i * 300, () => setRevealedCount(i + 1));
