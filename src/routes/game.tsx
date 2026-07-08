@@ -36,7 +36,7 @@ import {
   getStoredIdentity, setStoredIdentity, type Identity,
 } from "@/lib/identity";
 import {
-  bumpMyStats, fetchMyStats, fetchMyWinStreak, findOpenRoom, recordMatch, setMatchEloDelta,
+  bumpMyStats, fetchMyStats, fetchMyWinStreak, findOpenRoom, findOpenRoomOlderThan, recordMatch, setMatchEloDelta,
   registerOpenRoom, removeOpenRoom, updateOpenRoomSeats, applyElo1v1,
 } from "@/lib/stats";
 import {
@@ -643,6 +643,7 @@ function QuickMatch({ mode, ranked, ident, onBack, onJoin, onHost }: {
     cancelled.current = false;
     transitioned.current = false;
     registeredCode.current = null;
+    let cedePoll: number | null = null;
     (async () => {
       const existing = await findOpenRoom(mode, !!ranked);
       if (cancelled.current) return;
@@ -668,6 +669,38 @@ function QuickMatch({ mode, ranked, ident, onBack, onJoin, onHost }: {
       }
       transitioned.current = true;
       onHost(code);
+      // Race fix: two searchers can each register their own room before
+      // either sees the other. After we hand off to GameScreen (which sets
+      // up the peer host), keep polling briefly for an older sibling room —
+      // if one exists we should be the guest instead. We only cede to a
+      // strictly older room to keep the decision deterministic (the older
+      // room never cedes to us).
+      if (registeredCode.current) {
+        const myCode = registeredCode.current;
+        const started = Date.now();
+        const tick = async () => {
+          if (cancelled.current) return;
+          // Stop trying to cede once someone has actually joined our peer
+          // room (open_rooms row is removed on onFull) or ~8s have passed.
+          if (Date.now() - started > 8000) {
+            if (cedePoll != null) window.clearInterval(cedePoll);
+            return;
+          }
+          try {
+            const older = await findOpenRoomOlderThan(myCode, mode, !!ranked);
+            if (!older || cancelled.current) return;
+            if (cedePoll != null) window.clearInterval(cedePoll);
+            await removeOpenRoom(myCode);
+            registeredCode.current = null;
+            // GameScreen is already mounted as host — the parent's onJoin
+            // will swap the view to guest, tearing that peer session down.
+            onJoin(older);
+          } catch { /* transient; try again next tick */ }
+        };
+        cedePoll = window.setInterval(tick, 1500);
+        // Fire once immediately so a fast second registration also flips.
+        void tick();
+      }
     })();
     const onUnload = () => {
       if (registeredCode.current && !transitioned.current) {
@@ -679,6 +712,7 @@ function QuickMatch({ mode, ranked, ident, onBack, onJoin, onHost }: {
     return () => {
       cancelled.current = true;
       window.removeEventListener("beforeunload", onUnload);
+      if (cedePoll != null) window.clearInterval(cedePoll);
       if (registeredCode.current && !transitioned.current) {
         void removeOpenRoom(registeredCode.current);
         registeredCode.current = null;
