@@ -23,7 +23,8 @@ export type PeerMessage =
   | { type: "afkCancel"; payload: { slot: number } }
   | { type: "activity"; payload: { slot: number } }
   | { type: "ready"; payload: { slot: number } }
-  | { type: "readyState"; payload: { slots: number[] } };
+  | { type: "readyState"; payload: { slots: number[] } }
+  | { type: "chat"; payload: { slot: number; name: string; text: string; ts: number } };
 
 const PREFIX = "quoridor-lvbl-";
 
