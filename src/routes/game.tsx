@@ -291,7 +291,7 @@ function Home() {
                   opponentNames: Array.from({ length: view.mode - 1 }, () => randomGamerName()),
                 })}
                 onRankedTimeout={view.ranked ? () => { void navigate({ to: "/" }); } : undefined}
-                onLeave={goHome}
+                onLeave={() => { clearInterruptedGame(); goHome(); }}
               />
             )}
             {view.name === "bot" && (
