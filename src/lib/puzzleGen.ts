@@ -83,17 +83,23 @@ export function generatePuzzle(seed: number, difficulty: 1 | 2 | 3 = 2): Generat
   const mode = 2 as const;
   const goals = goalsFor(mode);
 
-  // Pawn starts slightly forward for variety, opponent stays at row 0.
-  const startRow = 6 + Math.floor(rng() * 3); // 6..8
-  const startCol = 2 + Math.floor(rng() * 5); // 2..6
+  // Pawn starts further back to force longer, mazier paths.
+  const startRow = 7 + Math.floor(rng() * 2); // 7..8
+  const startCol = 1 + Math.floor(rng() * 7); // 1..7
   let pawn: Pos = [startRow, startCol];
-  const other: Pos = [0, 4];
+  // Opponent pawn placed as an in-path obstacle near the middle band.
+  const otherRow = 3 + Math.floor(rng() * 3); // 3..5
+  const otherCol = 2 + Math.floor(rng() * 5); // 2..6
+  const other: Pos = [otherRow, otherCol];
   const pawns: Pos[] = [pawn, other];
 
-  const targetWalls = ({ 1: 4, 2: 8, 3: 12 } as const)[difficulty];
+  // Way more walls, and prefer configurations that lengthen the path.
+  const targetWalls = ({ 1: 10, 2: 15, 3: 18 } as const)[difficulty];
+  const minPathLen  = ({ 1: 10, 2: 14, 3: 18 } as const)[difficulty];
   const walls: Wall[] = [];
   let attempts = 0;
-  while (walls.length < targetWalls && attempts < 600) {
+  const maxAttempts = 4000;
+  while (walls.length < targetWalls && attempts < maxAttempts) {
     attempts++;
     const r = Math.floor(rng() * (BOARD - 1));
     const c = Math.floor(rng() * (BOARD - 1));
@@ -101,22 +107,25 @@ export function generatePuzzle(seed: number, difficulty: 1 | 2 | 3 = 2): Generat
     const spec: WallSpec = { r, c, o };
     if (wallConflicts(walls, spec)) continue;
     const test: Wall[] = [...walls, { ...spec, by: 0 }];
-    // Both players must still have a path.
     if (!hasPathToGoal(pawns[0], goals[0], test)) continue;
     if (!hasPathToGoal(pawns[1], goals[1], test)) continue;
-    // Path must not be too short — keep it interesting.
-    if (shortestPathToGoal(pawns[0], goals[0], test) < 3) continue;
+    const before = shortestPathToGoal(pawns[0], goals[0], walls);
+    const after  = shortestPathToGoal(pawns[0], goals[0], test);
+    // Prefer walls that meaningfully lengthen the player's path. Once we
+    // already have a mazy board (path >= minPathLen), accept neutral walls
+    // too so we still hit the wall target.
+    if (after < before + 1 && before < minPathLen && rng() > 0.15) continue;
     walls.push({ ...spec, by: 0 });
   }
 
-  // If we somehow lost the path, fall back to canonical start.
   if (!hasPathToGoal(pawn, goals[0], walls)) {
     pawn = [8, 4];
     pawns[0] = pawn;
   }
 
   const dist = shortestPathToGoal(pawn, goals[0], walls);
-  const slack = 1 + Math.floor(rng() * 3); // 1..3 extra moves allowed
+  // Tight budget: exact shortest, or +1 at most. No brute-force slack.
+  const slack = rng() < 0.6 ? 0 : 1;
   const goal_moves = Math.max(1, dist + slack);
 
   return {
