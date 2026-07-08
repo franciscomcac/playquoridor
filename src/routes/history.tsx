@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { requireRealUser } from "@/lib/auth-gate";
+import { isMatchSnapshot, type MatchSnapshot } from "@/lib/matchHistory";
+import { renderMatchGif, downloadBlob } from "@/lib/gifExport";
 
 export const Route = createFileRoute("/history")({
   head: () => ({
@@ -22,6 +24,7 @@ type MatchRow = {
   ranked: boolean;
   ended_at: string;
   winner_player_id: string | null;
+  snapshot: unknown;
   players: Array<{
     slot: number;
     name: string;
@@ -55,7 +58,7 @@ function HistoryPage() {
       if (ids.length === 0) { setRows([]); return; }
       const { data: matches } = await supabase
         .from("matches")
-        .select("id,mode,rounds,ranked,ended_at,winner_player_id")
+        .select("id,mode,rounds,ranked,ended_at,winner_player_id,snapshot")
         .in("id", ids)
         .order("ended_at", { ascending: false });
       const { data: mps } = await supabase
@@ -69,6 +72,7 @@ function HistoryPage() {
         ranked: m.ranked,
         ended_at: m.ended_at,
         winner_player_id: m.winner_player_id,
+        snapshot: (m as unknown as { snapshot?: unknown }).snapshot ?? null,
         players: (mps ?? []).filter((p) => p.match_id === m.id).sort((a, b) => a.slot - b.slot),
       }));
       setRows(grouped);
@@ -147,6 +151,7 @@ function HistoryPage() {
                         ))}
                       </tbody>
                     </table>
+                    <MatchActions row={m} meId={me.playerId} />
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -155,6 +160,50 @@ function HistoryPage() {
         })}
       </ul>
     </Shell>
+  );
+}
+
+function MatchActions({ row, meId }: { row: MatchRow; meId: string | null }) {
+  const nav = useNavigate();
+  const [busy, setBusy] = useState(false);
+  const snap = isMatchSnapshot(row.snapshot) ? (row.snapshot as MatchSnapshot) : null;
+  const opp = row.players.find((p) => p.player_id && p.player_id !== meId);
+  const analyze = () => {
+    if (!snap) return;
+    try { sessionStorage.setItem("analyze:pending", JSON.stringify(snap)); } catch {}
+    void nav({ to: "/analyze/$clipId", params: { clipId: "local" } });
+  };
+  const gif = async () => {
+    if (!snap) return;
+    setBusy(true);
+    try {
+      const blob = await renderMatchGif(snap);
+      const stamp = new Date(row.ended_at).toISOString().slice(0, 10);
+      downloadBlob(blob, `quoridor-${stamp}.gif`);
+    } finally { setBusy(false); }
+  };
+  return (
+    <div className="mt-4 flex flex-wrap items-center gap-2">
+      <button onClick={analyze} disabled={!snap}
+        title={snap ? "Open engine analysis" : "This match has no saved replay"}
+        className="rounded-md border border-primary/50 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 disabled:opacity-40">
+        Analyze
+      </button>
+      <button onClick={gif} disabled={!snap || busy}
+        title={snap ? "Download animated GIF" : "This match has no saved replay"}
+        className="rounded-md border border-border bg-secondary/40 px-3 py-1.5 text-xs font-medium hover:bg-secondary disabled:opacity-40">
+        {busy ? "Rendering…" : "Download GIF"}
+      </button>
+      {opp?.player_id && (
+        <Link to="/player/$playerId" params={{ playerId: opp.player_id }}
+          className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-secondary">
+          View {opp.name}'s profile
+        </Link>
+      )}
+      {!snap && (
+        <span className="text-[11px] text-zinc-500">Older match — no replay stored.</span>
+      )}
+    </div>
   );
 }
 
