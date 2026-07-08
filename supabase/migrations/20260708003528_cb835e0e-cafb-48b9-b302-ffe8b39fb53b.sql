@@ -1,0 +1,1 @@
+ALTER TABLE public.players ADD COLUMN IF NOT EXISTS country text, ADD COLUMN IF NOT EXISTS onboarded_at timestamptz;

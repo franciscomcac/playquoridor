@@ -180,23 +180,29 @@ export type Database = {
       players: {
         Row: {
           auth_user_id: string | null
+          country: string | null
           created_at: string
           id: string
           name: string
+          onboarded_at: string | null
           updated_at: string
         }
         Insert: {
           auth_user_id?: string | null
+          country?: string | null
           created_at?: string
           id: string
           name: string
+          onboarded_at?: string | null
           updated_at?: string
         }
         Update: {
           auth_user_id?: string | null
+          country?: string | null
           created_at?: string
           id?: string
           name?: string
+          onboarded_at?: string | null
           updated_at?: string
         }
         Relationships: []
