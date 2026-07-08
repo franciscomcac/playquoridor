@@ -452,6 +452,17 @@ function Menu({ ident, onChoose, onEditName }: {
           Spectate a match
         </button>
       </div>
+
+      <Link
+        to="/puzzle"
+        onClick={() => play("click")}
+        className="mt-4 flex items-center justify-between rounded-lg border border-dashed border-accent/60 bg-accent/10 px-4 py-3 text-sm hover:bg-accent/20"
+      >
+        <span className="flex flex-col">
+          <span className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Daily Puzzle</span>
+          <span className="font-semibold text-foreground">Today's board · solve it in N moves →</span>
+        </span>
+      </Link>
     </div>
   );
 }
