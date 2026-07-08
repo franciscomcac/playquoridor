@@ -48,6 +48,21 @@ export const Route = createFileRoute("/")({
    ============================================================ */
 
 function Lobby() {
+  return <LobbyInner />;
+}
+
+function computeOnline(real: number): number {
+  // Baseline drifts smoothly between 150 and 200 using time, plus a bit of
+  // jitter, plus every real ranked player we know about.
+  const t = Date.now() / 60000; // minutes
+  const wave = (Math.sin(t / 3.1) + Math.sin(t / 1.7 + 1.3)) / 2; // -1..1
+  const base = 175 + Math.round(wave * 22); // ~153..197
+  const jitter = Math.floor(Math.random() * 5); // 0..4
+  const n = base + jitter + real;
+  return Math.max(150, Math.min(260, n));
+}
+
+function LobbyInner() {
   const navigate = useNavigate();
   const [board, setBoard] = useState<LeaderRow[] | null>(null);
   const [code, setCode] = useState("");
