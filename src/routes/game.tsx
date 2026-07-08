@@ -210,7 +210,7 @@ function Home() {
                 initialRounds={view.rounds}
                 quickMatch={view.quickMatch}
                 ranked={view.ranked}
-                onBotFallback={() => setView({
+                onBotFallback={view.ranked ? undefined : () => setView({
                   name: "bot",
                   difficulty: randomDifficulty().value,
                   opponentName: randomGamerName(),
