@@ -4,6 +4,7 @@ import { fetchLeaderboard, type LeaderRow } from "@/lib/stats";
 import { supabase } from "@/integrations/supabase/client";
 import { COUNTRY_BY_ISO } from "@/lib/countries";
 import { AnimatePresence, motion } from "framer-motion";
+import { AccountNav } from "@/components/AccountNav";
 
 const SITE_URL = "https://playquoridor.online";
 const TITLE = "Quoridor Online — Play now, free";
