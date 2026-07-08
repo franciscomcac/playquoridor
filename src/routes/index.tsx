@@ -108,6 +108,18 @@ function timeAgo(iso: string): string {
   return `${Math.floor(h / 24)}d`;
 }
 
+const ACTIVE_GAME_KEY = "quoridor:activeGame";
+const ACTIVE_GAME_TTL_MS = 2 * 60 * 60 * 1000;
+
+function hasActiveGame(): boolean {
+  try {
+    const raw = localStorage.getItem(ACTIVE_GAME_KEY);
+    if (!raw) return false;
+    const p = JSON.parse(raw) as { savedAt?: number };
+    return typeof p?.savedAt === "number" && Date.now() - p.savedAt < ACTIVE_GAME_TTL_MS;
+  } catch { return false; }
+}
+
 function Lobby() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<Mode>("ranked");
@@ -164,6 +176,9 @@ function Lobby() {
   }, [navigate]);
 
   function onPlay() {
+    // Never let a player start a second game while one is still active —
+    // send them to the resume prompt instead.
+    if (hasActiveGame()) { void navigate({ to: "/game" }); return; }
     if (mode === "ranked" && !signedIn) {
       void navigate({ to: "/auth" });
       return;
@@ -174,6 +189,7 @@ function Lobby() {
   }
   function onJoin(c: string) {
     if (c.length !== 5) return;
+    if (hasActiveGame()) { void navigate({ to: "/game" }); return; }
     try { sessionStorage.setItem("quoridor:pendingJoin", c); } catch {/* noop */}
     void navigate({ to: "/game" });
   }
