@@ -33,6 +33,16 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
   const [hover, setHover] = useState<HoverTarget | null>(null);
   const boardRef = useRef<HTMLDivElement>(null);
 
+  // Per-player POV rotation so each seat sees their pawn on the bottom.
+  // 2-player: player 1 flips 180°. 4-player: cardinal orientation per seat.
+  const rotation =
+    state.mode === 4
+      ? ([0, 180, -90, 90][you] ?? 0)
+      : state.mode === 2 && you === 1
+        ? 180
+        : 0;
+  const rotated = rotation !== 0;
+
   // Pawn elimination pops — track slots that just went inactive.
   const [pops, setPops] = useState<Pop[]>([]);
   const prevActive = useRef<boolean[]>(state.active);
@@ -63,8 +73,20 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
     const el = boardRef.current;
     if (!el) return null;
     const rect = el.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * BOARD;
-    const y = ((e.clientY - rect.top) / rect.height) * BOARD;
+    // Coords relative to the (rotated) board's axis-aligned bounding rect.
+    let px = e.clientX - rect.left;
+    let py = e.clientY - rect.top;
+    if (rotation !== 0) {
+      const S = rect.width; // board is square
+      const cx = px - S / 2, cy = py - S / 2;
+      const rad = (-rotation * Math.PI) / 180;
+      const rx = cx * Math.cos(rad) - cy * Math.sin(rad);
+      const ry = cx * Math.sin(rad) + cy * Math.cos(rad);
+      px = rx + S / 2;
+      py = ry + S / 2;
+    }
+    const x = (px / rect.width) * BOARD;
+    const y = (py / rect.height) * BOARD;
     if (x < 0 || x > BOARD || y < 0 || y > BOARD) return null;
     const gy = Math.min(BOARD - 1, Math.max(1, Math.round(y)));
     const gx = Math.min(BOARD - 1, Math.max(1, Math.round(x)));
