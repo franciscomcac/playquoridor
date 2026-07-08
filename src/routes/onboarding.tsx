@@ -66,6 +66,11 @@ function OnboardingPage() {
       await ensureAuthSession();
       let ident = getStoredIdentity();
       if (!ident) ident = setStoredIdentity(name.trim());
+      const { moderateUsername } = await import("@/lib/moderation.functions");
+      const modn = await moderateUsername({ data: { name: name.trim() } }).catch(() => ({ allow: true } as { allow: boolean; reason?: string }));
+      if (!modn.allow) {
+        throw new Error(`Username not allowed: ${modn.reason ?? "policy violation"}`);
+      }
       const { error } = await supabase.rpc("complete_onboarding", {
         _player_id: ident.id,
         _name: name.trim(),

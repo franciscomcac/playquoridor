@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { AVATAR_SWATCHES, Avatar, LobbyChrome, tierFromRating } from "@/components/LobbyChrome";
 import { requireRealUser } from "@/lib/auth-gate";
 import { fetchProfile, fetchMyWinStreak, updateMyProfile, renameMyPlayer } from "@/lib/stats";
-import { saveBio, saveAvatar } from "@/lib/moderation.functions";
+import { saveBio, saveAvatar, moderateUsername } from "@/lib/moderation.functions";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
@@ -38,6 +38,7 @@ function ProfilePage() {
 
   const callSaveBio = useServerFn(saveBio);
   const callSaveAvatar = useServerFn(saveAvatar);
+  const callModName = useServerFn(moderateUsername);
 
   useEffect(() => {
     void requireRealUser().then((u) => {
@@ -99,6 +100,14 @@ function ProfilePage() {
     const { error } = await updateMyProfile(me.playerId, { avatar_color: avColor });
     let ok = !error;
     if (nameDirty) {
+      const modn = await callModName({ data: { name: pname } }).catch(() => ({ allow: true } as { allow: boolean; reason?: string }));
+      if (!modn.allow) {
+        setBusy(false);
+        setSaved("err");
+        setModMsg(`Display name rejected: ${modn.reason ?? "not allowed"}.`);
+        setTimeout(() => setSaved(null), 2400);
+        return;
+      }
       const r = await renameMyPlayer(me.playerId, pname);
       if (!r.ok) {
         ok = false;
@@ -165,7 +174,7 @@ function ProfilePage() {
         <div className="mt-5 grid items-start gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
           {/* Preview card */}
           <div className="rounded-2xl border border-[#232329] bg-[#111114] px-6 pb-6 pt-8 text-center">
-            <div className="mx-auto"><Avatar name={pname} color={avColor} size={72} imageUrl={avUrl} /></div>
+            <div className="flex justify-center"><Avatar name={pname} color={avColor} size={72} imageUrl={avUrl} /></div>
             <div className="mt-4 text-[20px] font-bold">{pname || "—"}</div>
             <div className="mt-[6px] font-[IBM_Plex_Mono,monospace] text-[11px] tracking-[0.08em] text-[#5c5c66]">
               @{pname || "player"}{since ? ` · SINCE ${since}` : ""}

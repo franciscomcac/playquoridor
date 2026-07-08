@@ -9,11 +9,13 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as StatsRouteImport } from './routes/stats'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as PuzzleRouteImport } from './routes/puzzle'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as GameRouteImport } from './routes/game'
@@ -24,6 +26,11 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PuzzleDateRouteImport } from './routes/puzzle.$date'
 
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StatsRoute = StatsRouteImport.update({
   id: '/stats',
   path: '/stats',
@@ -47,6 +54,11 @@ const PuzzleRoute = PuzzleRouteImport.update({
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -104,11 +116,13 @@ export interface FileRoutesByFullPath {
   '/game': typeof GameRoute
   '/history': typeof HistoryRoute
   '/onboarding': typeof OnboardingRoute
+  '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/puzzle': typeof PuzzleRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
+  '/terms': typeof TermsRoute
   '/puzzle/$date': typeof PuzzleDateRoute
 }
 export interface FileRoutesByTo {
@@ -120,11 +134,13 @@ export interface FileRoutesByTo {
   '/game': typeof GameRoute
   '/history': typeof HistoryRoute
   '/onboarding': typeof OnboardingRoute
+  '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/puzzle': typeof PuzzleRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
+  '/terms': typeof TermsRoute
   '/puzzle/$date': typeof PuzzleDateRoute
 }
 export interface FileRoutesById {
@@ -137,11 +153,13 @@ export interface FileRoutesById {
   '/game': typeof GameRoute
   '/history': typeof HistoryRoute
   '/onboarding': typeof OnboardingRoute
+  '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/puzzle': typeof PuzzleRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
+  '/terms': typeof TermsRoute
   '/puzzle/$date': typeof PuzzleDateRoute
 }
 export interface FileRouteTypes {
@@ -155,11 +173,13 @@ export interface FileRouteTypes {
     | '/game'
     | '/history'
     | '/onboarding'
+    | '/privacy'
     | '/profile'
     | '/puzzle'
     | '/reset-password'
     | '/sitemap.xml'
     | '/stats'
+    | '/terms'
     | '/puzzle/$date'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -171,11 +191,13 @@ export interface FileRouteTypes {
     | '/game'
     | '/history'
     | '/onboarding'
+    | '/privacy'
     | '/profile'
     | '/puzzle'
     | '/reset-password'
     | '/sitemap.xml'
     | '/stats'
+    | '/terms'
     | '/puzzle/$date'
   id:
     | '__root__'
@@ -187,11 +209,13 @@ export interface FileRouteTypes {
     | '/game'
     | '/history'
     | '/onboarding'
+    | '/privacy'
     | '/profile'
     | '/puzzle'
     | '/reset-password'
     | '/sitemap.xml'
     | '/stats'
+    | '/terms'
     | '/puzzle/$date'
   fileRoutesById: FileRoutesById
 }
@@ -204,15 +228,24 @@ export interface RootRouteChildren {
   GameRoute: typeof GameRoute
   HistoryRoute: typeof HistoryRoute
   OnboardingRoute: typeof OnboardingRoute
+  PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
   PuzzleRoute: typeof PuzzleRouteWithChildren
   ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StatsRoute: typeof StatsRoute
+  TermsRoute: typeof TermsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/stats': {
       id: '/stats'
       path: '/stats'
@@ -246,6 +279,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding': {
@@ -334,11 +374,13 @@ const rootRouteChildren: RootRouteChildren = {
   GameRoute: GameRoute,
   HistoryRoute: HistoryRoute,
   OnboardingRoute: OnboardingRoute,
+  PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
   PuzzleRoute: PuzzleRouteWithChildren,
   ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StatsRoute: StatsRoute,
+  TermsRoute: TermsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
