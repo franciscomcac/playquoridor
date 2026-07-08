@@ -99,6 +99,26 @@ export async function fetchMyStats(playerId: string) {
   return data;
 }
 
+/**
+ * Current win streak — number of consecutive most-recent matches with
+ * result = "win" for this player. Stops at the first non-win.
+ */
+export async function fetchMyWinStreak(playerId: string): Promise<number> {
+  const { data } = await supabase
+    .from("match_players")
+    .select("result, matches!inner(created_at)")
+    .eq("player_id", playerId)
+    .order("created_at", { referencedTable: "matches", ascending: false })
+    .limit(50);
+  if (!data?.length) return 0;
+  let streak = 0;
+  for (const row of data) {
+    if (row.result === "win") streak++;
+    else break;
+  }
+  return streak;
+}
+
 export async function fetchLeaderboard(limit = 20, rankedOnly = true): Promise<LeaderRow[]> {
   let q = supabase.from("player_stats").select("*");
   if (rankedOnly) q = q.gt("ranked_matches", 0);
