@@ -35,6 +35,8 @@ export type GameState = {
   // UI messaging; the engine never reads it back.
   endReason?: "goal" | "time" | "forfeit" | "afk";
   endLoser?: PlayerId;
+  // Total moves played this round (pawn moves + wall placements).
+  moveCount?: number;
 };
 
 export const BOARD = 9;
@@ -87,7 +89,7 @@ export function newRound(state: GameState, starter: PlayerId): GameState {
     active,
     wallsLeft: state.wallsLeft.map((_, i) => (active[i] ? state.totalWalls : 0)),
     walls: [], lastWall: null, turn: s, winner: null,
-    endReason: undefined, endLoser: undefined,
+    endReason: undefined, endLoser: undefined, moveCount: 0,
   };
 }
 
@@ -232,7 +234,7 @@ export function applyMove(state: GameState, player: PlayerId, move: Move): GameS
     }
     return { ...state, pawns, active,
       turn: winner !== null ? player : nextTurn(state.mode, active, player),
-      winner, score, matchWinner };
+      winner, score, matchWinner, moveCount: (state.moveCount ?? 0) + 1 };
   } else {
     if (!canPlaceWall(state, player, move.wall)) return null;
     const placed: Wall = { ...move.wall, by: player };
@@ -240,7 +242,8 @@ export function applyMove(state: GameState, player: PlayerId, move: Move): GameS
     const wallsPlacedByPlayer = [...state.wallsPlacedByPlayer];
     wallsPlacedByPlayer[player] = (wallsPlacedByPlayer[player] ?? 0) + 1;
     return { ...state, walls: [...state.walls, placed], wallsLeft, lastWall: placed,
-      turn: nextTurn(state.mode, state.active, player), wallsPlacedByPlayer };
+      turn: nextTurn(state.mode, state.active, player), wallsPlacedByPlayer,
+      moveCount: (state.moveCount ?? 0) + 1 };
   }
 }
 
