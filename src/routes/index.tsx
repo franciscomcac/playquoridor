@@ -416,16 +416,3 @@ function CpuRow({ onClick, color, lvl, name, desc }: { onClick: () => void; colo
     </button>
   );
 }
-function Step({ n, title, desc }: { n: string; title: string; desc: string }) {
-  return (
-    <div className="flex items-start gap-4 rounded-[14px] border border-[#232329] bg-[#111114] px-[18px] py-4">
-      <span className="grid h-7 w-7 flex-none place-items-center rounded-[9px] bg-[rgba(245,165,36,0.14)] font-[IBM_Plex_Mono,monospace] text-[12.5px] font-semibold text-[#f5a524]">
-        {n}
-      </span>
-      <div>
-        <div className="text-[13.5px] font-semibold">{title}</div>
-        <div className="mt-[3px] text-[12.5px] leading-[1.45] text-[#83838e]">{desc}</div>
-      </div>
-    </div>
-  );
-}
