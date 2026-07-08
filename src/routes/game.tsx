@@ -904,7 +904,8 @@ function GameScreen({
   const startCoinflip = useCallback((starter: PlayerId) => {
     setCoinflip({ starter, animating: true });
     play("matchStart");
-    window.setTimeout(() => setCoinflip((cf) => (cf ? { ...cf, animating: false } : cf)), 4200);
+    const dur = introDurationMs(stateRef.current.mode as Mode);
+    window.setTimeout(() => setCoinflip((cf) => (cf ? { ...cf, animating: false } : cf)), dur);
   }, []);
 
   const hostStartRound = useCallback((base?: GameState) => {
@@ -918,7 +919,7 @@ function GameScreen({
       ...rawNs,
       clocks: {
         remaining: Array.from({ length: rawNs.mode }, () => DEFAULT_CLOCK_MS),
-        turnStartedAt: Date.now() + 4200,
+        turnStartedAt: Date.now() + introDurationMs(rawNs.mode as Mode),
         total: DEFAULT_CLOCK_MS,
       },
     };
