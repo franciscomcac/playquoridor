@@ -261,7 +261,6 @@ function LobbyInner() {
 }
 
 function TopBar() {
-function TopBar() {
   return (
     <nav className="flex items-center justify-between">
       <Link to="/" className="flex items-center gap-2.5">
