@@ -45,7 +45,14 @@ const BG = "#0b0b10";
 const CELL_BG = "#1a1a22";
 const CELL_ALT = "#141420";
 const GRID = "#2b2b3a";
-const WALL = "#e8dfa8";
+const WALL_NEUTRAL = "#e8dfa8";
+
+// Tint a player's wall so it reads clearly on the dark board while still
+// keeping the player's colour identifiable.
+function wallColorFor(by: number | undefined): string {
+  const base = by == null ? WALL_NEUTRAL : PLAYER_HEX[by] ?? WALL_NEUTRAL;
+  return base;
+}
 
 export function drawState(
   ctx: CanvasRenderingContext2D,
@@ -85,8 +92,8 @@ export function drawState(
 
   // Walls
   const wallThick = Math.max(3, Math.round(cell * 0.16));
-  ctx.fillStyle = WALL;
   for (const w of state.walls) {
+    ctx.fillStyle = wallColorFor((w as unknown as { by?: number }).by);
     if (w.o === "h") {
       const x = ox + w.c * cell;
       const y = oy + (w.r + 1) * cell - wallThick / 2;
