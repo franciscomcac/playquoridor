@@ -1987,6 +1987,7 @@ function CoinflipOverlay({ starter, you, mode, nameOf }: {
 }) {
   // Phase machine driven by mount-time timers.
   //  0 idle → 1 banners land → 2 impact/flash+shake → 3 coin shows → 4 coin spins → 5 reveal
+  //  → 6 exit (frame fades + "Game starting…") → 7 gone (unmounted)
   const [phase, setPhase] = useState(0);
   const [shakeKey, setShakeKey] = useState(0);
   useEffect(() => {
@@ -1997,6 +1998,10 @@ function CoinflipOverlay({ starter, you, mode, nameOf }: {
     t(1350, () => { setPhase(3); play("coinToss"); });  // coin appear
     t(1550, () => setPhase(4));  // coin spin
     t(3350, () => { setPhase(5); play("roundWin"); }); // reveal
+    // Out animation: hold on reveal, then fade the whole frame away while a
+    // "Game starting…" flash appears (matches the 2-player design doc).
+    t(3350 + 1300, () => setPhase(6));
+    t(3350 + 1300 + 650, () => setPhase(7));
     return () => { timers.forEach((id) => window.clearTimeout(id)); };
   }, []);
 
@@ -2027,6 +2032,9 @@ function CoinflipOverlay({ starter, you, mode, nameOf }: {
     return <FourPlayerRoundStart starter={starter} you={you} nameOf={nameOf} />;
   }
 
+  const exiting = phase >= 6;
+  if (phase >= 7) return null;
+
   return (
     <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-lg bg-background/85 backdrop-blur-md">
       {/* Grid + radial glow backdrop */}
@@ -2055,7 +2063,7 @@ function CoinflipOverlay({ starter, you, mode, nameOf }: {
       />
       <p
         className="absolute left-1/2 top-6 -translate-x-1/2 text-[11px] font-semibold uppercase tracking-[0.28em] text-muted-foreground"
-        style={{ opacity: phase >= 1 ? 1 : 0, transition: "opacity .5s ease" }}
+        style={{ opacity: phase >= 1 && !exiting ? 1 : 0, transition: "opacity .5s ease" }}
       >
         Round start
       </p>
@@ -2064,7 +2072,12 @@ function CoinflipOverlay({ starter, you, mode, nameOf }: {
       <div
         key={shakeKey}
         className="relative flex h-full w-full items-center justify-center px-3"
-        style={phase >= 2 ? { animation: "rs-shake .32s ease" } : undefined}
+        style={{
+          animation: phase === 2 ? "rs-shake .32s ease" : undefined,
+          transform: exiting ? "scale(.95) translateY(-12px)" : "none",
+          opacity: exiting ? 0 : 1,
+          transition: "transform .55s ease, opacity .55s ease",
+        }}
       >
         <div className="flex w-full max-w-3xl flex-col items-stretch gap-4 sm:gap-5">
           <RoundStartBanner
@@ -2116,6 +2129,20 @@ function CoinflipOverlay({ starter, you, mode, nameOf }: {
       >
         {youStart ? "You " : `${nameOf(starter)} `}
         <span style={{ color: winnerColor }}>{youStart ? "go first" : "goes first"}</span>
+      </p>
+
+      {/* Game starting… flash during the exit */}
+      <p
+        className="absolute left-1/2 top-1/2 whitespace-nowrap text-center text-sm font-extrabold uppercase tracking-[0.24em]"
+        style={{
+          color: "oklch(0.75 0.18 155)",
+          opacity: exiting ? 1 : 0,
+          transform: exiting ? "translate(-50%, -50%) scale(1)" : "translate(-50%, -50%) scale(.9)",
+          transition: "opacity .4s ease, transform .4s ease",
+          zIndex: 6,
+        }}
+      >
+        Game starting…
       </p>
 
       <style>{`@keyframes rs-shake{0%{transform:translate(0,0)}15%{transform:translate(-8px,3px)}30%{transform:translate(7px,-4px)}45%{transform:translate(-6px,2px)}60%{transform:translate(5px,-3px)}75%{transform:translate(-3px,2px)}100%{transform:translate(0,0)}}`}</style>
