@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { PLAYER_COLORS } from "@/components/QuoridorBoard";
 import { play } from "@/lib/sound";
 import type { PlayerId } from "@/lib/quoridor";
@@ -21,21 +20,7 @@ type Props = {
 
 export function ChatPanel({ entries, onSend, disabled, you }: Props) {
   const [draft, setDraft] = useState("");
-  const [canChat, setCanChat] = useState<boolean | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    let alive = true;
-    const check = async () => {
-      const { data } = await supabase.auth.getUser();
-      const u = data.user;
-      const signedIn = !!u && !(u.is_anonymous === true || (u.app_metadata?.provider ?? "") === "anonymous");
-      if (alive) setCanChat(signedIn);
-    };
-    void check();
-    const { data: sub } = supabase.auth.onAuthStateChange(() => { void check(); });
-    return () => { alive = false; sub.subscription.unsubscribe(); };
-  }, []);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -45,7 +30,7 @@ export function ChatPanel({ entries, onSend, disabled, you }: Props) {
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const t = draft.trim().slice(0, 240);
-    if (!t || !canChat || disabled) return;
+    if (!t || disabled) return;
     onSend(t);
     setDraft("");
     play("click");
@@ -80,30 +65,24 @@ export function ChatPanel({ entries, onSend, disabled, you }: Props) {
           );
         })}
       </div>
-      {canChat === false ? (
-        <p className="mt-2 text-[11px] text-muted-foreground">
-          <a href="/auth" className="underline underline-offset-2 text-primary hover:text-primary/80">Sign in</a> to use chat.
-        </p>
-      ) : (
-        <form onSubmit={submit} className="mt-2 flex gap-2">
-          <input
-            type="text"
-            value={draft}
-            maxLength={240}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder={disabled ? "Chat unavailable" : "Say something…"}
-            disabled={disabled || !canChat}
-            className="min-w-0 flex-1 rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground outline-none focus:border-primary disabled:opacity-50"
-          />
-          <button
-            type="submit"
-            disabled={disabled || !canChat || draft.trim().length === 0}
-            className="rounded-md bg-primary px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-primary-foreground disabled:opacity-50"
-          >
-            Send
-          </button>
-        </form>
-      )}
+      <form onSubmit={submit} className="mt-2 flex gap-2">
+        <input
+          type="text"
+          value={draft}
+          maxLength={240}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder={disabled ? "Chat unavailable" : "Say something…"}
+          disabled={disabled}
+          className="min-w-0 flex-1 rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground outline-none focus:border-primary disabled:opacity-50"
+        />
+        <button
+          type="submit"
+          disabled={disabled || draft.trim().length === 0}
+          className="rounded-md bg-primary px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-primary-foreground disabled:opacity-50"
+        >
+          Send
+        </button>
+      </form>
     </div>
   );
 }
