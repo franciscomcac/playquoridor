@@ -1452,10 +1452,8 @@ function GameScreen({
     const allReady = need.every((i) => readySlots.includes(i));
     if (!allReady || mergingRef.current) return;
     setMerging(true);
-    const t = window.setTimeout(() => {
-      hostStartRound();
-    }, 900);
-    return () => window.clearTimeout(t);
+    hostStartRound();
+    return;
   }, [isHost, readySlots, state.winner, state.matchWinner, state.leftMatch, state.mode, hostStartRound]);
 
   const handleMove = useCallback((move: Move) => {
