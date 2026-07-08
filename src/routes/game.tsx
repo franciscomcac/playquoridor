@@ -2933,7 +2933,6 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
   const forfeit = useCallback(() => {
     if (state.winner !== null || state.matchWinner !== null) return;
     if (!state.active[YOU]) return;
-    if (!window.confirm("Forfeit this round?")) return;
     const ns = applyForfeit(state, YOU, false);
     if (ns) {
       if (ns.winner !== null) { ns.endReason = "forfeit"; ns.endLoser = YOU; }
