@@ -208,22 +208,13 @@ export const saveAvatar = createServerFn({ method: "POST" })
     });
 
     if (verdict.severity >= 3) {
-      const strikes = await recentStrikeCount(supabase, data.playerId);
-      const penalty = pickPenaltyForProfile(verdict.severity, strikes) ?? "warn";
-      const activeUntil = activeUntilFor(penalty);
-      await supabaseAdmin.from("moderation_penalties").insert({
-        player_id: data.playerId,
-        auth_user_id: userId,
-        kind: penalty,
-        reason: `avatar: ${verdict.summary || verdict.categories.join(", ")}`,
-        active_until: activeUntil ? activeUntil.toISOString() : null,
-      });
+      // No penalty for bad avatar uploads — just reject the image.
       return {
         allow: false,
-        penalty,
+        penalty: "warn",
         severity: verdict.severity,
         reason: verdict.summary,
-        senderMessage: `Avatar rejected (${penaltyLabel(penalty)}). Reason: ${verdict.summary || verdict.categories.join(", ") || "policy violation"}.`,
+        senderMessage: `Image rejected: ${verdict.summary || verdict.categories.join(", ") || "not allowed"}. Please choose a different picture.`,
       };
     }
 
