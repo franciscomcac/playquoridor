@@ -354,7 +354,10 @@ function AnalyzePage() {
 const COACH_CACHE = new Map<string, string>();
 const COACH_INFLIGHT = new Map<string, Promise<string>>();
 
-type Analysis = NonNullable<ReturnType<typeof (function () { return null as null | { verdict: Verdict; actual: Move; best: Move; delta: number; distMe: number; distOpp: number; distMeAfter: number; distOppAfter: number; }; })>>;
+type Analysis = {
+  verdict: Verdict; actual: Move; best: Move; delta: number;
+  distMe: number; distOpp: number; distMeAfter: number; distOppAfter: number;
+};
 
 function CoachPanel({ snapshot, frame, analysis }: {
   snapshot: MatchSnapshot;
