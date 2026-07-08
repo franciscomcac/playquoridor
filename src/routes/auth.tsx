@@ -5,6 +5,9 @@ import { lovable } from "@/integrations/lovable";
 import { linkAuthToPlayer } from "@/lib/identity";
 
 export const Route = createFileRoute("/auth")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    mode: s.mode === "signup" ? ("signup" as const) : ("signin" as const),
+  }),
   head: () => ({
     meta: [
       { title: "Sign in · playquoridor.online" },
@@ -21,7 +24,8 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const search = Route.useSearch();
+  const [mode, setMode] = useState<"signin" | "signup">(search.mode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
