@@ -1,5 +1,5 @@
 // Web Audio SFX — synthesized, no assets. Lazy-init on first user gesture.
-type SfxName = "pop"|"wall"|"join"|"matchStart"|"roundWin"|"matchWin"|"afkWarn"|"click"|"lowTime"|"tick"|"denied";
+type SfxName = "pop"|"wall"|"join"|"matchStart"|"roundWin"|"matchWin"|"afkWarn"|"click"|"lowTime"|"tick"|"denied"|"searchStart"|"searchPing"|"matchFound";
 const MUTE_KEY = "quoridor.mute";
 const VOL_KEY = "quoridor.volume";
 let ctx: AudioContext | null = null;
@@ -79,7 +79,7 @@ function noiseBurst(dur: number, vol = 0.3, delay = 0) {
 // Per-sfx rate limits (ms). Prevents rapid double-clicks from stacking voices.
 const MIN_GAP_MS: Partial<Record<SfxName, number>> = {
   pop: 60, wall: 60, click: 30, denied: 80, tick: 40,
-  lowTime: 800, afkWarn: 400,
+  lowTime: 800, afkWarn: 400, searchPing: 900, searchStart: 400, matchFound: 400,
 };
 const lastPlayed: Partial<Record<SfxName, number>> = {};
 export function play(name: SfxName) {
@@ -127,6 +127,23 @@ export function play(name: SfxName) {
     case "denied":
       beep({ freq: 260, dur: 0.09, type: "square", vol: 0.22, slideTo: 140 });
       noiseBurst(0.05, 0.12);
+      break;
+    // Matchmaking: soft upward chirp when the search begins.
+    case "searchStart":
+      beep({ freq: 420, dur: 0.12, type: "sine", vol: 0.22, slideTo: 780 });
+      beep({ freq: 620, dur: 0.14, type: "triangle", vol: 0.16, slideTo: 980, delay: 0.09 });
+      break;
+    // Radar-style ping while queued; quiet enough to loop.
+    case "searchPing":
+      beep({ freq: 1320, dur: 0.06, type: "sine", vol: 0.14 });
+      beep({ freq: 660, dur: 0.22, type: "sine", vol: 0.09, delay: 0.05, slideTo: 380 });
+      break;
+    // Bright confirmation when an opponent is found.
+    case "matchFound":
+      [523.25, 783.99, 1046.5].forEach((f, i) =>
+        beep({ freq: f, dur: 0.14, type: "triangle", vol: 0.32, delay: i * 0.07 }),
+      );
+      beep({ freq: 1568, dur: 0.18, type: "sine", vol: 0.22, delay: 0.24 });
       break;
   }
 }
