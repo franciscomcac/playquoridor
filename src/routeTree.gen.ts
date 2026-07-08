@@ -15,6 +15,7 @@ import { Route as PuzzleRouteImport } from './routes/puzzle'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as GameRouteImport } from './routes/game'
+import { Route as FriendsRouteImport } from './routes/friends'
 import { Route as ClipsRouteImport } from './routes/clips'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AboutRouteImport } from './routes/about'
@@ -51,6 +52,11 @@ const GameRoute = GameRouteImport.update({
   path: '/game',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FriendsRoute = FriendsRouteImport.update({
+  id: '/friends',
+  path: '/friends',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ClipsRoute = ClipsRouteImport.update({
   id: '/clips',
   path: '/clips',
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
   '/clips': typeof ClipsRoute
+  '/friends': typeof FriendsRoute
   '/game': typeof GameRoute
   '/history': typeof HistoryRoute
   '/onboarding': typeof OnboardingRoute
@@ -95,6 +102,7 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
   '/clips': typeof ClipsRoute
+  '/friends': typeof FriendsRoute
   '/game': typeof GameRoute
   '/history': typeof HistoryRoute
   '/onboarding': typeof OnboardingRoute
@@ -109,6 +117,7 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
   '/clips': typeof ClipsRoute
+  '/friends': typeof FriendsRoute
   '/game': typeof GameRoute
   '/history': typeof HistoryRoute
   '/onboarding': typeof OnboardingRoute
@@ -124,6 +133,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/auth'
     | '/clips'
+    | '/friends'
     | '/game'
     | '/history'
     | '/onboarding'
@@ -137,6 +147,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/auth'
     | '/clips'
+    | '/friends'
     | '/game'
     | '/history'
     | '/onboarding'
@@ -150,6 +161,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/auth'
     | '/clips'
+    | '/friends'
     | '/game'
     | '/history'
     | '/onboarding'
@@ -164,6 +176,7 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   AuthRoute: typeof AuthRoute
   ClipsRoute: typeof ClipsRoute
+  FriendsRoute: typeof FriendsRoute
   GameRoute: typeof GameRoute
   HistoryRoute: typeof HistoryRoute
   OnboardingRoute: typeof OnboardingRoute
@@ -214,6 +227,13 @@ declare module '@tanstack/react-router' {
       path: '/game'
       fullPath: '/game'
       preLoaderRoute: typeof GameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/friends': {
+      id: '/friends'
+      path: '/friends'
+      fullPath: '/friends'
+      preLoaderRoute: typeof FriendsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/clips': {
@@ -270,6 +290,7 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   AuthRoute: AuthRoute,
   ClipsRoute: ClipsRoute,
+  FriendsRoute: FriendsRoute,
   GameRoute: GameRoute,
   HistoryRoute: HistoryRoute,
   OnboardingRoute: OnboardingRoute,
