@@ -1686,13 +1686,10 @@ function GameScreen({
               <MessageOverlay title="Disconnected" body="Connection to the room was lost." onLeave={onLeave} />
             )}
             {roundOver && !matchOver && !coinflip?.animating && roundEndAnim && (
-              <RoundEndScoreAnim state={state} nameOf={nameOf} onDone={() => setRoundEndAnim(false)} />
-            )}
-            {roundOver && !matchOver && !coinflip?.animating && !roundEndAnim && (
-              <RoundEndReady
-                state={state} you={you} nameOf={nameOf}
-                readySlots={readySlots} merging={merging}
-                onReady={requestReady} onLeave={onLeave}
+              <RoundEndScoreAnim
+                state={state}
+                nameOf={nameOf}
+                onDone={() => { setRoundEndAnim(false); requestReady(); }}
               />
             )}
             {matchOver && (
