@@ -570,6 +570,17 @@ button:not([data-no-press]):active:not(:disabled) {
   50% { transform: rotate(-6deg) translateY(-1px); }
 }
 
+@utility chaos-pulse {
+  transform-origin: center;
+  animation: chaos-pulse 1.4s ease-in-out infinite;
+  z-index: 5;
+}
+
+@keyframes chaos-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.25); }
+}
+
 /* Analyze page — display font + scrubber accent to match uploaded redesign. */
 .font-display { font-family: "Space Grotesk", "DM Sans", system-ui, sans-serif; }
 .analyze-scrub {
