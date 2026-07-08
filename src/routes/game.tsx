@@ -1084,12 +1084,10 @@ function GameScreen({
         <EventLog entries={log} />
 
         <div className="flex flex-col gap-2">
-          <button onClick={forfeit}
+          <ForfeitButton
+            onConfirm={forfeit}
             disabled={status !== "connected" || state.winner !== null || state.matchWinner !== null || !state.active[you]}
-            className="rounded-lg border px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary/50 disabled:opacity-40"
-            style={{ borderColor: "var(--destructive)", color: "var(--destructive)" }}>
-            Forfeit round
-          </button>
+          />
           <div className="flex gap-2">
             <button onClick={newMatchAction} disabled={status !== "connected" || !!coinflip?.animating}
               className="flex-1 rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary disabled:opacity-40">
