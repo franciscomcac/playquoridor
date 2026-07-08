@@ -87,6 +87,7 @@ function Home() {
   const [pending, setPending] = useState<string | null>(null);
   const navigate = useNavigate();
   const bootRan = useRef(false);
+  const goHome = () => { void navigate({ to: "/" }); };
 
   useEffect(() => {
     // StrictMode invokes mount effects twice in dev; guard so we don't
