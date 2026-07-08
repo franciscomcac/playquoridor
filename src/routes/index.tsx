@@ -255,7 +255,6 @@ function Lobby() {
         </h1>
         <div className="relative">
           <button
-            onClick={onPlay}
             onClick={() => {
               if (hasActiveGame()) { void navigate({ to: "/game" }); return; }
               go("quick2");
