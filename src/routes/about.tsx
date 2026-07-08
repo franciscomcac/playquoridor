@@ -2,11 +2,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 
 const SITE_URL = "https://playquoridor.online";
 const PAGE_URL = `${SITE_URL}/about`;
-const TITLE = "About Quoridor – Rules, History & How to Play the Wall Blocking Game";
+const TITLE = "About Quoridor — Rules, History & Strategy";
 const DESCRIPTION =
-  "Learn everything about Quoridor: the abstract strategy board game where two or four players race pawns across a 9×9 grid while placing walls to block opponents. Full rules, history, strategy tips, terminology and FAQ. Play free at playquoridor.online.";
-const OG_DESCRIPTION =
-  "Everything about Quoridor — rules, history, strategy, terminology and FAQ for the classic wall blocking board game. Play free in your browser.";
+  "Quoridor rules, history, strategy tips and FAQ for the 2–4 player wall blocking board game. Play free in your browser at playquoridor.online.";
+const OG_DESCRIPTION = DESCRIPTION;
 
 export const Route = createFileRoute("/about")({
   component: AboutPage,
@@ -58,6 +57,45 @@ export const Route = createFileRoute("/about")({
           itemListElement: [
             { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
             { "@type": "ListItem", position: 2, name: "About", item: PAGE_URL },
+          ],
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: [
+            {
+              "@type": "Question",
+              name: "Is Quoridor the same as the balls and walls game?",
+              acceptedAnswer: { "@type": "Answer", text: "Yes. Many players remember Quoridor by its components — round pawns and wall segments — and search for it as the balls and walls game or the wall blocking board game. It is called Quoridor." },
+            },
+            {
+              "@type": "Question",
+              name: "Is Quoridor a solved game?",
+              acceptedAnswer: { "@type": "Answer", text: "9×9 Quoridor has not been formally solved. Smaller 5×5 variants have been computer-solved and are a first-player win with perfect play. On the full 9×9 board strong engines exist but the game remains rich for human play." },
+            },
+            {
+              "@type": "Question",
+              name: "Do I have to place walls?",
+              acceptedAnswer: { "@type": "Answer", text: "No. On every turn you choose freely between moving your pawn and placing a wall. You can play an entire game without placing a wall — you just usually won't win against a player who does." },
+            },
+            {
+              "@type": "Question",
+              name: "Can I completely block my opponent with walls?",
+              acceptedAnswer: { "@type": "Answer", text: "No. After any wall placement, every player must still have at least one legal path to their goal. A wall that would fully cut off any player is illegal." },
+            },
+            {
+              "@type": "Question",
+              name: "How long does a game of Quoridor take?",
+              acceptedAnswer: { "@type": "Answer", text: "A casual two-player round usually takes 10–20 minutes. Best-of-five matches take around 30–60 minutes. Four-player games are quicker per round but often more chaotic." },
+            },
+            {
+              "@type": "Question",
+              name: "Where can I play Quoridor online for free?",
+              acceptedAnswer: { "@type": "Answer", text: "At playquoridor.online. Create a private room and share the code with a friend, use Quick Match, or play a local bot. No account and no download required." },
+            },
           ],
         }),
       },
