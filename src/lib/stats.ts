@@ -125,9 +125,9 @@ export async function fetchMyStats(playerId: string) {
 export async function fetchMyWinStreak(playerId: string): Promise<number> {
   const { data } = await supabase
     .from("match_players")
-    .select("result, matches!inner(created_at)")
+    .select("result, matches!inner(ended_at)")
     .eq("player_id", playerId)
-    .order("created_at", { referencedTable: "matches", ascending: false })
+    .order("ended_at", { referencedTable: "matches", ascending: false })
     .limit(50);
   if (!data?.length) return 0;
   let streak = 0;
