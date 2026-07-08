@@ -819,6 +819,7 @@ function GameScreen({
 
   const [state, setState] = useState<GameState>(() => initialState(initialMode, initialWalls, initialRounds));
   const stateRef = useRef(state); stateRef.current = state;
+  const matchHistory = useMatchHistory(state, Array.from({ length: initialMode }, (_, i) => rosterRef.current.find((e) => e.slot === i)?.name ?? `Player ${i + 1}`));
 
   const [coinflip, setCoinflip] = useState<{ starter: PlayerId; animating: boolean } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -1509,6 +1510,7 @@ function GameScreen({
             )}
             {matchOver && (
               <EndScreen state={state} you={you} nameOf={nameOf}
+                snapshot={matchHistory.getSnapshot()}
                 onPrimary={newMatchAction} onLeave={onLeave} />
             )}
           </div>
