@@ -104,7 +104,14 @@ function Home() {
     // redirect away on the second.
     if (bootRan.current) return;
     bootRan.current = true;
-    setIdent(getStoredIdentity());
+    let stored = getStoredIdentity();
+    if (!stored) {
+      // Anonymous session: auto-mint a temporary gamer-style username so
+      // players can jump straight into a game (and use chat) without an
+      // account. They can still rename via the "edit" link in the menu.
+      stored = setStoredIdentity(randomGamerName());
+    }
+    setIdent(stored);
     let hasPending = false;
     try {
       const j = sessionStorage.getItem("quoridor:pendingJoin");
@@ -305,6 +312,38 @@ function Footer() {
     <footer className="pt-6 text-center text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
       Peer-to-peer · no accounts · your browser only
     </footer>
+  );
+}
+
+function ForfeitButton({ onConfirm, disabled }: { onConfirm: () => void; disabled?: boolean }) {
+  const [armed, setArmed] = useState(false);
+  const timerRef = useRef<number | null>(null);
+  useEffect(() => () => { if (timerRef.current) window.clearTimeout(timerRef.current); }, []);
+  useEffect(() => { if (disabled) setArmed(false); }, [disabled]);
+  const click = () => {
+    if (disabled) return;
+    if (!armed) {
+      setArmed(true);
+      if (timerRef.current) window.clearTimeout(timerRef.current);
+      timerRef.current = window.setTimeout(() => setArmed(false), 3000);
+      return;
+    }
+    if (timerRef.current) { window.clearTimeout(timerRef.current); timerRef.current = null; }
+    setArmed(false);
+    onConfirm();
+  };
+  return (
+    <button
+      onClick={click}
+      disabled={disabled}
+      className={
+        "rounded-lg border px-3 py-2 text-xs font-medium uppercase tracking-widest transition-colors disabled:opacity-40 " +
+        (armed ? "bg-[color:var(--destructive)] text-white hover:opacity-90" : "hover:bg-secondary/50")
+      }
+      style={armed ? { borderColor: "var(--destructive)" } : { borderColor: "var(--destructive)", color: "var(--destructive)" }}
+    >
+      {armed ? "Click again to confirm" : "Forfeit round"}
+    </button>
   );
 }
 
@@ -939,8 +978,6 @@ function GameScreen({
     if (status !== "connected") return;
     if (state.winner !== null || state.matchWinner !== null) return;
     if (!state.active[you]) return;
-    const ok = window.confirm("Forfeit this round?");
-    if (!ok) return;
     if (isHost) { pushLog(`${ident.name} forfeited the round`); hostApplyForfeit(0, false, "forfeit"); }
     else roomRef.current?.send({ type: "forfeit", payload: { from: slotRef.current } });
   }, [isHost, status, state, you, hostApplyForfeit, pushLog, ident.name]);
@@ -1079,12 +1116,10 @@ function GameScreen({
         <EventLog entries={log} />
 
         <div className="flex flex-col gap-2">
-          <button onClick={forfeit}
+          <ForfeitButton
+            onConfirm={forfeit}
             disabled={status !== "connected" || state.winner !== null || state.matchWinner !== null || !state.active[you]}
-            className="rounded-lg border px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary/50 disabled:opacity-40"
-            style={{ borderColor: "var(--destructive)", color: "var(--destructive)" }}>
-            Forfeit round
-          </button>
+          />
           <div className="flex gap-2">
             <button onClick={newMatchAction} disabled={status !== "connected" || !!coinflip?.animating}
               className="flex-1 rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary disabled:opacity-40">
