@@ -80,51 +80,35 @@ function Lobby() {
       <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-4 py-5 sm:px-6 sm:py-8">
         <TopBar />
 
-        {/* Hero */}
-        <section className="mt-8 flex flex-col items-center text-center sm:mt-12">
-          <span className="mb-3 inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-zinc-500">
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+        {/* Hero — split, geometric */}
+        <section className="mt-10 grid grid-cols-1 items-center gap-10 sm:mt-16 lg:grid-cols-2 lg:gap-16">
+          <div className="flex flex-col">
+            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-zinc-500">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              </span>
+              Matchmaking live
             </span>
-            Matchmaking live
-          </span>
-          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-            Play <span className="text-amber-500">Quoridor</span>
-          </h1>
-          <p className="mt-3 max-w-md text-sm text-zinc-500">
-            Pick a mode. We find you an opponent.
-          </p>
-        </section>
+            <h1 className="mt-5 text-5xl font-bold tracking-tight sm:text-6xl lg:text-7xl">
+              Play <span className="text-amber-500">Quoridor</span>.
+            </h1>
+            <p className="mt-4 max-w-md text-base text-zinc-500">
+              Two walls, one pawn, a race across the board. Pick a mode and jump in.
+            </p>
 
-        {/* Find Match — main CTAs */}
-        <section className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-3">
-          <FindMatchCard
-            label="1v1"
-            sub="Casual duel"
-            desc="Classic head-to-head. No rating on the line."
-            accent="emerald"
-            onClick={() => goPlay("quick2")}
-          />
-          <FindMatchCard
-            label="4 Players"
-            sub="Free-for-all"
-            desc="Chaotic four-corner mayhem. Last pawn standing wins."
-            accent="sky"
-            onClick={() => goPlay("quick4")}
-          />
-          <FindMatchCard
-            label="Ranked"
-            sub="1v1 · ELO ladder"
-            desc="Climb the ladder. Winner takes rating from the loser."
-            accent="amber"
-            badge="ELO"
-            onClick={() => goPlay("ranked2")}
-          />
+            <div className="mt-8 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap">
+              <ModeButton label="2 Players" tone="primary" onClick={() => goPlay("quick2")} />
+              <ModeButton label="4 Players" tone="ghost" onClick={() => goPlay("quick4")} />
+              <ModeButton label="Ranked" tone="ghost" badge="ELO" onClick={() => goPlay("ranked2")} />
+            </div>
+          </div>
+
+          <BoardArt />
         </section>
 
         {/* Bento — leaderboard + private + quick actions */}
-        <section className="mt-4 grid grid-cols-1 items-start gap-4 lg:grid-cols-12">
+        <section className="mt-16 grid grid-cols-1 items-start gap-4 lg:grid-cols-12">
           {/* ELO Leaderboard */}
           <aside className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 lg:col-span-5">
             <div className="flex items-center justify-between">
@@ -218,43 +202,6 @@ function Lobby() {
   );
 }
 
-function FindMatchCard({
-  label, sub, desc, accent, badge, onClick,
-}: {
-  label: string; sub: string; desc: string;
-  accent: "emerald" | "sky" | "amber"; badge?: string;
-  onClick: () => void;
-}) {
-  const tone = {
-    emerald: { ring: "hover:border-emerald-500/40", dot: "bg-emerald-500", cta: "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/40" },
-    sky:     { ring: "hover:border-sky-500/40",     dot: "bg-sky-500",     cta: "bg-sky-600 hover:bg-sky-500 text-white shadow-sky-900/40" },
-    amber:   { ring: "hover:border-amber-500/50",   dot: "bg-amber-500",   cta: "bg-amber-500 hover:bg-amber-400 text-zinc-950 shadow-amber-500/20" },
-  }[accent];
-  return (
-    <button
-      onClick={onClick}
-      className={`group relative flex flex-col items-start rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 text-left transition-all hover:-translate-y-0.5 ${tone.ring}`}
-    >
-      {badge && (
-        <span className="absolute right-4 top-4 rounded-full bg-amber-500/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.25em] text-amber-400">
-          {badge}
-        </span>
-      )}
-      <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-zinc-500">
-        <span className={`h-1.5 w-1.5 rounded-full ${tone.dot}`} />
-        Find Match
-      </div>
-      <div className="mt-3 text-2xl font-bold tracking-tight text-zinc-50">{label}</div>
-      <div className="mt-0.5 text-xs font-semibold uppercase tracking-widest text-zinc-500">{sub}</div>
-      <p className="mt-3 text-sm text-zinc-400">{desc}</p>
-      <span className={`mt-5 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-widest shadow-lg transition-all ${tone.cta}`}>
-        Play
-        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M8 5v14l11-7z" /></svg>
-      </span>
-    </button>
-  );
-}
-
 function TopBar() {
   return (
     <nav className="flex items-center justify-between">
@@ -277,6 +224,63 @@ function TopBar() {
         </Link>
       </div>
     </nav>
+  );
+}
+
+function ModeButton({
+  label, tone, badge, onClick,
+}: { label: string; tone: "primary" | "ghost"; badge?: string; onClick: () => void }) {
+  const base =
+    "group relative inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold tracking-tight transition-all hover:-translate-y-0.5";
+  const styles =
+    tone === "primary"
+      ? "bg-amber-500 text-zinc-950 shadow-lg shadow-amber-500/10 hover:bg-amber-400"
+      : "border border-zinc-800 bg-zinc-900/60 text-zinc-100 hover:border-zinc-600";
+  return (
+    <button onClick={onClick} className={`${base} ${styles}`}>
+      {label}
+      {badge && (
+        <span className="rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.2em] text-amber-400">
+          {badge}
+        </span>
+      )}
+      <svg className="h-3.5 w-3.5 opacity-70 transition-transform group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M8 5v14l11-7z" /></svg>
+    </button>
+  );
+}
+
+function BoardArt() {
+  // 9x9 board silhouette with two pawns and a couple of walls — pure geometry, no state
+  const cells = Array.from({ length: 81 });
+  return (
+    <div className="relative mx-auto w-full max-w-md">
+      <div className="absolute -inset-8 rounded-[2rem] bg-gradient-to-br from-amber-500/10 via-transparent to-transparent blur-2xl" aria-hidden />
+      <div className="relative rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4 shadow-2xl shadow-black/40">
+        <div className="grid aspect-square grid-cols-9 gap-1.5">
+          {cells.map((_, i) => {
+            const row = Math.floor(i / 9);
+            const col = i % 9;
+            const isTop = row === 0 && col === 4;
+            const isBot = row === 8 && col === 4;
+            return (
+              <div
+                key={i}
+                className={
+                  "relative rounded-[3px] " +
+                  (isTop || isBot ? "bg-zinc-800" : "bg-zinc-900/70 ring-1 ring-inset ring-zinc-800/60")
+                }
+              >
+                {isTop && <span className="absolute inset-1 rounded-full bg-zinc-200 shadow-[0_0_10px_rgba(255,255,255,0.35)]" />}
+                {isBot && <span className="absolute inset-1 rounded-full bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.6)]" />}
+              </div>
+            );
+          })}
+        </div>
+        {/* Two decorative walls */}
+        <span className="pointer-events-none absolute left-[24%] top-[38%] h-1.5 w-[20%] rounded-full bg-amber-500/80" aria-hidden />
+        <span className="pointer-events-none absolute right-[20%] top-[58%] h-1.5 w-[20%] rounded-full bg-zinc-200/80" aria-hidden />
+      </div>
+    </div>
   );
 }
 
