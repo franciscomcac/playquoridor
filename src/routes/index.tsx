@@ -286,14 +286,14 @@ function ModeButton({
 }: { label: string; sub?: string; tone?: "primary" | "ghost"; onClick: () => void }) {
   const styles =
     tone === "primary"
-      ? "border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20"
-      : "border-zinc-800 bg-zinc-950/60 hover:border-zinc-600 hover:bg-zinc-900";
+      ? "border-amber-500/50 bg-gradient-to-b from-amber-500/20 to-amber-500/5 shadow-lg shadow-amber-900/20 hover:border-amber-400 hover:from-amber-500/30 hover:to-amber-500/10"
+      : "border-zinc-800 bg-zinc-950/60 hover:border-zinc-500 hover:bg-zinc-900";
   return (
     <button
       onClick={onClick}
-      className={`group flex flex-col items-start gap-0.5 rounded-xl border px-3 py-2.5 text-left transition-all hover:-translate-y-0.5 ${styles}`}
+      className={`group flex flex-col items-start gap-1 rounded-xl border px-4 py-4 text-left transition-all hover:-translate-y-1 ${styles}`}
     >
-      <span className={`text-sm font-bold tracking-tight ${tone === "primary" ? "text-amber-400" : "text-zinc-100"}`}>
+      <span className={`text-base font-bold tracking-tight ${tone === "primary" ? "text-amber-300" : "text-zinc-100"}`}>
         {label}
       </span>
       {sub && (
