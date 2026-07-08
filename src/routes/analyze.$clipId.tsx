@@ -505,10 +505,10 @@ function MoveCard({ snapshot, slot, analysis, actual }: {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#08080b] font-[Manrope,system-ui,sans-serif] text-zinc-100">
-      <div className="mx-auto max-w-[1400px] px-6 pb-12 pt-8 sm:px-12 sm:pt-10">
+    <main className="relative min-h-screen overflow-hidden bg-[#08080b] font-[Manrope,system-ui,sans-serif] text-zinc-100 lg:h-screen">
+      <div className="mx-auto flex min-h-screen max-w-[1400px] flex-col px-4 pb-6 pt-4 sm:px-8 lg:h-full lg:min-h-0">
         <Link to="/" className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500 transition hover:text-zinc-200">← Home</Link>
-        <div className="mt-3">{children}</div>
+        <div className="mt-2 flex min-h-0 flex-1 flex-col">{children}</div>
       </div>
     </main>
   );
