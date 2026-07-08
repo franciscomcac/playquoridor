@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Avatar, LobbyChrome, tierFromRating } from "@/components/LobbyChrome";
+import { Avatar, LobbyChrome, PLACEMENT_GAMES, UNRANKED_COLOR, isPlacement, placementRemaining, tierFromRating } from "@/components/LobbyChrome";
 import { requireRealUser } from "@/lib/auth-gate";
 import { currentSeason } from "@/lib/season";
 import {
@@ -47,6 +47,10 @@ function LeaderboardPage() {
     void fetchAcceptedFriends(me.authUserId).then(setFriends);
     void fetchMyStats(me.playerId).then(async (s) => {
       if (!s) return;
+      const rm = (s as { ranked_matches?: number }).ranked_matches ?? 0;
+      // Skip building a self-row while still in placement — the ladder
+      // only lists players who have finished their placement games.
+      if (isPlacement(rm)) { setMyRow(null); return; }
       const row: FullLeaderRow = {
         id: me.playerId, name: me.username + " (you)",
         rating: (s as { rating?: number }).rating ?? 1000,
