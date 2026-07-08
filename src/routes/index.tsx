@@ -256,6 +256,10 @@ function Lobby() {
         <div className="relative">
           <button
             onClick={onPlay}
+            onClick={() => {
+              if (hasActiveGame()) { void navigate({ to: "/game" }); return; }
+              go("quick2");
+            }}
             className="mt-10 inline-flex items-center gap-3 rounded-[10px] border border-[rgba(47,213,117,0.6)] bg-gradient-to-b from-[#2bcb6f] to-[#1fb35f] px-[46px] py-4 text-[15.5px] font-bold uppercase tracking-[0.08em] text-[#04150b] transition-transform hover:-translate-y-0.5"
             style={{ boxShadow: "0 4px 26px rgba(47,213,117,.2),inset 0 1px 0 rgba(255,255,255,.2)" }}
           >
