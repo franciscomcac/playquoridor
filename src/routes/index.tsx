@@ -86,8 +86,6 @@ function Lobby() {
   const [gamesToday, setGamesToday] = useState<number>(0);
   const [inQueue, setInQueue] = useState<number>(0);
   const [online, setOnline] = useState<number>(() => computeOnline(0));
-  const avgQueue = Math.max(6, 22 - inQueue * 2);
-
   const cleanCode = useMemo(
     () => code.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5),
     [code],
