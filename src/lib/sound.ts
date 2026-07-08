@@ -76,6 +76,58 @@ function noiseBurst(dur: number, vol = 0.3, delay = 0) {
   src.start(c.currentTime + delay);
 }
 
+// Cached impulse response for the radar ping tail. Small exponentially
+// decaying noise buffer — cheap synthetic reverb via ConvolverNode.
+let pingReverb: ConvolverNode | null = null;
+function getPingReverb(c: AudioContext): ConvolverNode {
+  if (pingReverb) return pingReverb;
+  const seconds = 1.6;
+  const rate = c.sampleRate;
+  const len = Math.floor(rate * seconds);
+  const buf = c.createBuffer(2, len, rate);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = buf.getChannelData(ch);
+    for (let i = 0; i < len; i++) {
+      // Exponential decay noise — bright at first, long soft tail.
+      d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.8);
+    }
+  }
+  const conv = c.createConvolver();
+  conv.buffer = buf;
+  pingReverb = conv;
+  return conv;
+}
+
+// A single radar "ping": bright sonar chirp with a fast attack, long
+// exponential decay, and a wet reverb tail routed in parallel.
+function radarPing() {
+  const c = ensureCtx();
+  if (!c || muted || !master) return;
+  const t0 = c.currentTime;
+  // Dry ping: two-tone sonar (high spike into a lower body) with a
+  // pronounced exponential fade so it feels like it decays into space.
+  const osc = c.createOscillator();
+  const g = c.createGain();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(1760, t0);
+  osc.frequency.exponentialRampToValueAtTime(640, t0 + 0.9);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(0.28, t0 + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.1);
+  // A gentle band-pass keeps the tail from sounding flabby.
+  const bp = c.createBiquadFilter();
+  bp.type = "bandpass"; bp.frequency.value = 900; bp.Q.value = 1.4;
+  osc.connect(bp).connect(g);
+  // Route wet + dry in parallel so the reverb tail continues after the
+  // dry signal has faded — that's what gives it the "space" feel.
+  const dryGain = c.createGain(); dryGain.gain.value = 0.85;
+  const wetGain = c.createGain(); wetGain.gain.value = 0.55;
+  g.connect(dryGain).connect(master);
+  g.connect(getPingReverb(c)).connect(wetGain).connect(master);
+  osc.start(t0);
+  osc.stop(t0 + 1.2);
+}
+
 // Per-sfx rate limits (ms). Prevents rapid double-clicks from stacking voices.
 const MIN_GAP_MS: Partial<Record<SfxName, number>> = {
   pop: 60, wall: 60, click: 30, denied: 80, tick: 40,
@@ -135,8 +187,7 @@ export function play(name: SfxName) {
       break;
     // Radar-style ping while queued; quiet enough to loop.
     case "searchPing":
-      beep({ freq: 1320, dur: 0.06, type: "sine", vol: 0.14 });
-      beep({ freq: 660, dur: 0.22, type: "sine", vol: 0.09, delay: 0.05, slideTo: 380 });
+      radarPing();
       break;
     // Bright confirmation when an opponent is found.
     case "matchFound":
