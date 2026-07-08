@@ -61,7 +61,12 @@ export function startsFor(mode: Mode): Pos[] {
 }
 export function goalsFor(mode: Mode): Goal[] { return mode === 2 ? GOALS_2 : GOALS_4; }
 export function defaultWallsFor(mode: Mode): number { return mode === 2 ? 10 : 5; }
-export function winsNeeded(totalRounds: number): number { return Math.floor(totalRounds / 2) + 1; }
+// 4-player matches end as soon as someone banks 2 round wins (short and
+// snappy with 4 players in the pool). 2-player matches use best-of.
+export function winsNeeded(totalRounds: number, mode: Mode = 2): number {
+  if (mode === 4) return 2;
+  return Math.floor(totalRounds / 2) + 1;
+}
 
 export function initialState(mode: Mode = 2, totalWalls = defaultWallsFor(mode), totalRounds = 5): GameState {
   return {
