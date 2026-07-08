@@ -588,9 +588,7 @@ function QuickMatch({ mode, ranked, ident, onBack, onJoin, onHost }: {
   onBack: () => void; onJoin: (code: string) => void; onHost: (code: string) => void;
 }) {
   const [status, setStatus] = useState("Searching…");
-  const [expired, setExpired] = useState(false);
   const cancelled = useRef(false);
-  const hostedCodeRef = useRef<string | null>(null);
   useEffect(() => {
     cancelled.current = false;
     (async () => {
@@ -601,29 +599,10 @@ function QuickMatch({ mode, ranked, ident, onBack, onJoin, onHost }: {
       setStatus("No matches — hosting a new room…");
       await registerOpenRoom(code, mode, ident.name, !!ranked);
       if (cancelled.current) { await removeOpenRoom(code); return; }
-      if (ranked) { hostedCodeRef.current = code; return; }
       onHost(code);
     })();
     return () => { cancelled.current = true; };
   }, [mode, ranked, ident.name, onJoin, onHost]);
-
-  // Ranked queue: 2-minute cap. No bot fallback — surface a clear timeout.
-  useEffect(() => {
-    if (!ranked) return;
-    const t = window.setTimeout(() => {
-      cancelled.current = true;
-      const code = hostedCodeRef.current;
-      if (code) { void removeOpenRoom(code); hostedCodeRef.current = null; }
-      setExpired(true);
-    }, 120_000);
-    return () => window.clearTimeout(t);
-  }, [ranked]);
-
-  if (expired) {
-    return (
-      <SearchExpired onBack={onBack} />
-    );
-  }
 
   return (
     <SearchingAnimation status={status} ranked={!!ranked} mode={mode} onBack={onBack} />
