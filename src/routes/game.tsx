@@ -49,7 +49,7 @@ const SEO_OG_DESCRIPTION =
   "Move your piece, place walls, block your opponent. Free online Quoridor — the addictive strategy game anyone can learn in 2 minutes.";
 const SEO_KEYWORDS =
   "quoridor online, play quoridor, quoridor game free, wall blocking game, balls and walls game, block opponent with walls game, wall placement strategy game, pawn and walls board game, maze blocking game online, grid wall game, place walls to win game, quoridor multiplayer";
-const SITE_URL = "https://playquoridor.online";
+const SITE_URL = "https://playquoridor.online/game";
 
 export const Route = createFileRoute("/game")({
   component: Home,
