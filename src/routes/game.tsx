@@ -1664,7 +1664,10 @@ function GameScreen({
       {matchOver && (
         <EndScreen state={state} you={you} nameOf={nameOf}
           snapshot={matchHistory.getSnapshot()}
-          onPrimary={newMatchAction} onLeave={onLeave} />
+          onRematch={rematchAction}
+          onRequeue={onRequeue}
+          onNewMatch={onRequeue ?? newMatchAction}
+          onLeave={onLeave} />
       )}
 
       <MobileAsideSheet
