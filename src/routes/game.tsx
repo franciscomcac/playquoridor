@@ -902,7 +902,7 @@ function GameScreen({
   const startCoinflip = useCallback((starter: PlayerId) => {
     setCoinflip({ starter, animating: true });
     play("matchStart");
-    window.setTimeout(() => setCoinflip((cf) => (cf ? { ...cf, animating: false } : cf)), 2000);
+    window.setTimeout(() => setCoinflip((cf) => (cf ? { ...cf, animating: false } : cf)), 4200);
   }, []);
 
   const hostStartRound = useCallback((base?: GameState) => {
@@ -916,7 +916,7 @@ function GameScreen({
       ...rawNs,
       clocks: {
         remaining: Array.from({ length: rawNs.mode }, () => DEFAULT_CLOCK_MS),
-        turnStartedAt: Date.now() + 2000,
+        turnStartedAt: Date.now() + 4200,
         total: DEFAULT_CLOCK_MS,
       },
     };
@@ -1659,7 +1659,7 @@ function GameScreen({
         <div className="flex gap-2 sm:gap-3">
           <div className="relative min-w-0 flex-1">
             <QuoridorBoard state={displayState} you={you} onMove={handleMove} interactive={boardInteractive} onActivity={() => markActivity(you)} />
-            {coinflip?.animating && <CoinflipOverlay starter={coinflip.starter} you={you} mode={state.mode as Mode} name={nameOf(coinflip.starter)} />}
+            {coinflip?.animating && <CoinflipOverlay starter={coinflip.starter} you={you} mode={state.mode as Mode} nameOf={nameOf} />}
             {!usesRadar && status === "waiting" && presence.count < presence.expected && (
               <WaitingOverlay count={presence.count} expected={presence.expected} isHost={isHost} onStart={hostStartMatch} />
             )}
@@ -1896,39 +1896,241 @@ function EventLog({ entries }: { entries: EventEntry[] }) {
   );
 }
 
-function CoinflipOverlay({ starter, you, mode, name }: {
-  starter: PlayerId; you: PlayerId; mode: Mode; name: string;
+// Player initials for the placeholder avatar disc.
+function initialsOf(name: string): string {
+  const s = name.trim();
+  if (!s) return "??";
+  const parts = s.split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return s.slice(0, 2).toUpperCase();
+}
+// Deterministic placeholder title until real titles land.
+const TITLE_POOL = ["Pathfinder", "Wall Breaker", "Corner Cutter", "Grid Sniper", "Bridge Builder", "Blockade Baron", "Route Rogue", "Maze Whisper"];
+function titleFor(name: string): string {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
+  return TITLE_POOL[Math.abs(h) % TITLE_POOL.length];
+}
+
+function RoundStartBanner({ slot, name, side, phase, isWinner, isLoser }: {
+  slot: PlayerId; name: string; side: "left" | "right"; phase: number;
+  isWinner: boolean; isLoser: boolean;
 }) {
-  const youStart = starter === you;
-  // Two-face coin: front = starter's color, back = the other featured player.
-  // In 2p that's the opponent. In 4p we pick the next player round-robin so
-  // both faces still have a distinct color.
-  const other = ((starter + 1) % mode) as PlayerId;
-  const frontColor = PLAYER_COLORS[starter];
-  const backColor = PLAYER_COLORS[other];
-  // Always LAND on the front face by construction. 5 full X-rotations = 1800°.
-  const endDeg = 1800;
-  const faceStyle = (color: string): React.CSSProperties => ({
-    background: `radial-gradient(circle at 32% 28%, color-mix(in oklab, ${color} 55%, white 50%), ${color} 55%, color-mix(in oklab, ${color} 60%, black 40%) 100%)`,
-    color: "oklch(0.15 0.02 55)",
-  });
+  const color = PLAYER_COLORS[slot];
+  const landed = phase >= 1;
+  const translate = landed ? "translateX(0)" : (side === "left" ? "translateX(-160%)" : "translateX(160%)");
+  const glow = isWinner
+    ? `0 0 0 2px ${color}, 0 20px 60px rgba(0,0,0,.5), 0 0 46px -6px ${color}`
+    : "0 20px 50px rgba(0,0,0,.45)";
   return (
-    <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-background/70 backdrop-blur-sm">
-      <div className="coin-stage relative h-32 w-32">
-        <div className="coin-3d h-32 w-32 rounded-full"
-          style={{ ["--end" as string]: `${endDeg}deg` } as React.CSSProperties}>
-          <div className="coin-face front text-4xl" style={faceStyle(frontColor)}>
-            {starter + 1}
-          </div>
-          <div className="coin-face back text-4xl" style={faceStyle(backColor)}>
-            {other + 1}
+    <div
+      className="relative flex items-center gap-4 rounded-2xl border px-4 py-3 sm:gap-5 sm:px-5 sm:py-4"
+      style={{
+        borderColor: "color-mix(in oklab, var(--border) 70%, transparent)",
+        background: "color-mix(in oklab, var(--card) 92%, black 8%)",
+        transform: translate,
+        opacity: isLoser ? 0.42 : 1,
+        filter: isLoser ? "grayscale(0.4) saturate(0.7)" : "none",
+        boxShadow: glow,
+        transition: "transform .55s cubic-bezier(.2,.7,.3,1.3), opacity .5s ease, box-shadow .5s ease, filter .5s ease",
+      }}
+    >
+      <div className="absolute left-0 top-3 bottom-3 w-1 rounded-full" style={{ background: color }} />
+      {/* Goes first badge */}
+      <div
+        className="absolute -top-2.5 right-4 rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.14em]"
+        style={{
+          background: "linear-gradient(90deg,#22c55e,#16a34a)",
+          color: "#06210f",
+          opacity: isWinner ? 1 : 0,
+          transform: isWinner ? "translateY(0) scale(1)" : "translateY(-6px) scale(.9)",
+          transition: "opacity .35s ease, transform .35s ease",
+        }}
+      >
+        Goes first
+      </div>
+      {/* Avatar */}
+      <div
+        className="grid h-14 w-14 flex-none place-items-center rounded-full text-lg font-extrabold sm:h-16 sm:w-16 sm:text-xl"
+        style={{
+          background: `radial-gradient(circle at 32% 28%, color-mix(in oklab, ${color} 55%, white 50%), ${color} 55%, color-mix(in oklab, ${color} 60%, black 40%) 100%)`,
+          border: `3px solid ${color}`,
+          color: "oklch(0.15 0.02 55)",
+        }}
+      >
+        {initialsOf(name)}
+      </div>
+      {/* Name + title */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <p className="truncate text-base font-extrabold text-foreground sm:text-lg" style={{ color: "var(--foreground)" }}>
+          {name}
+        </p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+          {titleFor(name)}
+        </p>
+      </div>
+      {/* Badge slots (3) */}
+      <div className="hidden flex-none gap-1.5 sm:flex">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="h-7 w-7 rounded-full border border-dashed" style={{ borderColor: "color-mix(in oklab, var(--foreground) 18%, transparent)" }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CoinflipOverlay({ starter, you, mode, nameOf }: {
+  starter: PlayerId; you: PlayerId; mode: Mode; nameOf: (s: PlayerId) => string;
+}) {
+  // Phase machine driven by mount-time timers.
+  //  0 idle → 1 banners land → 2 impact/flash+shake → 3 coin shows → 4 coin spins → 5 reveal
+  const [phase, setPhase] = useState(0);
+  const [shakeKey, setShakeKey] = useState(0);
+  useEffect(() => {
+    const timers: number[] = [];
+    const t = (ms: number, fn: () => void) => timers.push(window.setTimeout(fn, ms));
+    t(120, () => setPhase(1));   // slide in
+    t(950, () => { setPhase(2); setShakeKey((k) => k + 1); play("wall"); }); // impact
+    t(1350, () => setPhase(3));  // coin appear
+    t(1550, () => setPhase(4));  // coin spin
+    t(3350, () => { setPhase(5); play("roundWin"); }); // reveal
+    return () => { timers.forEach((id) => window.clearTimeout(id)); };
+  }, []);
+
+  const p1: PlayerId = 0;
+  const p2: PlayerId = 1 as PlayerId;
+  const p1Name = nameOf(p1);
+  const p2Name = nameOf(p2);
+  const youStart = starter === you;
+
+  // Coin faces map to the two banners (p1 front, p2 back). Spin 5 turns and land on the winner.
+  const spins = 5;
+  const endDeg = spins * 360 + (starter === p2 ? 180 : 0);
+  const coinRotation = phase >= 4 ? endDeg : 0;
+  const winnerColor = PLAYER_COLORS[starter];
+
+  const frontStyle: React.CSSProperties = {
+    background: `radial-gradient(circle at 32% 28%, color-mix(in oklab, ${PLAYER_COLORS[p1]} 55%, white 50%), ${PLAYER_COLORS[p1]} 55%, color-mix(in oklab, ${PLAYER_COLORS[p1]} 60%, black 40%) 100%)`,
+    color: "oklch(0.15 0.02 55)",
+  };
+  const backStyle: React.CSSProperties = {
+    background: `radial-gradient(circle at 32% 28%, color-mix(in oklab, ${PLAYER_COLORS[p2]} 55%, white 50%), ${PLAYER_COLORS[p2]} 55%, color-mix(in oklab, ${PLAYER_COLORS[p2]} 60%, black 40%) 100%)`,
+    color: "oklch(0.15 0.02 55)",
+    transform: "rotateY(180deg)",
+  };
+
+  // 4p games fall back to the plain coin (no banners) so the reveal still works.
+  if (mode !== 2) {
+    const other = ((starter + 1) % mode) as PlayerId;
+    return (
+      <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-background/70 backdrop-blur-sm">
+        <div className="coin-stage relative h-32 w-32">
+          <div className="coin-3d h-32 w-32 rounded-full"
+            style={{ ["--end" as string]: `${1800 + (starter % 2 ? 180 : 0)}deg` } as React.CSSProperties}>
+            <div className="coin-face front text-4xl" style={frontStyle}>{starter + 1}</div>
+            <div className="coin-face back text-4xl" style={backStyle}>{other + 1}</div>
           </div>
         </div>
-        <div className="coin-shadow absolute left-1/2 -bottom-4 h-2 w-24 rounded-full"
-          style={{ background: "radial-gradient(ellipse at center, rgba(0,0,0,0.5), transparent 70%)" }} />
+        <p className="mt-6 text-sm uppercase tracking-[0.25em] text-foreground">Coin flip…</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {youStart ? "You move first" : `${nameOf(starter)} moves first`}
+        </p>
       </div>
-      <p className="mt-6 text-sm uppercase tracking-[0.25em] text-foreground">Coin flip…</p>
-      <p className="mt-1 text-xs text-muted-foreground">{youStart ? "You move first" : `${name} moves first`}</p>
+    );
+  }
+
+  return (
+    <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-lg bg-background/85 backdrop-blur-md">
+      {/* Grid + radial glow backdrop */}
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage:
+            "linear-gradient(color-mix(in oklab, var(--foreground) 3%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in oklab, var(--foreground) 3%, transparent) 1px, transparent 1px)",
+          backgroundSize: "34px 34px",
+        }}
+      />
+      <div
+        className="absolute inset-0"
+        style={{
+          background: `radial-gradient(ellipse 60% 40% at 50% 50%, color-mix(in oklab, ${winnerColor} 18%, transparent), transparent 70%)`,
+        }}
+      />
+      {/* Flash */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background: "radial-gradient(circle at 50% 50%, rgba(255,255,255,.85), color-mix(in oklab, var(--primary) 30%, transparent) 40%, transparent 70%)",
+          opacity: phase === 2 ? 1 : 0,
+          transition: phase === 2 ? "opacity .12s ease" : "opacity .35s ease",
+        }}
+      />
+      <p
+        className="absolute left-1/2 top-6 -translate-x-1/2 text-[11px] font-semibold uppercase tracking-[0.28em] text-muted-foreground"
+        style={{ opacity: phase >= 1 ? 1 : 0, transition: "opacity .5s ease" }}
+      >
+        Round start
+      </p>
+
+      {/* Shake wrapper (remount on impact) */}
+      <div
+        key={shakeKey}
+        className="relative flex h-full w-full items-center justify-center px-3"
+        style={phase >= 2 ? { animation: "rs-shake .32s ease" } : undefined}
+      >
+        <div className="flex w-full max-w-3xl flex-col items-stretch gap-4 sm:gap-5">
+          <RoundStartBanner
+            slot={p1} name={p1Name} side="left" phase={phase}
+            isWinner={phase === 5 && starter === p1}
+            isLoser={phase === 5 && starter !== p1}
+          />
+          <RoundStartBanner
+            slot={p2} name={p2Name} side="right" phase={phase}
+            isWinner={phase === 5 && starter === p2}
+            isLoser={phase === 5 && starter !== p2}
+          />
+        </div>
+
+        {/* Coin (centered over the banners) */}
+        <div
+          className="pointer-events-none absolute left-1/2 top-1/2 h-24 w-24"
+          style={{
+            transform: `translate(-50%, -50%) scale(${phase >= 3 ? 1 : 0})`,
+            opacity: phase >= 3 ? 1 : 0,
+            transition: "transform .4s cubic-bezier(.3,1.4,.4,1), opacity .3s ease",
+            perspective: "600px",
+            zIndex: 5,
+          }}
+        >
+          <div
+            className="relative h-full w-full"
+            style={{
+              transformStyle: "preserve-3d",
+              transform: `rotateY(${coinRotation}deg)`,
+              transition: "transform 1.75s cubic-bezier(.16,.85,.24,1)",
+            }}
+          >
+            <div className="absolute inset-0 grid place-items-center rounded-full text-2xl font-extrabold shadow-[0_10px_30px_rgba(0,0,0,.5)] ring-4 ring-white/25" style={{ ...frontStyle, backfaceVisibility: "hidden" }}>1</div>
+            <div className="absolute inset-0 grid place-items-center rounded-full text-2xl font-extrabold shadow-[0_10px_30px_rgba(0,0,0,.5)] ring-4 ring-white/25" style={{ ...backStyle, backfaceVisibility: "hidden" }}>2</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom result text */}
+      <p
+        className="absolute bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap text-center text-sm font-extrabold sm:text-base"
+        style={{
+          opacity: phase === 5 ? 1 : 0,
+          transform: phase === 5 ? "translate(-50%, 0)" : "translate(-50%, 8px)",
+          transition: "opacity .45s ease, transform .45s ease",
+          color: "var(--foreground)",
+        }}
+      >
+        {youStart ? "You " : `${nameOf(starter)} `}
+        <span style={{ color: winnerColor }}>{youStart ? "go first" : "goes first"}</span>
+      </p>
+
+      <style>{`@keyframes rs-shake{0%{transform:translate(0,0)}15%{transform:translate(-8px,3px)}30%{transform:translate(7px,-4px)}45%{transform:translate(-6px,2px)}60%{transform:translate(5px,-3px)}75%{transform:translate(-3px,2px)}100%{transform:translate(0,0)}}`}</style>
     </div>
   );
 }
@@ -2591,7 +2793,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
   const startCoinflip = useCallback((starter: PlayerId) => {
     setCoinflip({ starter, animating: true });
     play("matchStart");
-    window.setTimeout(() => setCoinflip((cf) => (cf ? { ...cf, animating: false } : cf)), 1900);
+    window.setTimeout(() => setCoinflip((cf) => (cf ? { ...cf, animating: false } : cf)), 4200);
   }, []);
 
   const startRound = useCallback((base?: GameState) => {
@@ -2603,7 +2805,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
       ...ns,
       clocks: {
         remaining: Array.from({ length: mode }, () => DEFAULT_CLOCK_MS),
-        turnStartedAt: Date.now() + 1900,
+        turnStartedAt: Date.now() + 4200,
         total: DEFAULT_CLOCK_MS,
       },
     };
@@ -2811,7 +3013,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
           <div className="relative min-w-0 flex-1">
             <QuoridorBoard state={displayState} you={YOU} onMove={handleMove} interactive={boardInteractive} />
             {coinflip?.animating && (
-              <CoinflipOverlay starter={coinflip.starter} you={YOU} mode={mode} name={nameOf(coinflip.starter)} />
+              <CoinflipOverlay starter={coinflip.starter} you={YOU} mode={mode} nameOf={nameOf} />
             )}
             {roundOver && !matchOver && !coinflip?.animating && (
               <RoundEndReady
@@ -2928,7 +3130,7 @@ function SpectatorGame({ ident, code, onLeave }: {
   const startCoinflip = useCallback((starter: PlayerId) => {
     setCoinflip({ starter, animating: true });
     play("matchStart");
-    window.setTimeout(() => setCoinflip((cf) => (cf ? { ...cf, animating: false } : cf)), 2000);
+    window.setTimeout(() => setCoinflip((cf) => (cf ? { ...cf, animating: false } : cf)), 4200);
   }, []);
 
   useEffect(() => {
@@ -3052,7 +3254,7 @@ function SpectatorGame({ ident, code, onLeave }: {
                 starter={coinflip.starter}
                 you={SPECTATOR_YOU}
                 mode={state.mode as Mode}
-                name={nameOf(coinflip.starter)}
+                nameOf={nameOf}
               />
             )}
           </div>
