@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Avatar, LobbyChrome, tierFromRating } from "@/components/LobbyChrome";
 import { requireRealUser } from "@/lib/auth-gate";
+import { currentSeason } from "@/lib/season";
 import {
   fetchAcceptedFriends, fetchFullLeaderboard, fetchMyStats,
   type FriendListItem, type FullLeaderRow,
@@ -25,6 +26,7 @@ export const Route = createFileRoute("/stats")({
 type Me = Awaited<ReturnType<typeof requireRealUser>>;
 
 function LeaderboardPage() {
+  const season = currentSeason();
   const [tab, setTab] = useState<"global" | "friends">("global");
   const [rows, setRows] = useState<FullLeaderRow[] | null>(null);
   const [friends, setFriends] = useState<FriendListItem[] | null>(null);
