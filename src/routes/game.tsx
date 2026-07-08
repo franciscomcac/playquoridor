@@ -2344,6 +2344,15 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
     botRecordedRef.current = true;
     const winnerSlot = state.matchWinner;
     const winnerIsYou = winnerSlot === YOU;
+    // Update the caller's aggregate stats (matches/wins/losses/etc.) so bot
+    // games count on the profile the same way online games do.
+    const walls = state.wallsPlacedByPlayer[YOU] ?? 0;
+    const pops = state.pawnsEliminatedByPlayer[YOU] ?? 0;
+    const forfeited = state.leftMatch[YOU] ?? false;
+    void bumpMyStats(ident.id, {
+      matches: 1, wins: winnerIsYou ? 1 : 0, losses: winnerIsYou ? 0 : 1,
+      walls_placed: walls, pawns_eliminated: pops, forfeits: forfeited ? 1 : 0,
+    });
     void recordMatch({
       mode: mode as 2 | 4,
       rounds: state.totalRounds,
