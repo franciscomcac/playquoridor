@@ -81,7 +81,7 @@ type View =
   | { name: "join" }
   | { name: "quick"; mode: Mode; ranked?: boolean }
   | { name: "game"; isHost: boolean; code: string; mode: Mode; walls: number; rounds: number; quickMatch?: boolean; ranked?: boolean }
-  | { name: "bot"; difficulty: number; opponentName: string }
+  | { name: "bot"; mode: Mode; difficulty: number; opponentNames: string[] }
   | { name: "spectate" }
   | { name: "spectating"; code: string };
 
