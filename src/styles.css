@@ -519,3 +519,15 @@
     animation: none !important;
   }
 }
+
+@utility chaos-badge {
+  transform: rotate(8deg);
+  transform-origin: center;
+  animation: chaos-wobble 2.6s ease-in-out infinite;
+  z-index: 5;
+}
+
+@keyframes chaos-wobble {
+  0%, 100% { transform: rotate(8deg) translateY(0); }
+  50% { transform: rotate(-6deg) translateY(-1px); }
+}
