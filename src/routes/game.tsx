@@ -1773,6 +1773,21 @@ function AfkBanner({ deadline, name }: { slot: PlayerId; deadline: number; name:
 
 function ScoreCard({ state, you, nameOf }: { state: GameState; you: PlayerId; nameOf: (s: PlayerId) => string }) {
   const target = winsNeeded(state.totalRounds);
+  const prevScoreRef = useRef<number[]>(state.score);
+  const [bumped, setBumped] = useState<number | null>(null);
+  useEffect(() => {
+    const prev = prevScoreRef.current;
+    for (let i = 0; i < state.score.length; i++) {
+      if ((prev[i] ?? 0) < (state.score[i] ?? 0)) {
+        setBumped(i);
+        play("wall");
+        const id = window.setTimeout(() => setBumped(null), 900);
+        prevScoreRef.current = [...state.score];
+        return () => window.clearTimeout(id);
+      }
+    }
+    prevScoreRef.current = [...state.score];
+  }, [state.score]);
   return (
     <div className="rounded-xl border border-border bg-card p-4">
       <div className="flex items-baseline justify-between">
@@ -1786,7 +1801,12 @@ function ScoreCard({ state, you, nameOf }: { state: GameState; you: PlayerId; na
               style={{ color: state.matchWinner === i ? PLAYER_COLORS[i] : "var(--muted-foreground)" }}>
               {i === you ? "You" : nameOf(i as PlayerId)}
             </span>
-            <span className="grid h-9 w-9 place-items-center rounded-full text-base font-semibold"
+            <span
+              key={`${i}-${state.score[i]}`}
+              className={
+                "grid h-9 w-9 place-items-center rounded-full text-base font-semibold " +
+                (bumped === i ? "score-pop" : "")
+              }
               style={{
                 background: PLAYER_COLORS[i], color: "oklch(0.15 0.02 55)",
                 boxShadow: state.matchWinner === i ? `0 0 0 3px color-mix(in oklab, ${PLAYER_COLORS[i]} 45%, transparent)` : "0 1px 3px rgba(0,0,0,0.4)",
