@@ -1388,34 +1388,41 @@ function GameScreen({
     matchRecordedRef.current = true;
     const r = rosterRef.current;
     const winnerEntry = r.find((e) => e.slot === state.matchWinner);
-    void recordMatch({
-      mode: state.mode as 2 | 4,
-      rounds: state.totalRounds,
-      ranked: !!ranked,
-      winnerId: winnerEntry?.playerId ?? null,
-      snapshot: matchHistory.getSnapshot(),
-      players: Array.from({ length: state.mode }, (_, i) => {
-        const entry = r.find((e) => e.slot === i);
-        return {
-          id: entry?.playerId ?? null,
-          slot: i,
-          name: entry?.name ?? `Player ${i + 1}`,
-          roundsWon: state.score[i] ?? 0,
-          wallsPlaced: state.wallsPlacedByPlayer[i] ?? 0,
-          pawnsEliminated: state.pawnsEliminatedByPlayer[i] ?? 0,
-          forfeited: state.leftMatch[i] ?? false,
-        };
-      }),
-    });
+    void (async () => {
+      const matchId = await recordMatch({
+        mode: state.mode as 2 | 4,
+        rounds: state.totalRounds,
+        ranked: !!ranked,
+        winnerId: winnerEntry?.playerId ?? null,
+        snapshot: matchHistory.getSnapshot(),
+        players: Array.from({ length: state.mode }, (_, i) => {
+          const entry = r.find((e) => e.slot === i);
+          return {
+            id: entry?.playerId ?? null,
+            slot: i,
+            name: entry?.name ?? `Player ${i + 1}`,
+            roundsWon: state.score[i] ?? 0,
+            wallsPlaced: state.wallsPlacedByPlayer[i] ?? 0,
+            pawnsEliminated: state.pawnsEliminatedByPlayer[i] ?? 0,
+            forfeited: state.leftMatch[i] ?? false,
+          };
+        }),
+      });
 
-    // Ranked 1v1 → apply ELO once (host only) using both players' identities.
-    if (ranked && state.mode === 2) {
-      const winner = r.find((e) => e.slot === state.matchWinner);
-      const loser = r.find((e) => e.slot !== state.matchWinner);
-      if (winner?.playerId && loser?.playerId && winner.playerId !== loser.playerId) {
-        void applyElo1v1(winner.playerId, winner.name, loser.playerId, loser.name);
+      // Ranked 1v1 → apply ELO once (host only) using both players' identities,
+      // then stamp the match with the rating transferred so history can show
+      // the +/- points.
+      if (ranked && state.mode === 2) {
+        const winner = r.find((e) => e.slot === state.matchWinner);
+        const loser = r.find((e) => e.slot !== state.matchWinner);
+        if (winner?.playerId && loser?.playerId && winner.playerId !== loser.playerId) {
+          const delta = await applyElo1v1(winner.playerId, winner.name, loser.playerId, loser.name);
+          if (matchId && typeof delta === "number") {
+            await setMatchEloDelta(matchId, delta);
+          }
+        }
       }
-    }
+    })();
   }, [isHost, state]);
 
   // ---------- Bump my personal stats (every client) ----------
