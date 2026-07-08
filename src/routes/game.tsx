@@ -893,6 +893,22 @@ function GameScreen({
   const matchRecordedRef = useRef(false);
   const matchStartedRef = useRef(false);
 
+  // ---------- Rank-up overlay (ranked 1v1 only) ----------
+  const preRatingRef = useRef<number | null>(null);
+  const rankUpFiredRef = useRef(false);
+  const [rankUp, setRankUp] = useState<{ oldRating: number; newRating: number } | null>(null);
+  useEffect(() => {
+    if (!ranked || initialMode !== 2) return;
+    let cancel = false;
+    void (async () => {
+      const s = await fetchMyStats(ident.id).catch(() => null);
+      if (cancel) return;
+      const r = (s as { rating?: number } | null)?.rating;
+      preRatingRef.current = typeof r === "number" ? r : 1000;
+    })();
+    return () => { cancel = true; };
+  }, [ranked, initialMode, ident.id]);
+
   // Ready-up state for the between-rounds flow (replaces "Next round" button).
   const [readySlots, setReadySlots] = useState<PlayerId[]>([]);
   const [merging, setMerging] = useState(false);
