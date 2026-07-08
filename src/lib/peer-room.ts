@@ -58,6 +58,12 @@ export type Room = {
   isHost: boolean;
   code: string;
   getRoster: () => RosterEntry[];
+  /**
+   * Host-only: fill unclaimed player slots with virtual "bot" entries so a
+   * partially-filled 4p lobby can start with bots controlling the empty
+   * seats. Returns the slot numbers that were assigned to bots.
+   */
+  addBotPlayers?: (bots: Array<{ name: string }>) => number[];
 };
 
 export async function createHostRoom(
@@ -69,6 +75,7 @@ export async function createHostRoom(
   const conns: Array<{ conn: DataConnection; slot: number; name: string; playerId: string | null }> = [];
   const roster: RosterEntry[] = [{ slot: 0, name: host.name, playerId: host.playerId }];
   const spectators: Array<{ conn: DataConnection; name: string }> = [];
+  const virtualBots: RosterEntry[] = [];
   // Last-known broadcast per replayable type — used to catch spectators up on join.
   let lastState: unknown = null;
   let lastCoinflip: { starter: number } | null = null;
@@ -83,7 +90,7 @@ export async function createHostRoom(
     return `${base} ${k}`;
   };
 
-  const openCount = () => 1 + conns.filter((c) => c.conn.open).length;
+  const openCount = () => 1 + conns.filter((c) => c.conn.open).length + virtualBots.length;
 
   const broadcastToSpectators = (msg: PeerMessage) => {
     for (const s of spectators) if (s.conn.open) s.conn.send(msg);
@@ -200,6 +207,28 @@ export async function createHostRoom(
       peer.destroy();
     },
     getRoster: () => roster.slice(),
+    addBotPlayers: (bots) => {
+      const reservedSlots = new Set(roster.map((r) => r.slot));
+      const assigned: number[] = [];
+      for (const b of bots) {
+        const openSlot = Array.from({ length: mode - 1 }, (_, i) => i + 1)
+          .find((c) => !reservedSlots.has(c));
+        if (openSlot === undefined) break;
+        reservedSlots.add(openSlot);
+        const entry: RosterEntry = { slot: openSlot, name: uniqueName(b.name), playerId: null };
+        roster.push(entry);
+        virtualBots.push(entry);
+        assigned.push(openSlot);
+      }
+      if (assigned.length === 0) return assigned;
+      const count = openCount();
+      const presence: PeerMessage = { type: "presence", payload: { count, expected, roster: roster.slice() } };
+      handlers.onPresence?.(count, expected, roster.slice());
+      for (const other of conns) if (other.conn.open) other.conn.send(presence);
+      broadcastToSpectators(presence);
+      if (count === expected) handlers.onFull?.();
+      return assigned;
+    },
   };
 }
 
