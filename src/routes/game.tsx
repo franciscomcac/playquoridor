@@ -87,7 +87,16 @@ function Home() {
   const [pending, setPending] = useState<string | null>(null);
   const navigate = useNavigate();
   const bootRan = useRef(false);
-  const goHome = () => { void navigate({ to: "/" }); };
+  const [aborting, setAborting] = useState(false);
+  const goHome = () => {
+    // Only show the aborted animation if we're leaving mid-game.
+    if (view.name === "game" || view.name === "bot" || view.name === "spectating") {
+      setAborting(true);
+      window.setTimeout(() => { void navigate({ to: "/" }); }, 1350);
+    } else {
+      void navigate({ to: "/" });
+    }
+  };
 
   useEffect(() => {
     // StrictMode invokes mount effects twice in dev; guard so we don't
@@ -217,7 +226,28 @@ function Home() {
       </div>
 
       {settingsOpen && <SettingsDrawer onClose={() => setSettingsOpen(false)} />}
+      {aborting && <AbortedOverlay />}
     </main>
+  );
+}
+
+function AbortedOverlay() {
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-sm aborted-fade">
+      <div className="flex flex-col items-center gap-4 text-center">
+        <div className="aborted-ring relative flex h-24 w-24 items-center justify-center rounded-full border-2 border-rose-500/60">
+          <svg className="h-12 w-12 text-rose-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <circle cx="12" cy="12" r="10" />
+            <line x1="8" y1="8" x2="16" y2="16" />
+          </svg>
+        </div>
+        <div className="aborted-text">
+          <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-rose-400">Match ended</p>
+          <h2 className="mt-2 text-3xl font-black tracking-tight text-white sm:text-4xl">Game Aborted</h2>
+          <p className="mt-2 text-sm text-zinc-400">Returning to lobby…</p>
+        </div>
+      </div>
+    </div>
   );
 }
 
