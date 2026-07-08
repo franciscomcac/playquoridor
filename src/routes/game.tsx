@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PLAYER_COLORS, QuoridorBoard } from "@/components/QuoridorBoard";
@@ -85,16 +85,21 @@ function Home() {
   const [view, setView] = useState<View>({ name: "menu" });
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [pending, setPending] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     setIdent(getStoredIdentity());
+    let hasPending = false;
     try {
       const j = sessionStorage.getItem("quoridor:pendingJoin");
       const a = sessionStorage.getItem("quoridor:pendingAction");
-      if (j) { sessionStorage.removeItem("quoridor:pendingJoin"); setPending(`join:${j}`); }
-      else if (a) { sessionStorage.removeItem("quoridor:pendingAction"); setPending(a); }
+      if (j) { sessionStorage.removeItem("quoridor:pendingJoin"); setPending(`join:${j}`); hasPending = true; }
+      else if (a) { sessionStorage.removeItem("quoridor:pendingAction"); setPending(a); hasPending = true; }
     } catch {}
-  }, []);
+    // No lobby on /game — bounce back to the homepage lobby if the user
+    // navigated here directly without picking a mode.
+    if (!hasPending) void navigate({ to: "/", replace: true });
+  }, [navigate]);
 
   useEffect(() => {
     if (!ident || !pending) return;
