@@ -187,26 +187,44 @@ function ProfilePage() {
             <div className="mt-6 rounded-[14px] border border-[#232329] bg-[#0d0d10] p-5 text-left">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: tier.color }}>
-                    {tier.name} · Ranked 1v1
+                  <div className="text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: unranked ? UNRANKED_COLOR : tier.color }}>
+                    {unranked ? "Unranked · Placement" : `${tier.name} · Ranked 1v1`}
                   </div>
-                  <div className="mt-1 font-[IBM_Plex_Mono,monospace] text-[32px] font-semibold leading-none">{rating}</div>
+                  <div className="mt-1 font-[IBM_Plex_Mono,monospace] text-[32px] font-semibold leading-none">
+                    {unranked ? "—" : rating}
+                  </div>
                 </div>
                 <div className="text-right">
                   <div className="font-[IBM_Plex_Mono,monospace] text-[9.5px] font-semibold uppercase tracking-[0.12em] text-[#5c5c66]">Global rank</div>
-                  <div className="mt-[5px] font-[IBM_Plex_Mono,monospace] text-[16px] font-semibold">{profile?.rank ? `#${profile.rank}` : "—"}</div>
+                  <div className="mt-[5px] font-[IBM_Plex_Mono,monospace] text-[16px] font-semibold">{unranked ? "—" : (profile?.rank ? `#${profile.rank}` : "—")}</div>
                 </div>
               </div>
-              <div className="mt-4 h-[5px] overflow-hidden rounded-full bg-[#1e1e24]">
-                <div className="h-full rounded-full bg-[linear-gradient(90deg,var(--acc,#f5a524),#f5c542)]" style={{ width: `${progress}%`, background: `linear-gradient(90deg,${tier.color},#f5c542)` }} />
-              </div>
-              <div className="mt-2 flex items-center justify-between font-[IBM_Plex_Mono,monospace] text-[9.5px] font-semibold uppercase tracking-[0.12em] text-[#5c5c66]">
-                <span>{tier.name} {tier.min}</span>
-                {tier.nextMin != null ? (
-                  <span style={{ color: tier.color }}>{tier.nextMin - rating} to {tier.nextName}</span>
-                ) : <span style={{ color: tier.color }}>Max tier</span>}
-                <span>{tier.nextName ?? "—"} {tier.nextMin ?? ""}</span>
-              </div>
+              {unranked ? (
+                <>
+                  <div className="mt-4 h-[5px] overflow-hidden rounded-full bg-[#1e1e24]">
+                    <div className="h-full rounded-full" style={{ width: `${Math.round((rankedMatches / PLACEMENT_GAMES) * 100)}%`, background: "linear-gradient(90deg,#83838e,#c8cdd7)" }} />
+                  </div>
+                  <div className="mt-2 flex items-center justify-between font-[IBM_Plex_Mono,monospace] text-[9.5px] font-semibold uppercase tracking-[0.12em] text-[#5c5c66]">
+                    <span>Placement {rankedMatches}/{PLACEMENT_GAMES}</span>
+                    <span style={{ color: UNRANKED_COLOR }}>
+                      {placementLeft} ranked game{placementLeft === 1 ? "" : "s"} to unlock rank
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="mt-4 h-[5px] overflow-hidden rounded-full bg-[#1e1e24]">
+                    <div className="h-full rounded-full bg-[linear-gradient(90deg,var(--acc,#f5a524),#f5c542)]" style={{ width: `${progress}%`, background: `linear-gradient(90deg,${tier.color},#f5c542)` }} />
+                  </div>
+                  <div className="mt-2 flex items-center justify-between font-[IBM_Plex_Mono,monospace] text-[9.5px] font-semibold uppercase tracking-[0.12em] text-[#5c5c66]">
+                    <span>{tier.name} {tier.min}</span>
+                    {tier.nextMin != null ? (
+                      <span style={{ color: tier.color }}>{tier.nextMin - rating} to {tier.nextName}</span>
+                    ) : <span style={{ color: tier.color }}>Max tier</span>}
+                    <span>{tier.nextName ?? "—"} {tier.nextMin ?? ""}</span>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-[10px] sm:grid-cols-4">
