@@ -270,11 +270,11 @@ function TopBar() {
         <span className="text-sm font-semibold tracking-tight text-zinc-100">playquoridor.online</span>
       </Link>
       <div className="flex items-center gap-2">
-        <Link to="/auth" className="rounded-md border border-zinc-800 bg-zinc-900/60 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-zinc-300 hover:bg-zinc-800">
+        <Link
+          to="/auth"
+          className="rounded-lg border border-zinc-800 bg-zinc-900/60 px-5 py-2.5 text-xs font-semibold uppercase tracking-widest text-zinc-200 transition-colors hover:border-zinc-600 hover:bg-zinc-800 hover:text-white"
+        >
           Sign in
-        </Link>
-        <Link to="/game" className="rounded-md bg-amber-500 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-950 hover:bg-amber-400">
-          Lobby
         </Link>
       </div>
     </nav>
