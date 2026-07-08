@@ -531,3 +531,22 @@
   0%, 100% { transform: rotate(8deg) translateY(0); }
   50% { transform: rotate(-6deg) translateY(-1px); }
 }
+
+/* Analyze page — display font + scrubber accent to match uploaded redesign. */
+.font-display { font-family: "Space Grotesk", "DM Sans", system-ui, sans-serif; }
+.analyze-scrub {
+  -webkit-appearance: none; appearance: none;
+  height: 4px; border-radius: 2px;
+  background: rgba(255,255,255,0.10); outline: none;
+}
+.analyze-scrub::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--scrub-accent, #f0a63d);
+  box-shadow: 0 0 8px color-mix(in oklch, var(--scrub-accent, #f0a63d) 70%, transparent);
+  cursor: pointer; border: 2px solid #0a0a0d;
+}
+.analyze-scrub::-moz-range-thumb {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--scrub-accent, #f0a63d); border: 2px solid #0a0a0d; cursor: pointer;
+}

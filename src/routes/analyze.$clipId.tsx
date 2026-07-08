@@ -65,6 +65,15 @@ const VERDICT_COLOR: Record<Verdict, string> = {
   blunder: "text-rose-400 border-rose-400/50 bg-rose-500/10",
 };
 
+// Tag chip styles matching the uploaded redesign — solid color + soft tint.
+const VERDICT_CHIP: Record<Verdict, string> = {
+  best:       "text-emerald-300 border-emerald-400/40 bg-emerald-500/10",
+  good:       "text-lime-300    border-lime-400/40    bg-lime-500/10",
+  inaccuracy: "text-amber-300   border-amber-400/40   bg-amber-500/10",
+  mistake:    "text-orange-300  border-orange-400/40  bg-orange-500/10",
+  blunder:    "text-rose-300    border-rose-400/40    bg-rose-500/10",
+};
+
 function moveText(m: Move): string {
   if (m.kind === "pawn") {
     const files = "abcdefghi";
@@ -188,89 +197,140 @@ function AnalyzePage() {
 
   const cur = frames[idx];
   const curAnalysis = analyses[idx];
+  const winnerName = snapshot.matchWinner !== null ? snapshot.playerNames[snapshot.matchWinner] : "—";
+
+  // Group frames by round so the move list can render "ROUND N" dividers.
+  type ListRow = { kind: "divider"; roundIndex: number } | { kind: "move"; i: number };
+  const listRows: ListRow[] = [];
+  {
+    let lastRound = -1;
+    frames.forEach((f, i) => {
+      if (f.plyIndex < 0) {
+        listRows.push({ kind: "divider", roundIndex: f.roundIndex });
+        lastRound = f.roundIndex;
+      } else {
+        if (f.roundIndex !== lastRound) {
+          listRows.push({ kind: "divider", roundIndex: f.roundIndex });
+          lastRound = f.roundIndex;
+        }
+        listRows.push({ kind: "move", i });
+      }
+    });
+  }
 
   return (
     <Shell>
-      <div className="mb-4 flex items-baseline justify-between gap-3">
+      {/* Ambient glow accents */}
+      <div aria-hidden className="pointer-events-none absolute -top-40 right-[-15%] -z-10 h-[600px] w-[820px] rounded-full blur-3xl"
+        style={{ background: "radial-gradient(circle at 70% 20%, color-mix(in oklch, " + PLAYER_HEX[1] + " 20%, transparent), transparent 60%)" }} />
+      <div aria-hidden className="pointer-events-none absolute bottom-[-25%] left-[-12%] -z-10 h-[560px] w-[680px] rounded-full blur-3xl"
+        style={{ background: "radial-gradient(circle at 30% 80%, color-mix(in oklch, " + PLAYER_HEX[0] + " 16%, transparent), transparent 60%)" }} />
+
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Game analysis</h1>
-          <p className="text-xs text-zinc-500">
-            {snapshot.rounds.length} round{snapshot.rounds.length === 1 ? "" : "s"} ·
-            {" "}winner: {snapshot.matchWinner !== null ? snapshot.playerNames[snapshot.matchWinner] : "—"}
+          <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">Game analysis</h1>
+          <p className="mt-1.5 text-sm text-zinc-500">
+            {snapshot.rounds.length} round{snapshot.rounds.length === 1 ? "" : "s"} · winner:{" "}
+            <b className="font-semibold" style={{ color: PLAYER_HEX[snapshot.matchWinner ?? 0] }}>{winnerName}</b>
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2.5">
           <button onClick={downloadGif} disabled={busyGif}
-            className="rounded-lg border border-border bg-secondary/40 px-3 py-2 text-xs font-medium hover:bg-secondary disabled:opacity-60">
+            className="rounded-lg border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-zinc-100 transition hover:border-white/20 hover:bg-white/[0.07] disabled:opacity-60">
             {busyGif ? "Rendering GIF…" : "Download GIF"}
           </button>
-          <Link to="/clips" className="rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-secondary">
+          <Link to="/clips"
+            className="rounded-lg px-4 py-2.5 text-sm font-semibold transition hover:brightness-110"
+            style={{ background: PLAYER_HEX[0], color: "#1a1002" }}>
             My clips
           </Link>
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,360px)_1fr]">
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-3">
-          <canvas ref={canvasRef} width={340} height={340} className="w-full max-w-[340px]" />
-          <div className="mt-3 flex items-center gap-2">
-            <button onClick={() => setIdx((i) => Math.max(0, i - 1))} disabled={idx === 0}
-              className="rounded-md border border-border px-2 py-1 text-xs disabled:opacity-40">◀</button>
+      <div className="mt-7 grid items-start gap-6 lg:grid-cols-[minmax(0,540px)_1fr]">
+        {/* Board + transport card */}
+        <section className="rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.035] to-white/[0.015] p-4 backdrop-blur">
+          <div className="relative mx-auto aspect-square w-full max-w-[540px] overflow-hidden rounded-xl border border-white/10 bg-[#0d0d12]">
+            <canvas ref={canvasRef} width={720} height={720} className="absolute inset-0 h-full w-full" />
+          </div>
+
+          <div className="mt-4 flex items-center gap-2.5">
+            <button onClick={() => { setPlaying(false); setIdx((i) => Math.max(0, i - 1)); }} disabled={idx === 0}
+              aria-label="Previous move"
+              className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] text-zinc-100 transition hover:bg-white/[0.08] disabled:opacity-40">◀</button>
             <button onClick={() => setPlaying((p) => !p)}
-              className="rounded-md border border-border px-3 py-1 text-xs">{playing ? "Pause" : "Play"}</button>
-            <button onClick={() => setIdx((i) => Math.min(frames.length - 1, i + 1))} disabled={idx >= frames.length - 1}
-              className="rounded-md border border-border px-2 py-1 text-xs disabled:opacity-40">▶</button>
-            <span className="ml-auto text-[11px] text-zinc-500">
+              className="flex h-10 flex-1 items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.05] font-semibold text-zinc-100 transition hover:bg-white/[0.1]">
+              {playing ? "❚❚ Pause" : "▶ Play"}
+            </button>
+            <button onClick={() => { setPlaying(false); setIdx((i) => Math.min(frames.length - 1, i + 1)); }} disabled={idx >= frames.length - 1}
+              aria-label="Next move"
+              className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] text-zinc-100 transition hover:bg-white/[0.08] disabled:opacity-40">▶</button>
+            <div className="ml-1 min-w-[64px] text-right font-mono text-xs text-zinc-500">
               {idx + 1} / {frames.length}
-            </span>
+            </div>
           </div>
-          <div className="mt-2 flex items-center gap-1 text-[10px] uppercase tracking-widest text-zinc-500">
-            <span className="mr-1">Speed</span>
-            {(["slow", "med", "fast"] as const).map((s) => (
-              <button key={s} onClick={() => setSpeed(s)}
-                className={"rounded-md border px-2 py-0.5 " +
-                  (speed === s
-                    ? "border-primary/60 bg-primary/15 text-primary"
-                    : "border-border text-zinc-400 hover:bg-secondary/40")}>
-                {s === "med" ? "medium" : s}
-              </button>
-            ))}
+
+          <div className="mt-3 flex items-center gap-3">
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-zinc-600">Speed</span>
+            <div className="flex gap-1 rounded-lg border border-white/10 bg-white/[0.03] p-0.5">
+              {(["slow", "med", "fast"] as const).map((s) => (
+                <button key={s} onClick={() => setSpeed(s)}
+                  className={"rounded-md px-3 py-1.5 text-xs font-semibold transition " +
+                    (speed === s
+                      ? "text-[#1a1002]"
+                      : "text-zinc-500 hover:text-zinc-200")}
+                  style={speed === s ? { background: PLAYER_HEX[0] } : undefined}>
+                  {s === "med" ? "medium" : s}
+                </button>
+              ))}
+            </div>
           </div>
-          <input type="range" min={0} max={frames.length - 1} value={idx}
-            onChange={(e) => setIdx(Number(e.target.value))}
-            className="mt-3 w-full accent-[color:var(--primary)]" />
+
+          <input type="range" min={0} max={Math.max(0, frames.length - 1)} value={idx}
+            onChange={(e) => { setPlaying(false); setIdx(Number(e.target.value)); }}
+            className="analyze-scrub mt-3 w-full"
+            style={{ ["--scrub-accent" as string]: PLAYER_HEX[0] }} />
+
           {cur && curAnalysis && cur.by !== null && (
             <MoveCard snapshot={snapshot} slot={cur.by} analysis={curAnalysis} actual={curAnalysis.actual} />
           )}
-        </div>
+        </section>
 
-        <ol className="max-h-[70vh] overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-900/40 p-2">
-          {frames.map((f, i) => {
-            const a = analyses[i];
-            if (f.plyIndex < 0) return (
-              <li key={i} className="mt-2 text-[10px] uppercase tracking-widest text-zinc-500">
-                — Round {f.roundIndex + 1} —
-              </li>
-            );
-            if (!a || f.by === null) return null;
-            const name = snapshot.playerNames[f.by];
-            return (
-              <li key={i}>
-                <button onClick={() => setIdx(i)}
-                  className={"my-0.5 flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs " +
-                    (i === idx ? "bg-primary/15 text-foreground" : "hover:bg-secondary/40")}>
-                  <span className="w-6 text-right text-[10px] text-zinc-500">{f.plyIndex + 1}.</span>
-                  <span className="h-2 w-2 rounded-full" style={{ background: PLAYER_HEX[f.by] }} />
-                  <span className="w-16 truncate">{name}</span>
-                  <span className="flex-1 font-mono">{moveText(a.actual)}</span>
-                  <span className={"rounded border px-1.5 py-0.5 text-[9px] uppercase tracking-widest " + VERDICT_COLOR[a.verdict]}>
+        {/* Move list card */}
+        <section className="flex max-h-[calc(100vh-180px)] flex-col rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.035] to-white/[0.015] backdrop-blur">
+          <div className="overflow-y-auto px-2.5 pb-4">
+            {listRows.map((row, k) => {
+              if (row.kind === "divider") {
+                return (
+                  <div key={"d-" + k} className="sticky top-0 z-[1] flex items-center gap-3 bg-gradient-to-b from-[color:var(--analyze-panel,#101014)] to-transparent px-4 pb-2 pt-3">
+                    <div className="h-px flex-1 bg-white/10" />
+                    <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-600">Round {row.roundIndex + 1}</span>
+                    <div className="h-px flex-1 bg-white/10" />
+                  </div>
+                );
+              }
+              const f = frames[row.i];
+              const a = analyses[row.i];
+              if (!a || f.by === null) return null;
+              const name = snapshot.playerNames[f.by];
+              const active = row.i === idx;
+              return (
+                <button key={row.i} onClick={() => { setPlaying(false); setIdx(row.i); }}
+                  className={"grid w-full grid-cols-[24px_10px_84px_1fr_84px] items-center gap-2 rounded-lg px-2.5 py-1.5 text-left transition " +
+                    (active ? "" : "hover:bg-white/[0.035]")}
+                  style={active ? { background: "color-mix(in oklch, " + PLAYER_HEX[0] + " 12%, transparent)" } : undefined}>
+                  <span className="font-mono text-[10.5px] text-zinc-600">{f.plyIndex + 1}.</span>
+                  <span className="h-1.5 w-1.5 rounded-full" style={{ background: PLAYER_HEX[f.by] }} />
+                  <span className={"truncate text-[11.5px] " + (active ? "text-zinc-100" : "text-zinc-500")} title={name}>{name}</span>
+                  <span className="truncate font-mono text-[11.5px] text-zinc-100">{moveText(a.actual)}</span>
+                  <span className={"justify-self-end rounded border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest " + VERDICT_CHIP[a.verdict]}>
                     {a.verdict}
                   </span>
                 </button>
-              </li>
-            );
-          })}
-        </ol>
+              );
+            })}
+          </div>
+        </section>
       </div>
     </Shell>
   );
@@ -308,25 +368,31 @@ function MoveCard({ snapshot, slot, analysis, actual }: {
     } finally { setBusy(false); }
   };
   return (
-    <div className="mt-3 rounded-lg border border-border bg-background/40 p-3">
-      <div className="flex items-baseline justify-between">
-        <p className="text-xs">
-          <span className="text-muted-foreground">Played:</span>{" "}
-          <span className="font-mono">{moveText(actual)}</span>
+    <div className="mt-4 rounded-xl border border-white/10 bg-black/30 p-3.5">
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="text-xs text-zinc-400">
+          <span className="text-zinc-600">Played by</span>{" "}
+          <span className="font-semibold text-zinc-100" style={{ color: PLAYER_HEX[slot] }}>{snapshot.playerNames[slot]}</span>
+          <span className="text-zinc-600"> · </span>
+          <span className="font-mono text-zinc-100">{moveText(actual)}</span>
         </p>
-        <span className={"rounded border px-1.5 py-0.5 text-[9px] uppercase tracking-widest " + VERDICT_COLOR[analysis.verdict]}>
+        <span className={"rounded border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest " + VERDICT_CHIP[analysis.verdict]}>
           {analysis.verdict}
         </span>
       </div>
-      <p className="mt-1 text-[11px] text-muted-foreground">
-        Engine suggested <span className="font-mono text-foreground">{moveText(analysis.best)}</span> · path {analysis.distMe}→{analysis.distMeAfter} · opp {analysis.distOpp}→{analysis.distOppAfter}
+      <p className="mt-1.5 text-[11px] text-zinc-500">
+        Engine suggested <span className="font-mono text-zinc-200">{moveText(analysis.best)}</span>
+        <span className="text-zinc-700"> · </span>
+        path <span className="font-mono text-zinc-300">{analysis.distMe}→{analysis.distMeAfter}</span>
+        <span className="text-zinc-700"> · </span>
+        opp <span className="font-mono text-zinc-300">{analysis.distOpp}→{analysis.distOppAfter}</span>
       </p>
-      <div className="mt-2">
+      <div className="mt-2.5">
         <button onClick={explain} disabled={busy}
-          className="rounded-md border border-primary/50 bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary hover:bg-primary/20 disabled:opacity-60">
+          className="rounded-md border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-semibold text-zinc-100 transition hover:bg-white/[0.09] disabled:opacity-60">
           {busy ? "Thinking…" : note ? "Re-explain" : "Explain with AI"}
         </button>
-        {note && <p className="mt-2 text-xs italic text-foreground">{note}</p>}
+        {note && <p className="mt-2 text-xs italic text-zinc-200">{note}</p>}
       </div>
     </div>
   );
@@ -334,10 +400,10 @@ function MoveCard({ snapshot, slot, analysis, actual }: {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="min-h-screen bg-zinc-950 text-zinc-100">
-      <div className="mx-auto max-w-5xl px-4 py-8 sm:py-12">
-        <Link to="/" className="text-xs uppercase tracking-widest text-zinc-500 hover:text-zinc-300">← Home</Link>
-        <div className="mt-6">{children}</div>
+    <main className="relative min-h-screen overflow-hidden bg-[#08080b] font-[Manrope,system-ui,sans-serif] text-zinc-100">
+      <div className="mx-auto max-w-[1400px] px-6 pb-12 pt-8 sm:px-12 sm:pt-10">
+        <Link to="/" className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500 transition hover:text-zinc-200">← Home</Link>
+        <div className="mt-3">{children}</div>
       </div>
     </main>
   );
