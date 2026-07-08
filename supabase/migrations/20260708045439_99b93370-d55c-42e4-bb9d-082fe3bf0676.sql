@@ -1,0 +1,1 @@
+UPDATE public.moderation_penalties SET active_until = now() WHERE kind IN ('match_mute','chat_ban_24h','chat_ban_7d','perm') AND (active_until IS NULL OR active_until > now());
