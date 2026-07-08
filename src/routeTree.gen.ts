@@ -16,6 +16,7 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as GameRouteImport } from './routes/game'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as PuzzleDateRouteImport } from './routes/puzzle.$date'
 
 const StatsRoute = StatsRouteImport.update({
@@ -53,6 +54,11 @@ const AboutRoute = AboutRouteImport.update({
   path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PuzzleDateRoute = PuzzleDateRouteImport.update({
   id: '/$date',
   path: '/$date',
@@ -60,6 +66,7 @@ const PuzzleDateRoute = PuzzleDateRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
   '/game': typeof GameRoute
@@ -70,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/puzzle/$date': typeof PuzzleDateRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
   '/game': typeof GameRoute
@@ -81,6 +89,7 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
   '/game': typeof GameRoute
@@ -93,6 +102,7 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/'
     | '/about'
     | '/auth'
     | '/game'
@@ -103,6 +113,7 @@ export interface FileRouteTypes {
     | '/puzzle/$date'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/'
     | '/about'
     | '/auth'
     | '/game'
@@ -113,6 +124,7 @@ export interface FileRouteTypes {
     | '/puzzle/$date'
   id:
     | '__root__'
+    | '/'
     | '/about'
     | '/auth'
     | '/game'
@@ -124,6 +136,7 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   AuthRoute: typeof AuthRoute
   GameRoute: typeof GameRoute
@@ -184,6 +197,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/puzzle/$date': {
       id: '/puzzle/$date'
       path: '/$date'
@@ -206,6 +226,7 @@ const PuzzleRouteWithChildren =
   PuzzleRoute._addFileChildren(PuzzleRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   AuthRoute: AuthRoute,
   GameRoute: GameRoute,
