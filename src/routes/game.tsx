@@ -647,15 +647,10 @@ function QuickMatch({ mode, ranked, ident, onBack, onJoin, onHost }: {
   // Play a soft radar loop while queued; stop as soon as we transition.
   useEffect(() => {
     play("searchStart");
-    // Fire the first ping quickly so users get audible feedback even when
-    // the match resolves in under 1.6s.
-    const firstPing = window.setTimeout(() => {
-      if (!cancelled.current && !transitioned.current) play("searchPing");
-    }, 600);
-    const ping = window.setInterval(() => {
-      if (!cancelled.current && !transitioned.current) play("searchPing");
-    }, 1600);
-    return () => { window.clearTimeout(firstPing); window.clearInterval(ping); };
+    // Radar ping loops back-to-back: each play waits for the sample to
+    // finish before starting again (no chopping mid-ping).
+    const stopLoop = startSampleLoop("searchPing", 0.85);
+    return () => { stopLoop(); };
   }, []);
 
   useEffect(() => {
