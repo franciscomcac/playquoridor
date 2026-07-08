@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PLAYER_COLORS, QuoridorBoard } from "@/components/QuoridorBoard";
+import { renderResultCard, shareResultCard } from "@/lib/result-card";
 
 // Warm palette for celebratory confetti — browns, creams, blues, yellows
 // pulled from the app's existing tokens (kept in-sync with styles.css).
@@ -1569,6 +1570,7 @@ function WinOverlay({ state, you, matchOver, onPrimary, primaryLabel, onLeave, n
           <button onClick={onPrimary} className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5">
             {primaryLabel}
           </button>
+          <ShareResultButton state={state} you={you} nameOf={nameOf} matchOver={matchOver} />
           <button onClick={onLeave} className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary">
             Leave
           </button>
@@ -1643,12 +1645,50 @@ function EndScreen({ state, you, onPrimary, onLeave, nameOf }: {
           <button onClick={onPrimary} className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5">
             New match
           </button>
+          <ShareResultButton state={state} you={you} nameOf={nameOf} matchOver />
           <button onClick={onLeave} className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary">
             Leave
           </button>
         </div>
       </div>
     </div>
+  );
+}
+
+function ShareResultButton({ state, you, nameOf, matchOver }: {
+  state: GameState; you: PlayerId;
+  nameOf: (s: PlayerId) => string; matchOver: boolean;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState<null | "shared" | "downloaded" | "error">(null);
+  const onClick = useCallback(async () => {
+    const winner = (matchOver ? state.matchWinner : state.winner);
+    if (winner === null) return;
+    setBusy(true); setDone(null);
+    try {
+      const blob = await renderResultCard({
+        state, you, winner: winner as PlayerId, nameOf,
+        reason: state.endReason, matchOver,
+      });
+      const outcome = await shareResultCard(blob);
+      setDone(outcome);
+    } catch {
+      setDone("error");
+    } finally {
+      setBusy(false);
+      window.setTimeout(() => setDone(null), 2400);
+    }
+  }, [state, you, nameOf, matchOver]);
+  const label = busy ? "Preparing…"
+    : done === "shared" ? "Shared!"
+    : done === "downloaded" ? "Downloaded"
+    : done === "error" ? "Try again"
+    : "Share result";
+  return (
+    <button onClick={onClick} disabled={busy}
+      className="rounded-lg border border-border bg-accent/70 px-5 py-2 text-sm font-medium text-accent-foreground transition-transform hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-70">
+      {label}
+    </button>
   );
 }
 
