@@ -98,9 +98,11 @@ function AuthPage() {
     setBusy(true);
     try {
       await supabase.auth.signOut();
-      // Immediately re-establish an anonymous session so the app keeps working.
-      await supabase.auth.signInAnonymously();
-      await linkAuthToPlayer();
+      try {
+        localStorage.removeItem("quoridor.playerId");
+        localStorage.removeItem("quoridor.playerName");
+      } catch { /* ignore */ }
+      window.location.replace("/");
     } finally { setBusy(false); }
   }
 
