@@ -2,7 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PLAYER_COLORS, QuoridorBoard } from "@/components/QuoridorBoard";
-import { MoveHistory } from "@/components/MoveHistory";
+import { MoveHistory, MoveHistoryPanel } from "@/components/MoveHistory";
+import { ChatPanel, type ChatEntry } from "@/components/ChatPanel";
 import { renderResultCard, shareResultCard } from "@/lib/result-card";
 
 // Warm palette for celebratory confetti — browns, creams, blues, yellows
