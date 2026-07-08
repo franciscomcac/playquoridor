@@ -1721,6 +1721,7 @@ function EndScreen({ state, you, onPrimary, onLeave, nameOf }: {
             {analyzing ? "Hide analysis" : "Analyze game"}
           </button>
           <ShareResultButton state={state} you={you} nameOf={nameOf} matchOver />
+          <SaveClipButton state={state} you={you} nameOf={nameOf} />
           <button onClick={onLeave} className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary">
             Leave
           </button>
