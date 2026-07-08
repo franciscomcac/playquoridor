@@ -232,3 +232,21 @@ export const myChatBan = createServerFn({ method: "GET" })
     if (!row) return { active: false };
     return { active: true, kind: row.kind, until: row.active_until, reason: row.reason };
   });
+
+// ---------- Username moderation (no penalty — just accept/reject) ----------
+export const moderateUsername = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => {
+    const d = raw as { name: string };
+    return { name: String(d?.name ?? "").slice(0, 40) };
+  })
+  .handler(async ({ data }): Promise<{ allow: boolean; reason?: string }> => {
+    const clean = data.name.trim();
+    if (!clean) return { allow: false, reason: "Name is required." };
+    const { moderateText } = await import("./moderation.server");
+    const verdict = await moderateText(`Proposed username: "${clean}". Judge only the username itself for hate, slurs, harassment, or sexual content.`);
+    if (verdict.severity >= 3) {
+      return { allow: false, reason: verdict.summary || verdict.categories.join(", ") || "Username not allowed." };
+    }
+    return { allow: true };
+  });

@@ -98,6 +98,8 @@ export function LobbyChrome({
             <Link to="/stats" className="text-[#5c5c66] hover:text-[#a7a7b2]">Leaderboard</Link>
             <Link to="/puzzle" className="text-[#5c5c66] hover:text-[#a7a7b2]">Puzzles</Link>
             <a href="mailto:hi@playquoridor.online" className="text-[#5c5c66] hover:text-[#a7a7b2]">Contact</a>
+            <Link to="/terms" className="text-[#5c5c66] hover:text-[#a7a7b2]">Terms</Link>
+            <Link to="/privacy" className="text-[#5c5c66] hover:text-[#a7a7b2]">Privacy</Link>
           </nav>
         </div>
       </footer>
