@@ -102,9 +102,9 @@ const PuzzleIndexRoute = PuzzleIndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const PuzzleDateRoute = PuzzleDateRouteImport.update({
-  id: '/puzzle/$date',
-  path: '/puzzle/$date',
-  getParentRoute: () => rootRouteImport,
+  id: '/$date',
+  path: '/$date',
+  getParentRoute: () => PuzzleRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -234,7 +234,6 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StatsRoute: typeof StatsRoute
   TermsRoute: typeof TermsRoute
-  PuzzleDateRoute: typeof PuzzleDateRoute
   PuzzleIndexRoute: typeof PuzzleIndexRoute
 }
 
@@ -347,10 +346,10 @@ declare module '@tanstack/react-router' {
     }
     '/puzzle/$date': {
       id: '/puzzle/$date'
-      path: '/puzzle/$date'
+      path: '/$date'
       fullPath: '/puzzle/$date'
       preLoaderRoute: typeof PuzzleDateRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof PuzzleRoute
     }
   }
 }
@@ -370,9 +369,18 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StatsRoute: StatsRoute,
   TermsRoute: TermsRoute,
-  PuzzleDateRoute: PuzzleDateRoute,
   PuzzleIndexRoute: PuzzleIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
