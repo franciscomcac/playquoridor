@@ -251,7 +251,7 @@ function Lobby() {
           style={{ background: "radial-gradient(closest-side,rgba(245,165,36,0.14),transparent 68%)", opacity: 0.6 }}
         />
         <h1 className="relative m-0 text-[44px] font-bold leading-none tracking-[-0.035em] sm:text-[66px]">
-          Play <span className="text-[#f5a524]">Quoridor</span>
+          play<span className="text-[#f5a524]">quoridor</span>.online
         </h1>
         {/* Desktop / signed-in mobile: green Play Now. Signed-out mobile gets a Sign in CTA instead. */}
         <div className={"relative " + (signedIn ? "" : "hidden sm:block")}>
