@@ -1747,6 +1747,31 @@ function ShareResultButton({ state, you, nameOf, matchOver }: {
   );
 }
 
+function SignUpNudge() {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    void supabase.auth.getUser().then(({ data }) => {
+      if (!alive) return;
+      const u = data.user;
+      const anon = !u || u.is_anonymous === true || (u.app_metadata?.provider ?? "") === "anonymous";
+      setShow(anon);
+    });
+    return () => { alive = false; };
+  }, []);
+  if (!show) return null;
+  return (
+    <div className="mt-3 w-full max-w-md rounded-lg border border-border bg-secondary/30 px-4 py-3 text-center">
+      <p className="text-sm font-semibold">Create a free account</p>
+      <p className="mt-1 text-xs text-muted-foreground">Save your games, chat in-match, and get a rating.</p>
+      <Link to="/auth"
+        className="mt-2 inline-block rounded-md bg-primary px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-primary-foreground hover:-translate-y-0.5 transition-transform">
+        Sign up
+      </Link>
+    </div>
+  );
+}
+
 function SettingsDrawer({ onClose }: { onClose: () => void }) {
   const [muted, setMutedS] = useState(isMuted());
   const [vol, setVolS] = useState(getVolume());
