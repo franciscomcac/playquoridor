@@ -8,6 +8,7 @@ import {
   type GameState, type Move, type Pos, type Wall,
 } from "@/lib/quoridor";
 import { play } from "@/lib/sound";
+import { generatePuzzle, seedFromDate } from "@/lib/puzzleGen";
 
 const SITE_URL = "https://playquoridor.online";
 const DATE_RX = /^\d{4}-\d{2}-\d{2}$/;
@@ -68,7 +69,23 @@ function PuzzlePage() {
         .maybeSingle();
       if (cancelled) return;
       if (error) { setLoadError(error.message); setLoading(false); return; }
-      if (!data) { setLoadError("No puzzle for this date yet — check back soon."); setLoading(false); return; }
+      if (!data) {
+        // Fall back to a deterministic generated puzzle for the date, so
+        // there is always a fresh daily rotation even without a DB row.
+        const gen = generatePuzzle(seedFromDate(date), 2);
+        setPuzzle({
+          id: gen.id,
+          puzzle_date: date,
+          title: `Daily Puzzle — ${date}`,
+          mode: gen.mode,
+          pawns: gen.pawns,
+          walls: gen.walls,
+          active_player: gen.active_player,
+          goal_moves: gen.goal_moves,
+        });
+        setLoading(false);
+        return;
+      }
       setPuzzle({
         id: data.id,
         puzzle_date: data.puzzle_date,
