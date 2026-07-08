@@ -119,18 +119,30 @@ export async function createHostRoom(
           handlers.onSpectatorJoined?.(specName);
           return;
         }
-        // Player join — reject if the game is already full.
-        if (conns.length >= mode - 1) {
+        role = "player";
+        const existing = p.playerId
+          ? roster.find((r) => r.playerId === p.playerId && r.slot > 0)
+          : null;
+        if (existing && conns.some((entry) => entry.slot === existing.slot && entry.conn.open)) {
           try { c.close(); } catch { /* noop */ }
           return;
         }
-        role = "player";
-        const slot = conns.length + 1;
-        const finalName = uniqueName(p.name);
+        const reservedSlots = new Set(roster.map((r) => r.slot));
+        const openSlot = Array.from({ length: mode - 1 }, (_, i) => i + 1)
+          .find((candidate) => !reservedSlots.has(candidate));
+        if (!existing && openSlot === undefined) {
+          try { c.close(); } catch { /* noop */ }
+          return;
+        }
+        const slot = existing?.slot ?? openSlot!;
+        const finalName = existing?.name ?? uniqueName(p.name);
         playerEntry = { conn: c, slot, name: finalName, playerId: p.playerId };
         conns.push(playerEntry);
-        roster.push({ slot, name: finalName, playerId: p.playerId });
+        if (!existing) roster.push({ slot, name: finalName, playerId: p.playerId });
         c.send({ type: "assign", payload: { slot, mode, expected, name: finalName, roster: roster.slice() } });
+        if (lastState !== null) c.send({ type: "state", payload: lastState });
+        if (lastCoinflip) c.send({ type: "coinflip", payload: lastCoinflip });
+        if (lastAfk) c.send({ type: "afk", payload: lastAfk });
         const count = openCount();
         const presence: PeerMessage = { type: "presence", payload: { count, expected, roster: roster.slice() } };
         handlers.onPresence?.(count, expected, roster.slice());
@@ -160,14 +172,13 @@ export async function createHostRoom(
       if (i >= 0) conns.splice(i, 1);
       const rIdx = roster.findIndex((r) => r.slot === entry.slot);
       const gone = rIdx >= 0 ? roster[rIdx].name : `Guest ${entry.slot}`;
-      if (rIdx >= 0) roster.splice(rIdx, 1);
+      if (lastState === null && rIdx >= 0) roster.splice(rIdx, 1);
       const count = openCount();
       const presence: PeerMessage = { type: "presence", payload: { count, expected, roster: roster.slice() } };
       handlers.onPresence?.(count, expected, roster.slice());
       for (const other of conns) if (other.conn.open) other.conn.send(presence);
       broadcastToSpectators(presence);
       handlers.onGuestLeft?.(entry.slot, gone);
-      handlers.onMessage?.({ type: "leave", payload: { slot: entry.slot } });
     });
     c.on("error", (err) => handlers.onError?.(err as Error));
   });
