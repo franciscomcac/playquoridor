@@ -151,7 +151,9 @@ export function MoveHistoryPanel({ state, nameOf, defaultOpen = false, compact =
   defaultOpen?: boolean; compact?: boolean;
   onView?: (view: HistorySnapshot | null) => void;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
+  // Note: `defaultOpen` is intentionally ignored — the panel is always open
+  // when there are moves. Toggling it caused the whole page to shift.
+  void defaultOpen;
   const history = state.moves ?? [];
   const [step, setStep] = useState(history.length);
   // Keep step pinned to the tail so newly played moves show up during live play.
@@ -166,14 +168,12 @@ export function MoveHistoryPanel({ state, nameOf, defaultOpen = false, compact =
   // Broadcast the currently-reviewed board so a parent can mirror it on the
   // main game board. Emit null when the panel is closed or pinned to the
   // latest move — that way live opponent moves snap the board back.
-  const reviewing = open && step < history.length;
+  const reviewing = step < history.length;
   useEffect(() => {
     if (!onView) return;
     onView(reviewing ? snapshot : null);
     return () => { onView(null); };
   }, [reviewing, snapshot, onView]);
-
-  if (history.length === 0) return null;
 
   const first = () => setStep(0);
   const prev = () => setStep((s) => Math.max(0, s - 1));
@@ -182,47 +182,49 @@ export function MoveHistoryPanel({ state, nameOf, defaultOpen = false, compact =
 
   return (
     <div className={(compact ? "" : "mt-3 ") + "w-full max-w-md text-left"}>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between rounded-lg border border-border bg-secondary/40 px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary"
-        aria-expanded={open}
-      >
-        <span>{compact ? "Move history" : "Review moves"} <span className="text-muted-foreground">· {history.length}</span></span>
-        <span aria-hidden className={"transition-transform " + (open ? "rotate-180" : "")}>▾</span>
-      </button>
-      {open && (
-        <div className="mt-2 rounded-lg border border-border bg-background/60 p-3">
-          {!compact && (
-            <div className="mx-auto max-w-[220px]">
-              <MiniBoard state={state} snapshot={snapshot} highlight={highlight} />
-            </div>
-          )}
-          <div className="mt-3 flex items-center justify-between gap-2">
-            <div className="text-xs text-muted-foreground">
-              {step === 0 ? "Round start" : (
-                <>
-                  <span className="inline-block h-2 w-2 rounded-full align-middle"
-                    style={{ background: PLAYER_COLORS[highlight!.by], marginRight: 6 }} />
-                  {`#${step} ${nameOf(highlight!.by)} · `}
-                  <span className="font-mono">{
-                    highlight!.move.kind === "wall" ? `wall ${notate(highlight!)}` : notate(highlight!)
-                  }</span>
-                </>
-              )}
-            </div>
-            <div className="flex items-center gap-1">
-              <StepBtn onClick={first} disabled={step === 0} label="⏮" title="First" />
-              <StepBtn onClick={prev} disabled={step === 0} label="◀" title="Previous" />
-              <span className="min-w-[3.5rem] text-center text-xs tabular-nums text-muted-foreground">
-                {step}/{history.length}
-              </span>
-              <StepBtn onClick={next} disabled={step === history.length} label="▶" title="Next" />
-              <StepBtn onClick={last} disabled={step === history.length} label="⏭" title="Last" />
-            </div>
+      <div className="flex w-full items-center justify-between rounded-lg border border-border bg-secondary/40 px-4 py-2 text-sm font-medium">
+        <span>
+          {compact ? "Move history" : "Review moves"}{" "}
+          <span className="text-muted-foreground">· {history.length}</span>
+        </span>
+        <span className="text-xs tabular-nums text-muted-foreground">
+          {history.length === 0 ? "—" : `${step}/${history.length}`}
+        </span>
+      </div>
+      <div className="mt-2 rounded-lg border border-border bg-background/60 p-3">
+        {!compact && (
+          <div className="mx-auto mb-3 max-w-[220px]">
+            <MiniBoard state={state} snapshot={snapshot} highlight={highlight} />
           </div>
-          <ol className="mt-3 grid max-h-32 grid-cols-2 gap-x-3 gap-y-0.5 overflow-y-auto pr-1 text-xs">
-            {history.map((rec, i) => {
+        )}
+        {/* Current-move label (fixed height so new moves don't shift layout) */}
+        <div className="flex h-5 items-center text-xs text-muted-foreground">
+          {history.length === 0 ? (
+            <span className="italic opacity-70">No moves yet</span>
+          ) : step === 0 ? (
+            "Round start"
+          ) : (
+            <>
+              <span
+                className="inline-block h-2 w-2 rounded-full align-middle"
+                style={{ background: PLAYER_COLORS[highlight!.by], marginRight: 6 }}
+              />
+              {`#${step} ${nameOf(highlight!.by)} · `}
+              <span className="font-mono">
+                {highlight!.move.kind === "wall" ? `wall ${notate(highlight!)}` : notate(highlight!)}
+              </span>
+            </>
+          )}
+        </div>
+
+        {/* Moves list — fixed height reserves space so adding moves never shifts. */}
+        <ol className="mt-2 grid h-40 grid-cols-2 gap-x-3 gap-y-0.5 overflow-y-auto pr-1 text-xs">
+          {history.length === 0 ? (
+            <li className="col-span-2 pt-4 text-center text-muted-foreground/60">
+              Moves will appear here.
+            </li>
+          ) : (
+            history.map((rec, i) => {
               const active = i === step - 1;
               const label = rec.move.kind === "wall" ? `wall ${notate(rec)}` : notate(rec);
               return (
@@ -236,16 +238,29 @@ export function MoveHistoryPanel({ state, nameOf, defaultOpen = false, compact =
                     }
                   >
                     <span className="w-6 text-right text-muted-foreground">{i + 1}.</span>
-                    <span className="inline-block h-2 w-2 rounded-full"
-                      style={{ background: PLAYER_COLORS[rec.by] }} />
+                    <span
+                      className="inline-block h-2 w-2 rounded-full"
+                      style={{ background: PLAYER_COLORS[rec.by] }}
+                    />
                     <span>{label}</span>
                   </button>
                 </li>
               );
-            })}
-          </ol>
+            })
+          )}
+        </ol>
+
+        {/* Nav arrows — bigger, at the bottom, centered. */}
+        <div className="mt-3 flex items-center justify-center gap-2">
+          <StepBtn onClick={first} disabled={step === 0} label="⏮" title="First" />
+          <StepBtn onClick={prev} disabled={step === 0} label="◀" title="Previous" />
+          <span className="min-w-[4rem] text-center text-sm tabular-nums text-muted-foreground">
+            {step}/{history.length}
+          </span>
+          <StepBtn onClick={next} disabled={step === history.length} label="▶" title="Next" />
+          <StepBtn onClick={last} disabled={step === history.length} label="⏭" title="Last" />
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -260,7 +275,7 @@ function StepBtn({ onClick, disabled, label, title }: {
       disabled={disabled}
       title={title}
       aria-label={title}
-      className="grid h-7 w-7 place-items-center rounded-md border border-border bg-secondary/40 text-xs transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40"
+      className="grid h-10 w-10 place-items-center rounded-md border border-border bg-secondary/40 text-base transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40"
     >
       {label}
     </button>
