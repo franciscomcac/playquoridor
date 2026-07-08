@@ -29,7 +29,7 @@ import {
   type PeerMessage, type Room, type RosterEntry,
 } from "@/lib/peer-room";
 import {
-  getStoredIdentity, isValidName, sanitizeName, setStoredIdentity, type Identity,
+  getStoredIdentity, setStoredIdentity, type Identity,
 } from "@/lib/identity";
 import {
   bumpMyStats, fetchMyStats, fetchMyWinStreak, findOpenRoom, recordMatch,
@@ -75,6 +75,7 @@ export const Route = createFileRoute("/game")({
 
 type View =
   | { name: "boot" }
+  | { name: "resume"; game: SavedGame }
   | { name: "create"; mode: Mode; walls: number; rounds: number }
   | { name: "join" }
   | { name: "quick"; mode: Mode; ranked?: boolean }
@@ -82,6 +83,56 @@ type View =
   | { name: "bot"; difficulty: number; opponentName: string }
   | { name: "spectate" }
   | { name: "spectating"; code: string };
+
+type SavedGame = {
+  isHost: boolean;
+  code: string;
+  mode: Mode;
+  walls: number;
+  rounds: number;
+  quickMatch?: boolean;
+  ranked?: boolean;
+  savedAt: number;
+};
+
+const ACTIVE_GAME_KEY = "quoridor:activeGame";
+const ACTIVE_GAME_TTL_MS = 2 * 60 * 60 * 1000;
+
+function saveInterruptedGame(game: SavedGame) {
+  try { localStorage.setItem(ACTIVE_GAME_KEY, JSON.stringify({ ...game, savedAt: Date.now() })); } catch { /* ignore */ }
+}
+
+function clearInterruptedGame() {
+  try { localStorage.removeItem(ACTIVE_GAME_KEY); } catch { /* ignore */ }
+}
+
+function loadInterruptedGame(): SavedGame | null {
+  try {
+    const raw = localStorage.getItem(ACTIVE_GAME_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<SavedGame>;
+    const code = typeof parsed.code === "string" ? parsed.code.toUpperCase() : "";
+    const mode = parsed.mode === 4 ? 4 : parsed.mode === 2 ? 2 : null;
+    const savedAt = typeof parsed.savedAt === "number" ? parsed.savedAt : 0;
+    if (!mode || code.length !== 5 || Date.now() - savedAt > ACTIVE_GAME_TTL_MS) {
+      clearInterruptedGame();
+      return null;
+    }
+    return {
+      isHost: !!parsed.isHost,
+      code,
+      mode,
+      walls: typeof parsed.walls === "number" ? parsed.walls : defaultWallsFor(mode),
+      rounds: typeof parsed.rounds === "number" ? parsed.rounds : 3,
+      quickMatch: !!parsed.quickMatch,
+      ranked: !!parsed.ranked,
+      savedAt,
+    };
+  } catch {
+    clearInterruptedGame();
+    return null;
+  }
+}
 
 function Home() {
   const [ident, setIdent] = useState<Identity | null>(null);
@@ -116,6 +167,8 @@ function Home() {
     }
     setIdent(stored);
     try {
+      const saved = loadInterruptedGame();
+      if (saved) { setView({ name: "resume", game: saved }); return; }
       const j = sessionStorage.getItem("quoridor:pendingJoin");
       const a = sessionStorage.getItem("quoridor:pendingAction");
       if (j) { sessionStorage.removeItem("quoridor:pendingJoin"); setPending(`join:${j}`); }
@@ -148,24 +201,33 @@ function Home() {
     setPending(null);
   }, [ident, pending]);
 
-  const onSetName = (name: string) => {
-    const i = setStoredIdentity(name);
-    setIdent(i);
-  };
-
   return (
     <main className="min-h-screen" onPointerDown={() => initSoundOnGesture()}>
       <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-3 py-4 sm:px-6 sm:py-10">
         <Header onOpenSettings={() => setSettingsOpen(true)} ident={ident} />
 
         {!ident ? (
-          <div className="flex flex-1 items-center justify-center py-4 sm:py-6">
-            <NamePrompt onSubmit={onSetName} />
-          </div>
+          <div className="flex flex-1 items-center justify-center py-4 sm:py-6 text-sm text-muted-foreground">Opening table…</div>
         ) : (
           <div key={view.name} className="view-fade flex flex-1 items-center justify-center py-4 sm:py-6">
             {view.name === "boot" && (
               <div className="text-sm text-muted-foreground">Opening table…</div>
+            )}
+            {view.name === "resume" && (
+              <ResumeMatchPrompt
+                game={view.game}
+                onReturn={() => setView({
+                  name: "game",
+                  isHost: view.game.isHost,
+                  code: view.game.code,
+                  mode: view.game.mode,
+                  walls: view.game.walls,
+                  rounds: view.game.rounds,
+                  quickMatch: view.game.quickMatch,
+                  ranked: view.game.ranked,
+                })}
+                onAbort={() => { clearInterruptedGame(); void navigate({ to: "/" }); }}
+              />
             )}
             {view.name === "create" && (
               <CreateRoom
@@ -415,32 +477,31 @@ function ForfeitButton({ onConfirm, disabled }: { onConfirm: () => void; disable
   );
 }
 
-function NamePrompt({ onSubmit, initial = "" }: { onSubmit: (n: string) => void; initial?: string }) {
-  const [name, setName] = useState(initial);
-  const clean = sanitizeName(name);
-  const ok = isValidName(name);
+function ResumeMatchPrompt({ game, onReturn, onAbort }: { game: SavedGame; onReturn: () => void; onAbort: () => void }) {
   return (
-    <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-2xl">
-      <h1 className="text-3xl">What should we call you?</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Your display name shows up in the lobby, on the board, and on the leaderboard.
-      </p>
-      <input
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        maxLength={16}
-        autoFocus
-        placeholder="Chico"
-        className="mt-6 w-full rounded-lg border border-border bg-background/40 px-4 py-3 text-lg focus:border-primary focus:outline-none"
-      />
-      <p className="mt-1 text-[11px] text-muted-foreground">{clean.length}/16 · 2–16 characters</p>
-      <button
-        disabled={!ok}
-        onClick={() => ok && onSubmit(name)}
-        className="mt-6 w-full rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
-      >
-        Continue →
-      </button>
+    <div className="fixed inset-0 z-[100] grid place-items-center bg-background px-4">
+      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl sm:p-8">
+        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary">Interrupted match</p>
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight">Return to game?</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Room {game.code} is still reserved. Choose one action before continuing.
+        </p>
+        <div className="mt-6 grid gap-3">
+          <button
+            onClick={onReturn}
+            autoFocus
+            className="rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground"
+          >
+            Return to game
+          </button>
+          <button
+            onClick={onAbort}
+            className="rounded-lg border border-border bg-secondary/30 px-5 py-3 text-sm font-semibold hover:bg-secondary"
+          >
+            Abort game
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -670,6 +731,7 @@ function GameScreen({
   const [chat, setChat] = useState<ChatEntry[]>([]);
   const roomRef = useRef<Room | null>(null);
   const matchRecordedRef = useRef(false);
+  const matchStartedRef = useRef(false);
 
   // Ready-up state for the between-rounds flow (replaces "Next round" button).
   const [readySlots, setReadySlots] = useState<PlayerId[]>([]);
@@ -713,6 +775,7 @@ function GameScreen({
 
   const hostStartMatch = useCallback(() => {
     matchRecordedRef.current = false;
+    matchStartedRef.current = true;
     const { totalWalls, totalRounds, mode } = stateRef.current;
     hostStartRound(initialState(mode, totalWalls, totalRounds));
     // Kick every match off with a friendly reminder. Host is the source of
@@ -741,6 +804,7 @@ function GameScreen({
   // Explicit leave: notify other players so they get "X left the match" and
   // (in 2-player rooms) an immediate win, instead of a generic disconnect.
   const handleLeave = useCallback(() => {
+    clearInterruptedGame();
     const s = stateRef.current;
     const inMatch = s.matchWinner === null && (status === "connected" || status === "waiting");
     if (inMatch) {
@@ -795,11 +859,14 @@ function GameScreen({
         setState((prev) => (prev.mode === m ? prev : initialState(m, initialWalls, initialRounds)));
       },
       onGuestJoined: (_s: number, name: string) => { pushLog(`${name} joined`); play("join"); },
-      onGuestLeft: (_s: number, name: string) => { pushLog(`${name} left the game`); },
+      onGuestLeft: (_s: number, name: string) => { pushLog(`${name} disconnected`); },
       onFull: () => {
         if (cancelled) return;
         setStatus("connected");
-        if (isHost) { void removeOpenRoom(code); hostStartMatch(); }
+        if (isHost) {
+          void removeOpenRoom(code);
+          if (!matchStartedRef.current) hostStartMatch();
+        }
       },
       onDisconnect: () => { if (!cancelled) setStatus("disconnected"); },
       onMessage: (msg: PeerMessage) => {
@@ -906,6 +973,23 @@ function GameScreen({
   }, [code, isHost, initialMode]);
 
   const you = slot;
+
+  useEffect(() => {
+    if (state.matchWinner !== null) {
+      clearInterruptedGame();
+      return;
+    }
+    saveInterruptedGame({
+      isHost,
+      code,
+      mode: initialMode,
+      walls: initialWalls,
+      rounds: initialRounds,
+      quickMatch,
+      ranked,
+      savedAt: Date.now(),
+    });
+  }, [state.matchWinner, isHost, code, initialMode, initialWalls, initialRounds, quickMatch, ranked]);
 
   const [matchMuted, setMatchMuted] = useState(false);
   const [chatBan, setChatBan] = useState<null | { until: string | null; reason: string | null }>(null);
@@ -1042,6 +1126,10 @@ function GameScreen({
       if (s.matchWinner !== null || s.winner !== null) return;
       // Don't run the AFK timer while waiting for players or during the coinflip intro.
       if (status !== "connected") return;
+      if (presenceRef.current.count < presenceRef.current.expected) {
+        if (afk) setAfk(null);
+        return;
+      }
       if (coinflip?.animating) return;
       const turn = s.turn;
       if (!s.active[turn]) return;
@@ -1071,6 +1159,7 @@ function GameScreen({
       const s = stateRef.current;
       if (!s.clocks) return;
       if (status !== "connected") return;
+      if (presenceRef.current.count < presenceRef.current.expected) return;
       if (coinflip?.animating) return;
       if (s.winner !== null || s.matchWinner !== null) return;
       const turn = s.turn;
@@ -1230,7 +1319,7 @@ function GameScreen({
   const displayState = review
     ? { ...state, pawns: review.pawns, walls: review.walls, lastWall: review.lastWall }
     : state;
-  const boardInteractive = status === "connected" && state.winner === null && !coinflip?.animating && !review;
+  const boardInteractive = status === "connected" && presence.count >= presence.expected && state.winner === null && !coinflip?.animating && !review;
 
   // Quick / ranked matchmaking: keep the radar visible from the start of
   // the game view until both players are connected AND one full radar
