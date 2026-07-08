@@ -9,6 +9,7 @@ import { moderateChatMessage, myChatBan } from "@/lib/moderation.functions";
 import { renderResultCard, shareResultCard } from "@/lib/result-card";
 import { supabase } from "@/integrations/supabase/client";
 import { AccountNav } from "@/components/AccountNav";
+import { QueuePuzzle } from "@/components/QueuePuzzle";
 
 // Warm palette for celebratory confetti — browns, creams, blues, yellows
 // pulled from the app's existing tokens (kept in-sync with styles.css).
@@ -609,13 +610,14 @@ function QuickMatch({ mode, ranked, ident, onBack, onJoin, onHost }: {
   );
 }
 
-function SearchingAnimation({ status, ranked, mode, onBack }: {
-  status: string; ranked: boolean; mode: Mode; onBack: () => void;
+function SearchingAnimation({ status, ranked, mode, onBack, compact = false }: {
+  status: string; ranked: boolean; mode: Mode; onBack: () => void; compact?: boolean;
 }) {
+  const opponents = Math.max(1, mode - 1);
   return (
-    <div className="w-full max-w-lg overflow-hidden rounded-3xl border border-emerald-500/20 bg-gradient-to-br from-zinc-950 via-zinc-950 to-emerald-950/30 p-10 text-center shadow-[0_30px_80px_-20px_rgba(16,185,129,0.35)]">
+    <div className={"w-full overflow-hidden rounded-3xl border border-emerald-500/20 bg-gradient-to-br from-zinc-950 via-zinc-950 to-emerald-950/30 text-center shadow-[0_30px_80px_-20px_rgba(16,185,129,0.35)] " + (compact ? "max-w-sm p-6" : "max-w-lg p-10")}>
       {/* Radar */}
-      <div className="relative mx-auto grid h-56 w-56 place-items-center">
+      <div className={"relative mx-auto grid place-items-center " + (compact ? "h-40 w-40" : "h-56 w-56")}>
         {[0, 1, 2].map((i) => (
           <span
             key={i}
@@ -641,17 +643,17 @@ function SearchingAnimation({ status, ranked, mode, onBack }: {
         <span className="absolute inset-0 rounded-full ring-1 ring-inset ring-emerald-400/15" />
       </div>
 
-      <p className="mt-8 text-xs font-semibold uppercase tracking-[0.4em] text-emerald-400">
+      <p className={"text-xs font-semibold uppercase tracking-[0.4em] text-emerald-400 " + (compact ? "mt-5" : "mt-8")}>
         {ranked ? "Ranked queue" : "Quick match"}
       </p>
-      <p className="mt-2 text-2xl font-semibold tracking-tight text-zinc-50">
+      <p className={"font-semibold tracking-tight text-zinc-50 " + (compact ? "mt-2 text-lg" : "mt-2 text-2xl")}>
         <span className="qm-dots">{status.replace(/…$/, "")}</span>
       </p>
-      <p className="mt-1 text-xs text-zinc-500">Looking for {mode} players nearby</p>
+      <p className="mt-1 text-xs text-zinc-500">Looking for {opponents} player{opponents === 1 ? "" : "s"} nearby</p>
 
       <button
         onClick={onBack}
-        className="mt-8 rounded-xl border border-zinc-800 bg-zinc-900/60 px-6 py-2.5 text-xs font-semibold uppercase tracking-widest text-zinc-300 transition-colors hover:bg-zinc-800"
+        className={"rounded-xl border border-zinc-800 bg-zinc-900/60 px-6 py-2.5 text-xs font-semibold uppercase tracking-widest text-zinc-300 transition-colors hover:bg-zinc-800 " + (compact ? "mt-5" : "mt-8")}
       >
         Cancel
       </button>
@@ -1328,6 +1330,7 @@ function GameScreen({
   // room code to share it.
   const usesRadar = !!(quickMatch || ranked);
   const [radarRevealed, setRadarRevealed] = useState(!usesRadar);
+  const [waitElapsed, setWaitElapsed] = useState(0);
   useEffect(() => {
     if (!usesRadar) return;
     if (status !== "connected") return;
@@ -1335,18 +1338,34 @@ function GameScreen({
     const t = window.setTimeout(() => setRadarRevealed(true), 1400);
     return () => window.clearTimeout(t);
   }, [usesRadar, status, presence.count, presence.expected]);
+  useEffect(() => {
+    if (!usesRadar || radarRevealed) return;
+    const start = Date.now();
+    const id = window.setInterval(() => setWaitElapsed(Math.floor((Date.now() - start) / 1000)), 500);
+    return () => window.clearInterval(id);
+  }, [usesRadar, radarRevealed]);
 
   if (usesRadar && !radarRevealed) {
     const label =
       status === "error" ? "Connection error" :
       status === "disconnected" ? "Disconnected" :
       status === "connected" && presence.count >= presence.expected ? "Match found" :
-      status === "connected" ? `Waiting for players ${presence.count}/${presence.expected}` :
-      status === "waiting" ? `Waiting for players ${presence.count}/${presence.expected}` :
+      status === "connected" ? `Waiting for opponent ${presence.count}/${presence.expected}` :
+      status === "waiting" ? `Waiting for opponent ${presence.count}/${presence.expected}` :
       "Connecting";
+    const showPuzzle = waitElapsed >= 11;
     return (
-      <div className="flex w-full justify-center">
-        <SearchingAnimation status={label} ranked={!!ranked} mode={state.mode as Mode} onBack={handleLeave} />
+      <div className={"w-full " + (showPuzzle ? "" : "flex justify-center")}>
+        {showPuzzle ? (
+          <div className="mx-auto grid w-full max-w-5xl items-start gap-6 md:grid-cols-[minmax(0,1fr)_auto]">
+            <div className="order-2 md:order-1"><QueuePuzzle /></div>
+            <div className="order-1 md:order-2 md:pt-4">
+              <SearchingAnimation compact status={label} ranked={!!ranked} mode={state.mode as Mode} onBack={handleLeave} />
+            </div>
+          </div>
+        ) : (
+          <SearchingAnimation status={label} ranked={!!ranked} mode={state.mode as Mode} onBack={handleLeave} />
+        )}
       </div>
     );
   }

@@ -164,6 +164,30 @@ export function reachedGoal(pos: Pos, goal: Goal): boolean {
   return goal.kind === "row" ? pos[0] === goal.value : pos[1] === goal.value;
 }
 
+// Pawn-only shortest path length to the goal, ignoring other pawns.
+// Returns Infinity if unreachable.
+export function shortestPathToGoal(from: Pos, goal: Goal, walls: Wall[]): number {
+  if (reachedGoal(from, goal)) return 0;
+  const seen = new Set<string>();
+  const q: Array<[Pos, number]> = [[from, 0]];
+  seen.add(`${from[0]},${from[1]}`);
+  const dirs: Array<[number, number]> = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+  while (q.length) {
+    const [[r, c], d] = q.shift()!;
+    for (const [dr, dc] of dirs) {
+      const nr = r + dr, nc = c + dc;
+      if (nr < 0 || nr >= BOARD || nc < 0 || nc >= BOARD) continue;
+      const k = `${nr},${nc}`;
+      if (seen.has(k)) continue;
+      if (isBlocked(r, c, nr, nc, walls)) continue;
+      if (reachedGoal([nr, nc], goal)) return d + 1;
+      seen.add(k);
+      q.push([[nr, nc], d + 1]);
+    }
+  }
+  return Infinity;
+}
+
 function hasPathToGoal(from: Pos, goal: Goal, walls: Wall[]): boolean {
   if (reachedGoal(from, goal)) return true;
   const seen = new Set<string>();
