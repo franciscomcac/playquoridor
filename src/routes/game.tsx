@@ -1380,6 +1380,11 @@ function GameScreen({
     if (!isHost) return;
     if (state.matchWinner === null) return;
     if (matchRecordedRef.current) return;
+    // Never persist a match that never actually got underway. Aborts before
+    // any move (e.g. opponent bails during matchmaking, host closes the
+    // lobby before the coinflip) should not clutter "recent matches".
+    if (!matchStartedRef.current) return;
+    if ((state.moveCount ?? 0) === 0) return;
     matchRecordedRef.current = true;
     const r = rosterRef.current;
     const winnerEntry = r.find((e) => e.slot === state.matchWinner);
@@ -2274,6 +2279,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
   useEffect(() => {
     if (state.matchWinner === null) return;
     if (botRecordedRef.current) return;
+    if ((state.moveCount ?? 0) === 0) return;
     botRecordedRef.current = true;
     const winnerSlot = state.matchWinner;
     const winnerIsYou = winnerSlot === YOU;
