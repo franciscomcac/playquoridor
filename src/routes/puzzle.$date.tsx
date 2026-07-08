@@ -1,14 +1,13 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { PLAYER_COLORS, QuoridorBoard } from "@/components/QuoridorBoard";
-import { supabase } from "@/integrations/supabase/client";
 import {
   applyMove, defaultWallsFor, goalsFor, reachedGoal,
   type GameState, type Move, type Pos, type Wall,
 } from "@/lib/quoridor";
 import { play } from "@/lib/sound";
-import { generatePuzzle, seedFromDate } from "@/lib/puzzleGen";
+import { generatePuzzle, seedFromString } from "@/lib/puzzleGen";
 
 const SITE_URL = "https://playquoridor.online";
 const DATE_RX = /^\d{4}-\d{2}-\d{2}$/;
@@ -22,6 +21,7 @@ type PuzzleRow = {
   walls: Wall[];
   active_player: number;
   goal_moves: number;
+  difficulty: 1 | 2 | 3;
 };
 
 export const Route = createFileRoute("/puzzle/$date")({
@@ -51,79 +51,79 @@ export const Route = createFileRoute("/puzzle/$date")({
 function PuzzlePage() {
   const { date } = Route.useParams();
   if (!DATE_RX.test(date)) throw notFound();
-  const [puzzle, setPuzzle] = useState<PuzzleRow | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true); setLoadError(null); setPuzzle(null);
-    (async () => {
-      const { data, error } = await supabase
-        .from("puzzles")
-        .select("id, puzzle_date, title, mode, pawns, walls, active_player, goal_moves")
-        .eq("puzzle_date", date)
-        .maybeSingle();
-      if (cancelled) return;
-      if (error) { setLoadError(error.message); setLoading(false); return; }
-      if (!data) {
-        // Fall back to a deterministic generated puzzle for the date, so
-        // there is always a fresh daily rotation even without a DB row.
-        const gen = generatePuzzle(seedFromDate(date), 2);
-        setPuzzle({
-          id: gen.id,
-          puzzle_date: date,
-          title: `Daily Puzzle — ${date}`,
-          mode: gen.mode,
-          pawns: gen.pawns,
-          walls: gen.walls,
-          active_player: gen.active_player,
-          goal_moves: gen.goal_moves,
-        });
-        setLoading(false);
-        return;
-      }
-      setPuzzle({
-        id: data.id,
-        puzzle_date: data.puzzle_date,
-        title: data.title,
-        mode: data.mode,
-        pawns: (data.pawns as unknown as Pos[]) ?? [],
-        walls: (data.walls as unknown as Wall[]) ?? [],
-        active_player: data.active_player,
-        goal_moves: data.goal_moves,
-      });
-      setLoading(false);
-    })();
-    return () => { cancelled = true; };
+  const puzzles = useMemo<PuzzleRow[]>(() => {
+    const diffs: Array<{ label: string; d: 1 | 2 | 3 }> = [
+      { label: "Easy", d: 1 },
+      { label: "Medium", d: 2 },
+      { label: "Hard", d: 3 },
+    ];
+    return diffs.map(({ label, d }, i) => {
+      const gen = generatePuzzle(seedFromString(`quoridor:${date}:${i}`), d);
+      return {
+        id: `${date}-${i}`,
+        puzzle_date: date,
+        title: `${label} — Puzzle ${i + 1}`,
+        mode: gen.mode,
+        pawns: gen.pawns,
+        walls: gen.walls,
+        active_player: gen.active_player,
+        goal_moves: gen.goal_moves,
+        difficulty: d,
+      };
+    });
   }, [date]);
+
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [solved, setSolved] = useState<boolean[]>(() => [false, false, false]);
+  const puzzle = puzzles[activeIdx];
+  const markSolved = useCallback((i: number) => {
+    setSolved((s) => { if (s[i]) return s; const n = [...s]; n[i] = true; return n; });
+  }, []);
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6">
       <nav className="flex items-center justify-between text-xs text-muted-foreground">
         <Link to="/" className="hover:text-foreground">← Back to game</Link>
-        <span className="tracking-widest uppercase">Daily Puzzle</span>
+        <span className="tracking-widest uppercase">Daily Puzzles</span>
       </nav>
 
       <header className="space-y-1">
         <p className="text-[11px] uppercase tracking-[0.3em] text-muted-foreground">{date}</p>
-        <h1 className="text-3xl sm:text-4xl">
-          {puzzle?.title ?? (loading ? "Loading puzzle…" : "Puzzle")}
-        </h1>
-        {puzzle && (
-          <p className="text-sm text-muted-foreground">
-            Reach your goal row in <span className="font-semibold text-foreground">{puzzle.goal_moves}</span> moves or fewer.
-          </p>
-        )}
+        <h1 className="text-3xl sm:text-4xl">{puzzle.title}</h1>
+        <p className="text-sm text-muted-foreground">
+          Reach your goal row in <span className="font-semibold text-foreground">{puzzle.goal_moves}</span> moves or fewer.
+        </p>
       </header>
 
-      {loadError && !loading && (
-        <div className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">
-          {loadError}
-        </div>
-      )}
+      <div className="flex gap-2">
+        {puzzles.map((p, i) => {
+          const active = i === activeIdx;
+          return (
+            <button
+              key={p.id}
+              onClick={() => setActiveIdx(i)}
+              className={
+                "flex-1 rounded-xl border px-3 py-2 text-left transition " +
+                (active
+                  ? "border-primary bg-primary/10"
+                  : "border-border bg-card hover:bg-secondary/40")
+              }
+            >
+              <div className="flex items-center justify-between text-[10px] uppercase tracking-widest text-muted-foreground">
+                <span>Puzzle {i + 1}</span>
+                {solved[i] && <span className="text-emerald-500">✓ Solved</span>}
+              </div>
+              <div className="mt-0.5 text-sm font-semibold">
+                {["Easy", "Medium", "Hard"][i]}
+              </div>
+              <div className="text-[11px] text-muted-foreground">{p.goal_moves} moves</div>
+            </button>
+          );
+        })}
+      </div>
 
-      {puzzle && <PuzzleBoard puzzle={puzzle} key={puzzle.id} />}
+      <PuzzleBoard puzzle={puzzle} key={puzzle.id} onSolved={() => markSolved(activeIdx)} />
     </main>
   );
 }
@@ -151,7 +151,7 @@ function buildPuzzleState(p: PuzzleRow): GameState {
   };
 }
 
-function PuzzleBoard({ puzzle }: { puzzle: PuzzleRow }) {
+function PuzzleBoard({ puzzle, onSolved }: { puzzle: PuzzleRow; onSolved: () => void }) {
   const you = (puzzle.active_player as 0 | 1 | 2 | 3) ?? 0;
   const [initial] = useState<GameState>(() => buildPuzzleState(puzzle));
   const [state, setState] = useState<GameState>(initial);
@@ -174,11 +174,12 @@ function PuzzleBoard({ puzzle }: { puzzle: PuzzleRow }) {
     play("pop");
     if (reachedGoal(m.to, goal)) {
       setStatus("solved");
+      onSolved();
       window.setTimeout(() => play("roundWin"), 120);
     } else if (newMoves >= puzzle.goal_moves) {
       setStatus("failed");
     }
-  }, [state, you, moves, puzzle.goal_moves, goal, status]);
+  }, [state, you, moves, puzzle.goal_moves, goal, status, onSolved]);
 
   const reset = () => {
     setState(initial); setMoves(0); setStatus("playing");
