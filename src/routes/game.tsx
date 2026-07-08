@@ -88,6 +88,7 @@ function Home() {
   const navigate = useNavigate();
   const bootRan = useRef(false);
   const [aborting, setAborting] = useState(false);
+  const [rankedTimedOut, setRankedTimedOut] = useState(false);
   const goHome = () => {
     // Only show the aborted animation if we're leaving mid-game.
     if (view.name === "game" || view.name === "bot" || view.name === "spectating") {
@@ -157,7 +158,9 @@ function Home() {
         ) : (
           <div key={view.name} className="view-fade flex flex-1 items-center justify-center py-4 sm:py-6">
             {view.name === "menu" && (
-              <Menu ident={ident} onChoose={setView} onEditName={() => setIdent(null)} />
+              rankedTimedOut
+                ? <SearchExpired onBack={() => setRankedTimedOut(false)} />
+                : <Menu ident={ident} onChoose={setView} onEditName={() => setIdent(null)} />
             )}
             {view.name === "create" && (
               <CreateRoom
@@ -195,7 +198,7 @@ function Home() {
                 ranked={!!view.ranked}
                 ident={ident}
                 onBack={goHome}
-                onJoin={(code) => setView({ name: "game", isHost: false, code, mode: view.mode, walls: defaultWallsFor(view.mode), rounds: 5, ranked: !!view.ranked })}
+                onJoin={(code) => setView({ name: "game", isHost: false, code, mode: view.mode, walls: defaultWallsFor(view.mode), rounds: 5, quickMatch: true, ranked: !!view.ranked })}
                 onHost={(code) => setView({ name: "game", isHost: true, code, mode: view.mode, walls: defaultWallsFor(view.mode), rounds: 5, quickMatch: true, ranked: !!view.ranked })}
               />
             )}
@@ -215,6 +218,7 @@ function Home() {
                   difficulty: randomDifficulty().value,
                   opponentName: randomGamerName(),
                 })}
+                onRankedTimeout={view.ranked ? () => { setView({ name: "menu" }); setRankedTimedOut(true); } : undefined}
                 onLeave={goHome}
               />
             )}
@@ -588,9 +592,7 @@ function QuickMatch({ mode, ranked, ident, onBack, onJoin, onHost }: {
   onBack: () => void; onJoin: (code: string) => void; onHost: (code: string) => void;
 }) {
   const [status, setStatus] = useState("Searching…");
-  const [expired, setExpired] = useState(false);
   const cancelled = useRef(false);
-  const hostedCodeRef = useRef<string | null>(null);
   useEffect(() => {
     cancelled.current = false;
     (async () => {
@@ -601,29 +603,10 @@ function QuickMatch({ mode, ranked, ident, onBack, onJoin, onHost }: {
       setStatus("No matches — hosting a new room…");
       await registerOpenRoom(code, mode, ident.name, !!ranked);
       if (cancelled.current) { await removeOpenRoom(code); return; }
-      if (ranked) { hostedCodeRef.current = code; return; }
       onHost(code);
     })();
     return () => { cancelled.current = true; };
   }, [mode, ranked, ident.name, onJoin, onHost]);
-
-  // Ranked queue: 2-minute cap. No bot fallback — surface a clear timeout.
-  useEffect(() => {
-    if (!ranked) return;
-    const t = window.setTimeout(() => {
-      cancelled.current = true;
-      const code = hostedCodeRef.current;
-      if (code) { void removeOpenRoom(code); hostedCodeRef.current = null; }
-      setExpired(true);
-    }, 120_000);
-    return () => window.clearTimeout(t);
-  }, [ranked]);
-
-  if (expired) {
-    return (
-      <SearchExpired onBack={onBack} />
-    );
-  }
 
   return (
     <SearchingAnimation status={status} ranked={!!ranked} mode={mode} onBack={onBack} />
@@ -746,11 +729,12 @@ const AFK_COUNTDOWN_MS = 15_000;
 
 function GameScreen({
   ident, code, isHost, mode: initialMode, initialWalls, initialRounds, onLeave,
-  quickMatch, ranked, onBotFallback,
+  quickMatch, ranked, onBotFallback, onRankedTimeout,
 }: {
   ident: Identity; code: string; isHost: boolean; mode: Mode;
   initialWalls: number; initialRounds: number; onLeave: () => void;
   quickMatch?: boolean; ranked?: boolean; onBotFallback?: () => void;
+  onRankedTimeout?: () => void;
 }) {
   const [status, setStatus] = useState<Status>("connecting");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -960,6 +944,14 @@ function GameScreen({
         if (cancelled) return;
         console.error(err);
         const em = err?.message ?? String(err);
+        // Ranked joiner hit a stale/dead host — purge the room and surface
+        // the "search time exceeded" screen instead of a scary error.
+        if (ranked && !isHost && onRankedTimeout &&
+            (em.includes("peer-unavailable") || em.toLowerCase().includes("could not connect"))) {
+          void removeOpenRoom(code);
+          onRankedTimeout();
+          return;
+        }
         if (em.includes("is taken") || em.includes("unavailable-id"))
           setErrorMsg("That room code is already in use. Try again.");
         else if (em.includes("peer-unavailable"))
@@ -1009,7 +1001,22 @@ function GameScreen({
   // and hand off to a local bot game so the player isn't left staring at a
   // spinner. Only fires when we're still waiting for players.
   useEffect(() => {
-    if (!quickMatch || !isHost || !onBotFallback) return;
+    if (!quickMatch || !isHost) return;
+    // Ranked: no bot fallback. Wait up to 2 minutes for an opponent, then
+    // return to lobby with a "search time exceeded" screen.
+    if (ranked) {
+      if (!onRankedTimeout) return;
+      const t = window.setTimeout(() => {
+        if (presenceRef.current.count >= presenceRef.current.expected) return;
+        if (stateRef.current.matchWinner !== null) return;
+        void removeOpenRoom(code);
+        roomRef.current?.close();
+        roomRef.current = null;
+        onRankedTimeout();
+      }, 120_000);
+      return () => window.clearTimeout(t);
+    }
+    if (!onBotFallback) return;
     const t = window.setTimeout(() => {
       if (presenceRef.current.count >= presenceRef.current.expected) return;
       if (stateRef.current.matchWinner !== null) return;
@@ -1019,7 +1026,7 @@ function GameScreen({
       onBotFallback();
     }, 10_000);
     return () => window.clearTimeout(t);
-  }, [quickMatch, isHost, onBotFallback, code]);
+  }, [quickMatch, isHost, onBotFallback, onRankedTimeout, ranked, code]);
   const markActivity = useCallback((who: PlayerId) => {
     lastInputRef.current[who] = Date.now();
     if (afk && afk.slot === who) {
