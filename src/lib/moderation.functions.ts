@@ -65,68 +65,9 @@ export const moderateChatMessage = createServerFn({ method: "POST" })
     if (!d?.playerId || typeof d.text !== "string") throw new Error("bad input");
     return { playerId: String(d.playerId), matchId: d.matchId ? String(d.matchId).slice(0, 40) : null, text: d.text.slice(0, 500) };
   })
-  .handler(async ({ data, context }): Promise<ChatModResult> => {
-    const { supabase, userId } = context;
-    const player = await ownPlayerRow(supabase, userId, data.playerId);
-    if (!player) return { allow: false, penalty: "warn", severity: 0, reason: "unknown player", senderMessage: "Message blocked.", lobbyMessage: null };
-
-    // Fast path: currently banned → block immediately.
-    if (await hasActiveChatBan(supabase, data.playerId)) {
-      return {
-        allow: false,
-        penalty: "chat_ban_24h",
-        severity: 0,
-        reason: "chat ban active",
-        senderMessage: "You're currently chat-banned. Message not delivered.",
-        lobbyMessage: null,
-      };
-    }
-
-    const { moderateText, pickPenaltyForChat, activeUntilFor, penaltyLabel } = await import("./moderation.server");
-    const verdict = await moderateText(data.text);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-    await supabaseAdmin.from("moderation_events").insert({
-      player_id: data.playerId,
-      auth_user_id: userId,
-      surface: "chat",
-      content: data.text,
-      categories: verdict.categories,
-      severity: verdict.severity,
-      verdict: verdict.severity <= 1 ? "ok" : verdict.severity <= 2 ? "flagged" : "blocked",
-      match_id: data.matchId,
-    });
-
-    if (verdict.severity <= 2) return { allow: true };
-
-    const strikes = await recentStrikeCount(supabase, data.playerId);
-    const penalty = pickPenaltyForChat(verdict.severity, strikes, false);
-    if (!penalty) return { allow: true };
-
-    const activeUntil = activeUntilFor(penalty);
-    await supabaseAdmin.from("moderation_penalties").insert({
-      player_id: data.playerId,
-      auth_user_id: userId,
-      kind: penalty,
-      reason: verdict.summary || verdict.categories.join(", ") || "chat auto-moderation",
-      match_id: data.matchId,
-      active_until: activeUntil ? activeUntil.toISOString() : null,
-    });
-
-    const label = penaltyLabel(penalty);
-    const senderMessage =
-      penalty === "warn"
-        ? `⚠ Auto-moderation warning. Repeat offenses will mute or ban you.`
-        : penalty === "match_mute"
-          ? `You received a ${label}. Chat is disabled for this match.`
-          : `You received a ${label}. Reason: ${verdict.summary || verdict.categories.join(", ") || "policy violation"}.`;
-
-    const lobbyMessage =
-      penalty === "match_mute" || penalty === "chat_ban_24h" || penalty === "chat_ban_7d" || penalty === "perm"
-        ? `${player.name} received a ${label} from auto-moderation.`
-        : null;
-
-    return { allow: false, penalty, severity: verdict.severity, reason: verdict.summary, senderMessage, lobbyMessage };
+  .handler(async (): Promise<ChatModResult> => {
+    // Chat moderation is disabled: never block messages, never issue bans.
+    return { allow: true };
   });
 
 // ---------- Bio moderation + save ----------
