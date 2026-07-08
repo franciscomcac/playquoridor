@@ -316,6 +316,7 @@ export async function updateMyProfile(
 ): Promise<{ error: string | null }> {
   try {
     const uid = await ensureAuthSession();
+    if (!uid) return { error: "not signed in" };
     const { error } = await supabase
       .from("players")
       .update({
