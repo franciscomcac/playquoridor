@@ -1659,7 +1659,7 @@ function GameScreen({
         <div className="flex gap-2 sm:gap-3">
           <div className="relative min-w-0 flex-1">
             <QuoridorBoard state={displayState} you={you} onMove={handleMove} interactive={boardInteractive} onActivity={() => markActivity(you)} />
-            {coinflip?.animating && <CoinflipOverlay starter={coinflip.starter} you={you} mode={state.mode as Mode} name={nameOf(coinflip.starter)} />}
+            {coinflip?.animating && <CoinflipOverlay starter={coinflip.starter} you={you} mode={state.mode as Mode} nameOf={nameOf} />}
             {!usesRadar && status === "waiting" && presence.count < presence.expected && (
               <WaitingOverlay count={presence.count} expected={presence.expected} isHost={isHost} onStart={hostStartMatch} />
             )}
@@ -2811,7 +2811,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
           <div className="relative min-w-0 flex-1">
             <QuoridorBoard state={displayState} you={YOU} onMove={handleMove} interactive={boardInteractive} />
             {coinflip?.animating && (
-              <CoinflipOverlay starter={coinflip.starter} you={YOU} mode={mode} name={nameOf(coinflip.starter)} />
+              <CoinflipOverlay starter={coinflip.starter} you={YOU} mode={mode} nameOf={nameOf} />
             )}
             {roundOver && !matchOver && !coinflip?.animating && (
               <RoundEndReady
@@ -3052,7 +3052,7 @@ function SpectatorGame({ ident, code, onLeave }: {
                 starter={coinflip.starter}
                 you={SPECTATOR_YOU}
                 mode={state.mode as Mode}
-                name={nameOf(coinflip.starter)}
+                nameOf={nameOf}
               />
             )}
           </div>
