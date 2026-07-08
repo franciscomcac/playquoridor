@@ -2130,7 +2130,7 @@ function CoinflipOverlay({ starter, you, mode, nameOf }: {
 function FourPlayerRoundStart({ starter, you, nameOf }: {
   starter: PlayerId; you: PlayerId; nameOf: (s: PlayerId) => string;
 }) {
-  const [phase, setPhase] = useState(0); // 0 idle → 1 slide → 2 impact → 3 spin → 4 reveal
+  const [phase, setPhase] = useState(0); // 0 idle → 1 slide → 2 impact → 3 spin → 4 reveal → 5 exit → 6 gone
   const [shakeKey, setShakeKey] = useState(0);
   const [spinSlot, setSpinSlot] = useState<PlayerId | null>(null);
   const [revealedCount, setRevealedCount] = useState(0);
@@ -2169,6 +2169,12 @@ function FourPlayerRoundStart({ starter, you, nameOf }: {
     for (let i = 1; i < revealSeq.length; i++) {
       t(spinEnd + 200 + i * 300, () => setRevealedCount(i + 1));
     }
+    // Out animation: after the last reveal settles, hold briefly, then fade
+    // the whole frame out and flash a "Game starting…" message (matches the
+    // design doc timing: 1300ms hold → exit → 650ms → gone).
+    const doneAt = spinEnd + 200 + revealSeq.length * 300 + 350;
+    t(doneAt + 1300, () => setPhase(5));
+    t(doneAt + 1300 + 650, () => setPhase(6));
     return () => { timers.forEach((id) => window.clearTimeout(id)); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -2187,7 +2193,10 @@ function FourPlayerRoundStart({ starter, you, nameOf }: {
   const youStart = starter === you;
   const winnerName = nameOf(starter);
 
-  const summaryDone = phase === 4 && revealedCount >= revealSeq.length;
+  const summaryDone = phase >= 4 && revealedCount >= revealSeq.length;
+  const exiting = phase >= 5;
+
+  if (phase >= 6) return null;
 
   return (
     <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-lg bg-background/85 backdrop-blur-md">
@@ -2208,7 +2217,7 @@ function FourPlayerRoundStart({ starter, you, nameOf }: {
       }} />
       {/* Eyebrow */}
       <div className="absolute left-1/2 top-5 flex -translate-x-1/2 items-center gap-2"
-        style={{ opacity: phase >= 1 ? 1 : 0, transition: "opacity .5s ease" }}>
+        style={{ opacity: phase >= 1 && !exiting ? 1 : 0, transition: "opacity .5s ease" }}>
         <span className="rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.14em] text-white"
           style={{ background: "linear-gradient(90deg, oklch(0.65 0.22 350), oklch(0.55 0.24 305))" }}>
           Chaos
@@ -2219,7 +2228,12 @@ function FourPlayerRoundStart({ starter, you, nameOf }: {
       <div
         key={shakeKey}
         className="relative flex h-full w-full items-center justify-center px-4"
-        style={phase >= 2 ? { animation: "rs-shake .32s ease" } : undefined}
+        style={{
+          animation: phase === 2 ? "rs-shake .32s ease" : undefined,
+          transform: exiting ? "scale(.95) translateY(-12px)" : "none",
+          opacity: exiting ? 0 : 1,
+          transition: "transform .55s ease, opacity .55s ease",
+        }}
       >
         <div className="grid w-full max-w-3xl grid-cols-2 gap-3 sm:gap-4">
           {([0, 1, 2, 3] as PlayerId[]).map((slot) => {
@@ -2321,14 +2335,28 @@ function FourPlayerRoundStart({ starter, you, nameOf }: {
       <p
         className="absolute bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap text-center text-sm font-extrabold sm:text-base"
         style={{
-          opacity: phase >= 4 ? 1 : 0,
-          transform: phase >= 4 ? "translate(-50%, 0)" : "translate(-50%, 8px)",
+          opacity: phase === 4 ? 1 : 0,
+          transform: phase === 4 ? "translate(-50%, 0)" : "translate(-50%, 8px)",
           transition: "opacity .45s ease, transform .45s ease",
           color: "var(--foreground)",
         }}
       >
         {youStart ? "You " : `${winnerName} `}
         <span style={{ color: winnerColor }}>{youStart ? "go first" : "goes first"}</span>
+      </p>
+
+      {/* Game starting… flash during the exit */}
+      <p
+        className="absolute left-1/2 top-1/2 whitespace-nowrap text-center text-sm font-extrabold uppercase tracking-[0.24em]"
+        style={{
+          color: "oklch(0.75 0.18 155)",
+          opacity: exiting ? 1 : 0,
+          transform: exiting ? "translate(-50%, -50%) scale(1)" : "translate(-50%, -50%) scale(.9)",
+          transition: "opacity .4s ease, transform .4s ease",
+          zIndex: 6,
+        }}
+      >
+        Game starting…
       </p>
 
       <style>{`@keyframes rs-shake{0%{transform:translate(0,0)}15%{transform:translate(-8px,3px)}30%{transform:translate(7px,-4px)}45%{transform:translate(-6px,2px)}60%{transform:translate(5px,-3px)}75%{transform:translate(-3px,2px)}100%{transform:translate(0,0)}}`}</style>
