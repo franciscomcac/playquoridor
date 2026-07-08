@@ -43,7 +43,7 @@ import {
 import {
   getVolume, initSoundOnGesture, isMuted, play, playWheelSpin, setMuted, setVolume, startSampleLoop,
 } from "@/lib/sound";
-import { humanThinkTimeMs, pickBotMove, randomDifficulty } from "@/lib/bot";
+import { humanThinkTimeMs, pickBotMove, randomDifficulty, rankedBotForRating, type RankedBot } from "@/lib/bot";
 import { randomGamerName } from "@/lib/names";
 import {
   DEFAULT_CLOCK_MS, endTurn, formatClock, initClocks, liveRemaining,
@@ -85,7 +85,7 @@ type View =
   | { name: "join" }
   | { name: "quick"; mode: Mode; ranked?: boolean }
   | { name: "game"; isHost: boolean; code: string; mode: Mode; walls: number; rounds: number; quickMatch?: boolean; ranked?: boolean }
-  | { name: "bot"; mode: Mode; difficulty: number; opponentNames: string[] }
+  | { name: "bot"; mode: Mode; difficulty: number; opponentNames: string[]; rankedBot?: RankedBot }
   | { name: "spectate" }
   | { name: "spectating"; code: string };
 
