@@ -429,7 +429,7 @@ function Lobby() {
                     {m.id === "4p" && (
                       <span
                         title="Free-for-all mayhem"
-                        className="chaos-badge absolute -top-2 right-1 inline-flex items-center gap-1 rounded-full border border-fuchsia-400/60 bg-linear-to-r from-fuchsia-600 via-rose-500 to-amber-400 px-1.5 py-[2px] font-[IBM_Plex_Mono,monospace] text-[8px] font-black uppercase tracking-[0.14em] text-white shadow-[0_4px_14px_rgba(217,70,239,0.5),inset_0_1px_0_rgba(255,255,255,0.35)] sm:-right-2 sm:px-2 sm:py-[3px] sm:text-[9px] sm:tracking-[0.18em]"
+                        className="chaos-pulse absolute -top-2 right-1 inline-flex items-center gap-1 rounded-full border border-fuchsia-400/60 bg-linear-to-r from-fuchsia-600 via-rose-500 to-amber-400 px-1.5 py-[2px] font-[IBM_Plex_Mono,monospace] text-[8px] font-black uppercase tracking-[0.14em] text-white shadow-[0_4px_14px_rgba(217,70,239,0.5),inset_0_1px_0_rgba(255,255,255,0.35)] sm:-right-2 sm:px-2 sm:py-[3px] sm:text-[9px] sm:tracking-[0.18em]"
                       >
                         <span aria-hidden>⚡</span>
                         Chaos
