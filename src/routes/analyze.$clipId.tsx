@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { isMatchSnapshot, type MatchSnapshot } from "@/lib/matchHistory";
 import { drawState, replay, PLAYER_HEX } from "@/lib/matchReplay";
-import { renderMatchGif, downloadBlob } from "@/lib/gifExport";
+import { ExportClipModal } from "@/components/ExportClipModal";
 import { pickBotMove } from "@/lib/bot";
 import {
   BOARD, goalsFor, isBlocked, reachedGoal,
@@ -177,15 +177,7 @@ function AnalyzePage() {
     drawState(ctx, frames[idx].state, c.width, c.height);
   }, [idx, frames]);
 
-  const [busyGif, setBusyGif] = useState(false);
-  const downloadGif = async () => {
-    if (!snapshot) return;
-    setBusyGif(true);
-    try {
-      const blob = await renderMatchGif(snapshot);
-      downloadBlob(blob, `quoridor-${new Date().toISOString().slice(0, 10)}.gif`);
-    } finally { setBusyGif(false); }
-  };
+  const [exportOpen, setExportOpen] = useState(false);
 
   if (loading) return <Shell><p className="text-zinc-500">Loading…</p></Shell>;
   if (error) return (
@@ -240,9 +232,9 @@ function AnalyzePage() {
             className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-semibold uppercase tracking-widest text-zinc-100 transition hover:border-white/20 hover:bg-white/[0.07]">
             Flip sides {flipped ? "↺" : "⇅"}
           </button>
-          <button onClick={downloadGif} disabled={busyGif}
+          <button onClick={() => setExportOpen(true)} disabled={!snapshot}
             className="rounded-lg border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-zinc-100 transition hover:border-white/20 hover:bg-white/[0.07] disabled:opacity-60">
-            {busyGif ? "Rendering GIF…" : "Download GIF"}
+            Download clip
           </button>
           <Link to="/clips"
             className="rounded-lg px-4 py-2.5 text-sm font-semibold transition hover:brightness-110"
@@ -250,6 +242,7 @@ function AnalyzePage() {
             My clips
           </Link>
         </div>
+        <ExportClipModal open={exportOpen} snapshot={snapshot} onClose={() => setExportOpen(false)} />
       </div>
 
       <div className="mt-4 grid min-h-0 flex-1 items-start gap-4 lg:grid-cols-[minmax(0,520px)_1fr] lg:overflow-hidden">
