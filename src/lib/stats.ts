@@ -1,6 +1,7 @@
 // Supabase reads/writes for stats, leaderboard, and Quick Match lobby index.
 import { supabase } from "@/integrations/supabase/client";
 import { ensureAuthSession, getStoredIdentity } from "@/lib/identity";
+import { PLACEMENT_GAMES } from "@/components/LobbyChrome";
 
 export type MatchResult = {
   mode: 2 | 4;
@@ -139,7 +140,8 @@ export async function fetchMyWinStreak(playerId: string): Promise<number> {
 
 export async function fetchLeaderboard(limit = 20, rankedOnly = true): Promise<LeaderRow[]> {
   let q = supabase.from("player_stats").select("*");
-  if (rankedOnly) q = q.gt("ranked_matches", 0);
+  // Only players who have finished placement appear on the ladder.
+  if (rankedOnly) q = q.gte("ranked_matches", PLACEMENT_GAMES);
   const { data: stats } = await q
     .order("rating", { ascending: false })
     .order("wins", { ascending: false })
@@ -399,12 +401,15 @@ export async function fetchProfile(playerId: string) {
   ]);
   let rank: number | null = null;
   if (s && (s as { rating?: number }).rating != null) {
-    const { count } = await supabase
-      .from("player_stats")
-      .select("player_id", { count: "exact", head: true })
-      .gt("rating", (s as { rating: number }).rating)
-      .gt("ranked_matches", 0);
-    rank = (count ?? 0) + 1;
+    const rm = (s as { ranked_matches?: number }).ranked_matches ?? 0;
+    if (rm >= PLACEMENT_GAMES) {
+      const { count } = await supabase
+        .from("player_stats")
+        .select("player_id", { count: "exact", head: true })
+        .gt("rating", (s as { rating: number }).rating)
+        .gte("ranked_matches", PLACEMENT_GAMES);
+      rank = (count ?? 0) + 1;
+    }
   }
   return { player: p, stats: s, rank };
 }
