@@ -80,51 +80,35 @@ function Lobby() {
       <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-4 py-5 sm:px-6 sm:py-8">
         <TopBar />
 
-        {/* Hero */}
-        <section className="mt-8 flex flex-col items-center text-center sm:mt-12">
-          <span className="mb-3 inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-zinc-500">
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+        {/* Hero — split, geometric */}
+        <section className="mt-10 grid grid-cols-1 items-center gap-10 sm:mt-16 lg:grid-cols-2 lg:gap-16">
+          <div className="flex flex-col">
+            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-zinc-500">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              </span>
+              Matchmaking live
             </span>
-            Matchmaking live
-          </span>
-          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-            Play <span className="text-amber-500">Quoridor</span>
-          </h1>
-          <p className="mt-3 max-w-md text-sm text-zinc-500">
-            Pick a mode. We find you an opponent.
-          </p>
-        </section>
+            <h1 className="mt-5 text-5xl font-bold tracking-tight sm:text-6xl lg:text-7xl">
+              Play <span className="text-amber-500">Quoridor</span>.
+            </h1>
+            <p className="mt-4 max-w-md text-base text-zinc-500">
+              Two walls, one pawn, a race across the board. Pick a mode and jump in.
+            </p>
 
-        {/* Find Match — main CTAs */}
-        <section className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-3">
-          <FindMatchCard
-            label="1v1"
-            sub="Casual duel"
-            desc="Classic head-to-head. No rating on the line."
-            accent="emerald"
-            onClick={() => goPlay("quick2")}
-          />
-          <FindMatchCard
-            label="4 Players"
-            sub="Free-for-all"
-            desc="Chaotic four-corner mayhem. Last pawn standing wins."
-            accent="sky"
-            onClick={() => goPlay("quick4")}
-          />
-          <FindMatchCard
-            label="Ranked"
-            sub="1v1 · ELO ladder"
-            desc="Climb the ladder. Winner takes rating from the loser."
-            accent="amber"
-            badge="ELO"
-            onClick={() => goPlay("ranked2")}
-          />
+            <div className="mt-8 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap">
+              <ModeButton label="2 Players" tone="primary" onClick={() => goPlay("quick2")} />
+              <ModeButton label="4 Players" tone="ghost" onClick={() => goPlay("quick4")} />
+              <ModeButton label="Ranked" tone="ghost" badge="ELO" onClick={() => goPlay("ranked2")} />
+            </div>
+          </div>
+
+          <BoardArt />
         </section>
 
         {/* Bento — leaderboard + private + quick actions */}
-        <section className="mt-4 grid grid-cols-1 items-start gap-4 lg:grid-cols-12">
+        <section className="mt-16 grid grid-cols-1 items-start gap-4 lg:grid-cols-12">
           {/* ELO Leaderboard */}
           <aside className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 lg:col-span-5">
             <div className="flex items-center justify-between">
