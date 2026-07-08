@@ -1388,6 +1388,7 @@ function GameScreen({
       rounds: state.totalRounds,
       ranked: !!ranked,
       winnerId: winnerEntry?.playerId ?? null,
+      snapshot: matchHistory.getSnapshot(),
       players: Array.from({ length: state.mode }, (_, i) => {
         const entry = r.find((e) => e.slot === i);
         return {
@@ -2136,12 +2137,7 @@ function EndScreen({ state, you, onPrimary, onLeave, nameOf, snapshot }: {
           <button onClick={onPrimary} className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5">
             New match
           </button>
-          <button onClick={() => setAnalyzing((v) => !v)}
-            className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary">
-            {analyzing ? "Hide analysis" : "Analyze game"}
-          </button>
           <ShareResultButton state={state} you={you} nameOf={nameOf} matchOver />
-          <SaveClipButton state={state} you={you} nameOf={nameOf} snapshot={snapshot} />
           <DownloadGifButton snapshot={snapshot} />
           <AnalyzeGameButton snapshot={snapshot} />
           <button onClick={onLeave} className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary">
