@@ -9,6 +9,7 @@ import { moderateChatMessage, myChatBan } from "@/lib/moderation.functions";
 import { renderResultCard, shareResultCard } from "@/lib/result-card";
 import { supabase } from "@/integrations/supabase/client";
 import { AccountNav } from "@/components/AccountNav";
+import { QueuePuzzle } from "@/components/QueuePuzzle";
 
 // Warm palette for celebratory confetti — browns, creams, blues, yellows
 // pulled from the app's existing tokens (kept in-sync with styles.css).
