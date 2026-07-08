@@ -946,7 +946,7 @@ function GameScreen({
         const em = err?.message ?? String(err);
         // Ranked joiner hit a stale/dead host — purge the room and surface
         // the "search time exceeded" screen instead of a scary error.
-        if (ranked && quickMatch && !isHost && onRankedTimeout &&
+        if (ranked && !isHost && onRankedTimeout &&
             (em.includes("peer-unavailable") || em.toLowerCase().includes("could not connect"))) {
           void removeOpenRoom(code);
           onRankedTimeout();
