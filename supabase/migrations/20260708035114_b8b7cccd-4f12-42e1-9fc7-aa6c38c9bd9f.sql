@@ -1,0 +1,1 @@
+UPDATE public.players SET name_changed_at = NULL, updated_at = now() WHERE lower(name) = 'nazi';
