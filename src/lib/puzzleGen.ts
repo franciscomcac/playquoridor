@@ -47,7 +47,12 @@ export type GeneratedPuzzle = {
   pawns: Pos[];
   walls: Wall[];
   active_player: 0;
-  goal_moves: number;
+  /** Wall budget the human player is given. Opponent has 0 walls. */
+  playerWalls: number;
+  /** Opponent's shortest-path distance at start (informational). */
+  oppSteps: number;
+  /** Your shortest-path distance at start (informational). */
+  yourSteps: number;
 };
 
 function seededRng(seed: number) {
@@ -75,31 +80,43 @@ export function seedFromDate(dateISO: string): number {
 }
 
 /**
- * Generate a warm-up puzzle: player 0 must reach row 0.
- * Difficulty roughly controls wall count (5–13).
+ * Generate a RACE puzzle: player 0 (you, row 0 goal) and player 1 (opponent,
+ * row 8 goal) both race. The opponent auto-plays shortest-path and cannot
+ * place walls. You are given a small wall budget. To win the race you must
+ * place walls that slow the opponent more than they slow you.
+ *
+ * Difficulty controls how many pre-placed walls sit on the board and how
+ * tight the race is. Easier puzzles give you more of an advantage; harder
+ * puzzles require efficient wall use.
  */
 export function generatePuzzle(seed: number, difficulty: 1 | 2 | 3 = 2): GeneratedPuzzle {
   const rng = seededRng(seed);
   const mode = 2 as const;
   const goals = goalsFor(mode);
 
-  // Pawn starts further back to force longer, mazier paths.
-  const startRow = 7 + Math.floor(rng() * 2); // 7..8
-  const startCol = 1 + Math.floor(rng() * 7); // 1..7
-  let pawn: Pos = [startRow, startCol];
-  // Opponent pawn placed as an in-path obstacle near the middle band.
-  const otherRow = 3 + Math.floor(rng() * 3); // 3..5
-  const otherCol = 2 + Math.floor(rng() * 5); // 2..6
-  const other: Pos = [otherRow, otherCol];
-  const pawns: Pos[] = [pawn, other];
+  // Wall budget for the human player. Opponent has none (pure race bot).
+  const playerWalls = ({ 1: 4, 2: 3, 3: 2 } as const)[difficulty];
+  // Pre-placed walls to give the board some structure.
+  const preWalls    = ({ 1: 2, 2: 4, 3: 6 } as const)[difficulty];
+  // How much closer to their goal the opponent starts than you do.
+  // Larger = harder (you must wall to catch up in the race).
+  const oppLead     = ({ 1: 0, 2: 1, 3: 2 } as const)[difficulty];
 
-  // Way more walls, and prefer configurations that lengthen the path.
-  const targetWalls = ({ 1: 10, 2: 15, 3: 18 } as const)[difficulty];
-  const minPathLen  = ({ 1: 10, 2: 14, 3: 18 } as const)[difficulty];
+  const you: Pos = [8, 3 + Math.floor(rng() * 3)];      // row 8, col 3..5
+  // Opponent starts oppLead+1 rows below their own start (row 0) to trim
+  // their path by that many rows. Position them off-column from you so
+  // they don't sit directly in your lane.
+  const oppRow = Math.min(BOARD - 2, 1 + oppLead);      // 1..3
+  const oppColBase = 3 + Math.floor(rng() * 3);         // 3..5
+  const oppCol = oppColBase === you[1] ? (oppColBase + (rng() < 0.5 ? -1 : 1) + BOARD) % BOARD : oppColBase;
+  const opp: Pos = [oppRow, oppCol];
+  const pawns: Pos[] = [you, opp];
+
+  // Add pre-placed walls. Prefer walls that lengthen the OPPONENT's path
+  // roughly as much as the player's, so the position feels balanced.
   const walls: Wall[] = [];
   let attempts = 0;
-  const maxAttempts = 4000;
-  while (walls.length < targetWalls && attempts < maxAttempts) {
+  while (walls.length < preWalls && attempts < 800) {
     attempts++;
     const r = Math.floor(rng() * (BOARD - 1));
     const c = Math.floor(rng() * (BOARD - 1));
@@ -107,49 +124,41 @@ export function generatePuzzle(seed: number, difficulty: 1 | 2 | 3 = 2): Generat
     const spec: WallSpec = { r, c, o };
     if (wallConflicts(walls, spec)) continue;
     const test: Wall[] = [...walls, { ...spec, by: 0 }];
-    if (!hasPathToGoal(pawns[0], goals[0], test)) continue;
-    if (!hasPathToGoal(pawns[1], goals[1], test)) continue;
-    const before = shortestPathToGoal(pawns[0], goals[0], walls);
-    const after  = shortestPathToGoal(pawns[0], goals[0], test);
-    // Prefer walls that meaningfully lengthen the player's path. Once we
-    // already have a mazy board (path >= minPathLen), accept neutral walls
-    // too so we still hit the wall target.
-    if (after < before + 1 && before < minPathLen && rng() > 0.15) continue;
+    if (!hasPathToGoal(you, goals[0], test)) continue;
+    if (!hasPathToGoal(opp, goals[1], test)) continue;
     walls.push({ ...spec, by: 0 });
   }
 
-  if (!hasPathToGoal(pawn, goals[0], walls)) {
-    pawn = [8, 4];
-    pawns[0] = pawn;
-  }
-
-  const dist = shortestPathToGoal(pawn, goals[0], walls);
-  // Tight budget: exact shortest, or +1 at most. No brute-force slack.
-  const slack = rng() < 0.6 ? 0 : 1;
-  const goal_moves = Math.max(1, dist + slack);
+  const yourSteps = shortestPathToGoal(you, goals[0], walls);
+  const oppSteps  = shortestPathToGoal(opp, goals[1], walls);
 
   return {
-    id: `gen-${seed.toString(16)}`,
-    title: "Warm-up Puzzle",
+    id: `race-${seed.toString(16)}`,
+    title: "Race Puzzle",
     mode,
     pawns,
     walls,
     active_player: 0,
-    goal_moves,
+    playerWalls,
+    oppSteps,
+    yourSteps,
   };
 }
 
 export function buildPuzzleGameState(p: GeneratedPuzzle | {
   mode: number; pawns: Pos[]; walls: Wall[]; active_player: number;
+  playerWalls?: number;
 }): GameState {
   const mode = (p.mode === 4 ? 4 : 2) as 2 | 4;
   const pawns = p.pawns.map((pp) => [pp[0], pp[1]] as Pos);
+  const playerWalls = "playerWalls" in p && typeof p.playerWalls === "number" ? p.playerWalls : 0;
+  const wallsLeft = Array.from({ length: mode }, (_, i) => (i === 0 ? playerWalls : 0));
   return {
     mode,
     pawns,
     active: Array.from({ length: mode }, () => true),
     leftMatch: Array.from({ length: mode }, () => false),
-    wallsLeft: Array.from({ length: mode }, () => 0),
+    wallsLeft,
     walls: p.walls.map((w) => ({ r: w.r, c: w.c, o: w.o, by: (w.by ?? 1) as 0 | 1 | 2 | 3 })),
     lastWall: null,
     turn: (p.active_player as 0 | 1 | 2 | 3) ?? 0,
