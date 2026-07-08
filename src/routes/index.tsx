@@ -388,14 +388,6 @@ function Lobby() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-[1240px] px-8">
-        <Eyebrow>New here? Quoridor in three moves</Eyebrow>
-        <div className="grid gap-4 py-6 md:grid-cols-3">
-          <Step n="01" title="Move your pawn" desc="One square per turn — forward, back, or sideways across the 9×9 board." />
-          <Step n="02" title="Or place a wall" desc="Drop one of your 10 walls to slow your opponent. You can never fully block them." />
-          <Step n="03" title="Reach the far side" desc="First pawn to touch the opposite edge wins the game." />
-        </div>
-      </div>
     </LobbyChrome>
   );
 }
@@ -422,18 +414,5 @@ function CpuRow({ onClick, color, lvl, name, desc }: { onClick: () => void; colo
       </div>
       <span className="text-[16px] text-[#3d3d46]">›</span>
     </button>
-  );
-}
-function Step({ n, title, desc }: { n: string; title: string; desc: string }) {
-  return (
-    <div className="flex items-start gap-4 rounded-[14px] border border-[#232329] bg-[#111114] px-[18px] py-4">
-      <span className="grid h-7 w-7 flex-none place-items-center rounded-[9px] bg-[rgba(245,165,36,0.14)] font-[IBM_Plex_Mono,monospace] text-[12.5px] font-semibold text-[#f5a524]">
-        {n}
-      </span>
-      <div>
-        <div className="text-[13.5px] font-semibold">{title}</div>
-        <div className="mt-[3px] text-[12.5px] leading-[1.45] text-[#83838e]">{desc}</div>
-      </div>
-    </div>
   );
 }
