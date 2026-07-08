@@ -12,9 +12,7 @@ const FONT_LINKS = (
   </>
 );
 
-const NAV = [
-  { to: "/", label: "Play" },
-] as const;
+const NAV = [] as const;
 
 export function LobbyChrome({
   children,
