@@ -8,6 +8,21 @@ let muted = false;
 let volume = 0.5;
 let initialized = false;
 
+// User-provided MP3 sample for the radar ping. Decoded lazily on first play.
+import radarPingAsset from "@/assets/radar-ping.mp3.asset.json";
+let radarPingBuffer: AudioBuffer | null = null;
+let radarPingLoading = false;
+function loadRadarPing(c: AudioContext) {
+  if (radarPingBuffer || radarPingLoading) return;
+  radarPingLoading = true;
+  fetch(radarPingAsset.url)
+    .then((r) => r.arrayBuffer())
+    .then((buf) => c.decodeAudioData(buf))
+    .then((decoded) => { radarPingBuffer = decoded; })
+    .catch(() => {})
+    .finally(() => { radarPingLoading = false; });
+}
+
 function loadPrefs() {
   if (typeof window === "undefined") return;
   muted = localStorage.getItem(MUTE_KEY) === "1";
@@ -187,7 +202,16 @@ export function play(name: SfxName) {
       break;
     // Radar-style ping while queued; quiet enough to loop.
     case "searchPing":
-      radarPing();
+      {
+        const c = ensureCtx();
+        if (!c || !master) break;
+        if (!radarPingBuffer) { loadRadarPing(c); radarPing(); break; }
+        const src = c.createBufferSource();
+        src.buffer = radarPingBuffer;
+        const g = c.createGain(); g.gain.value = 0.85;
+        src.connect(g).connect(master);
+        src.start(c.currentTime);
+      }
       break;
     // Bright confirmation when an opponent is found.
     case "matchFound":
