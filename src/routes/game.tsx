@@ -300,7 +300,7 @@ function SaveClipButton({ state, you, nameOf }: {
         owner_auth: u.id, owner_player_id: p?.id ?? null,
         match_id: null, mode: state.mode,
         title: `${winnerName} · ${new Date().toLocaleDateString()}`,
-        snapshot: state as unknown as Record<string, unknown>,
+        snapshot: JSON.parse(JSON.stringify(state)),
       });
       setSaved(error ? "err" : "ok");
     } catch {
