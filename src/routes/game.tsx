@@ -158,7 +158,9 @@ function Home() {
         ) : (
           <div key={view.name} className="view-fade flex flex-1 items-center justify-center py-4 sm:py-6">
             {view.name === "menu" && (
-              <Menu ident={ident} onChoose={setView} onEditName={() => setIdent(null)} />
+              rankedTimedOut
+                ? <SearchExpired onBack={() => setRankedTimedOut(false)} />
+                : <Menu ident={ident} onChoose={setView} onEditName={() => setIdent(null)} />
             )}
             {view.name === "create" && (
               <CreateRoom
