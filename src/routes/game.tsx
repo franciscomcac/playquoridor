@@ -2741,14 +2741,18 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
               />
             )}
             {matchOver && (
-              <EndScreen state={state} you={YOU} nameOf={nameOf}
-                snapshot={botMatchHistory.getSnapshot()}
-                onPrimary={startMatch} onLeave={onLeave} />
+              <div className="pointer-events-none absolute inset-0 rounded-lg bg-background/70 backdrop-blur-sm" />
             )}
           </div>
           <BoardSideClocks state={state} you={YOU} nameOf={nameOf} />
         </div>
       </div>
+
+      {matchOver && (
+        <EndScreen state={state} you={YOU} nameOf={nameOf}
+          snapshot={botMatchHistory.getSnapshot()}
+          onPrimary={startMatch} onLeave={onLeave} />
+      )}
 
       <MobileAsideSheet chat={<ChatPanel entries={chat} onSend={sendChat} you={YOU} />}>
         <ScoreCard state={state} you={YOU} nameOf={nameOf} />
