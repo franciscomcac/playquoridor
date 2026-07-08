@@ -37,6 +37,11 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
   // orientation toggle (H↔V) so mis-picks are cheap to fix.
   const [armed, setArmed] = useState<WallSpec | null>(null);
   const [isTouch, setIsTouch] = useState(false);
+  // Mobile drag-from-handle flow: user press-holds the H or V handle, drags
+  // over the board, and releases to place. During the drag a ghost wall
+  // follows the finger snapped to the nearest slot.
+  const [dragOrient, setDragOrient] = useState<Orient | null>(null);
+  const [dragWall, setDragWall] = useState<WallSpec | null>(null);
   const boardRef = useRef<HTMLDivElement>(null);
 
   // Per-player POV rotation so each seat sees their pawn on the bottom.
@@ -74,6 +79,69 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
   const legalSet = new Set(legal.map(([r, c]) => `${r},${c}`));
   const goals = goalsFor(state.mode);
   const yourColor = PLAYER_COLORS[you];
+
+  function wallAtPointer(clientX: number, clientY: number, o: Orient): WallSpec | null {
+    const el = boardRef.current;
+    if (!el) return null;
+    const rect = el.getBoundingClientRect();
+    let px = clientX - rect.left;
+    let py = clientY - rect.top;
+    if (rotation !== 0) {
+      const S = rect.width;
+      const cx = px - S / 2, cy = py - S / 2;
+      const rad = (-rotation * Math.PI) / 180;
+      const rx = cx * Math.cos(rad) - cy * Math.sin(rad);
+      const ry = cx * Math.sin(rad) + cy * Math.cos(rad);
+      px = rx + S / 2;
+      py = ry + S / 2;
+    }
+    if (px < 0 || px > rect.width || py < 0 || py > rect.height) return null;
+    const x = (px / rect.width) * BOARD;
+    const y = (py / rect.height) * BOARD;
+    const r = Math.min(BOARD - 2, Math.max(0, Math.round(y) - 1));
+    const c = Math.min(BOARD - 2, Math.max(0, Math.round(x) - 1));
+    return { r, c, o };
+  }
+
+  useEffect(() => {
+    if (!dragOrient) return;
+    const onMove = (e: PointerEvent) => {
+      const w = wallAtPointer(e.clientX, e.clientY, dragOrient);
+      setDragWall(w);
+    };
+    const onUp = (e: PointerEvent) => {
+      const w = wallAtPointer(e.clientX, e.clientY, dragOrient);
+      if (w && state.wallsLeft[you] > 0 && canPlaceWall(state, you, w)) {
+        onMove_placeWall(w);
+      } else if (w) {
+        play("denied");
+      }
+      setDragOrient(null);
+      setDragWall(null);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dragOrient, state, you]);
+
+  function onMove_placeWall(w: WallSpec) {
+    onActivity?.();
+    onMove({ kind: "wall", wall: w });
+  }
+
+  function startWallDrag(o: Orient, e: React.PointerEvent) {
+    if (!isYourTurn || state.wallsLeft[you] <= 0) { play("denied"); return; }
+    e.preventDefault();
+    setArmed(null);
+    setDragOrient(o);
+    setDragWall(wallAtPointer(e.clientX, e.clientY, o));
+  }
 
   function targetFor(e: { clientX: number; clientY: number }, touch = false): HoverTarget | null {
     const el = boardRef.current;
@@ -182,8 +250,10 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
   // Touch armed ghost (persistent until placed or cancelled).
   const armedValid = armed && state.wallsLeft[you] > 0 && canPlaceWall(state, you, armed) ? armed : null;
   const armedInvalid = armed && !armedValid ? armed : null;
-  const ghostWall = armedValid ?? hoverGhost;
-  const invalidGhost = armedInvalid ?? hoverInvalid;
+  const dragValid = dragWall && state.wallsLeft[you] > 0 && canPlaceWall(state, you, dragWall) ? dragWall : null;
+  const dragInvalid = dragWall && !dragValid ? dragWall : null;
+  const ghostWall = dragValid ?? armedValid ?? hoverGhost;
+  const invalidGhost = dragInvalid ?? armedInvalid ?? hoverInvalid;
   const hoverCell = hover && hover.kind === "cell" ? hover : null;
   const cursor = ghostWall || (hoverCell && legalSet.has(`${hoverCell.r},${hoverCell.c}`)) ? "pointer" : "default";
 
@@ -235,6 +305,7 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
   }
 
   return (
+    <div className="flex w-full flex-col gap-2">
     <div className="w-full" style={{
       display: "grid",
       gridTemplateColumns: "1.25rem minmax(0,1fr)",
@@ -312,6 +383,59 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
         </div>
       )}
     </div>
+
+    {/* Mobile wall-drag handles: press and drag onto the board to place a wall. */}
+    <div className="flex gap-2 lg:hidden" aria-hidden={!isYourTurn}>
+      <WallHandle
+        orient="h"
+        color={yourColor}
+        disabled={!isYourTurn || state.wallsLeft[you] <= 0}
+        active={dragOrient === "h"}
+        onPointerDown={(e) => startWallDrag("h", e)}
+      />
+      <WallHandle
+        orient="v"
+        color={yourColor}
+        disabled={!isYourTurn || state.wallsLeft[you] <= 0}
+        active={dragOrient === "v"}
+        onPointerDown={(e) => startWallDrag("v", e)}
+      />
+    </div>
+    </div>
+  );
+}
+
+function WallHandle({ orient, color, disabled, active, onPointerDown }: {
+  orient: Orient; color: string; disabled: boolean; active: boolean;
+  onPointerDown: (e: React.PointerEvent) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onPointerDown={onPointerDown}
+      disabled={disabled}
+      className={
+        "flex flex-1 items-center justify-center gap-3 rounded-xl border px-3 py-3 text-[11px] font-semibold uppercase tracking-widest transition " +
+        (active
+          ? "border-primary bg-primary/10 text-primary"
+          : "border-border bg-card text-foreground hover:bg-secondary ") +
+        (disabled ? " opacity-40" : "")
+      }
+      style={{ touchAction: "none" }}
+      aria-label={orient === "h" ? "Drag horizontal wall onto board" : "Drag vertical wall onto board"}
+    >
+      <span
+        aria-hidden
+        className="block rounded-sm"
+        style={{
+          background: `linear-gradient(180deg, color-mix(in oklab, ${color} 100%, white 12%), ${color} 55%, color-mix(in oklab, ${color} 70%, black 25%))`,
+          boxShadow: `0 2px 4px rgba(0,0,0,0.5)`,
+          width: orient === "h" ? 40 : 8,
+          height: orient === "h" ? 8 : 40,
+        }}
+      />
+      <span>{orient === "h" ? "Horizontal" : "Vertical"}</span>
+    </button>
   );
 }
 
