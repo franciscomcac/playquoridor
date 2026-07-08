@@ -287,7 +287,7 @@ function PuzzleBoard({ puzzle, onSolved }: { puzzle: PuzzleEntry; onSolved: () =
     if (busy.current) return;
     busy.current = true;
     const t = window.setTimeout(() => {
-      const bot = pickBotMove(state, opp, 1); // pure shortest-path (no walls left)
+      const bot = pickBotMove(state, opp, 1); // strong bot; will place walls when it has any
       busy.current = false;
       if (!bot) return;
       const next = applyMove(state, opp, bot);
