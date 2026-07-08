@@ -1626,9 +1626,7 @@ function GameScreen({
               />
             )}
             {matchOver && (
-              <EndScreen state={state} you={you} nameOf={nameOf}
-                snapshot={matchHistory.getSnapshot()}
-                onPrimary={newMatchAction} onLeave={onLeave} />
+              <div className="pointer-events-none absolute inset-0 rounded-lg bg-background/70 backdrop-blur-sm" />
             )}
           </div>
           <div className="hidden sm:contents">
@@ -1636,6 +1634,12 @@ function GameScreen({
           </div>
         </div>
       </div>
+
+      {matchOver && (
+        <EndScreen state={state} you={you} nameOf={nameOf}
+          snapshot={matchHistory.getSnapshot()}
+          onPrimary={newMatchAction} onLeave={onLeave} />
+      )}
 
       <MobileAsideSheet
         chat={<ChatPanel entries={chat} onSend={sendChat} disabled={status !== "connected" || matchMuted || !!chatBan} you={you} />}
@@ -2251,7 +2255,7 @@ function EndScreen({ state, you, onPrimary, onLeave, nameOf, snapshot }: {
   const winnerColor = PLAYER_COLORS[winner];
   const pieces = useMemo(() => Array.from({ length: youWon ? 100 : 20 }, (_, i) => i), [youWon]);
   return (
-    <div className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden rounded-lg bg-background/85 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overflow-x-hidden bg-background/85 px-3 py-6 backdrop-blur-sm">
       {pieces.map((i) => {
         const left = Math.random() * 100;
         const dx = (Math.random() - 0.5) * 40;
@@ -2268,7 +2272,7 @@ function EndScreen({ state, you, onPrimary, onLeave, nameOf, snapshot }: {
             } as React.CSSProperties} />
         );
       })}
-      <div className={"results-in relative flex w-[min(92vw,520px)] flex-col items-center gap-3 rounded-2xl border border-border bg-card px-6 py-6 text-center shadow-2xl"}>
+      <div className={"results-in relative my-auto flex max-h-full w-[min(92vw,520px)] flex-col items-center gap-3 overflow-y-auto rounded-2xl border border-border bg-card px-4 py-6 text-center shadow-2xl sm:px-6"}>
         <span className="grid h-14 w-14 place-items-center rounded-full text-xl font-semibold"
           style={{ background: winnerColor, color: "oklch(0.15 0.02 55)", boxShadow: `0 0 26px color-mix(in oklab, ${winnerColor} 60%, transparent)` }}>
           {winner + 1}
@@ -2737,14 +2741,18 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
               />
             )}
             {matchOver && (
-              <EndScreen state={state} you={YOU} nameOf={nameOf}
-                snapshot={botMatchHistory.getSnapshot()}
-                onPrimary={startMatch} onLeave={onLeave} />
+              <div className="pointer-events-none absolute inset-0 rounded-lg bg-background/70 backdrop-blur-sm" />
             )}
           </div>
           <BoardSideClocks state={state} you={YOU} nameOf={nameOf} />
         </div>
       </div>
+
+      {matchOver && (
+        <EndScreen state={state} you={YOU} nameOf={nameOf}
+          snapshot={botMatchHistory.getSnapshot()}
+          onPrimary={startMatch} onLeave={onLeave} />
+      )}
 
       <MobileAsideSheet chat={<ChatPanel entries={chat} onSend={sendChat} you={YOU} />}>
         <ScoreCard state={state} you={YOU} nameOf={nameOf} />

@@ -153,7 +153,10 @@ export async function createHostRoom(
         const count = openCount();
         const presence: PeerMessage = { type: "presence", payload: { count, expected, roster: roster.slice() } };
         handlers.onPresence?.(count, expected, roster.slice());
-        for (const other of conns) if (other.conn !== c && other.conn.open) other.conn.send(presence);
+        // Send to ALL connections including the newcomer — otherwise the
+        // guest never sees count===expected and onFull never fires on their
+        // side, leaving the board stuck in "waiting" and non-interactive.
+        for (const other of conns) if (other.conn.open) other.conn.send(presence);
         broadcastToSpectators(presence);
         handlers.onGuestJoined?.(slot, finalName);
         if (count === expected) handlers.onFull?.();
