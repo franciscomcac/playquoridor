@@ -169,6 +169,7 @@ function radarPing() {
 const MIN_GAP_MS: Partial<Record<SfxName, number>> = {
   pop: 60, wall: 60, click: 30, denied: 80, tick: 40,
   lowTime: 800, afkWarn: 400, searchPing: 900, searchStart: 400, matchFound: 400,
+  clash: 200, coinToss: 200,
 };
 const lastPlayed: Partial<Record<SfxName, number>> = {};
 export function play(name: SfxName) {
