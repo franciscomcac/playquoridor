@@ -274,6 +274,51 @@ function ChaosBanner() {
   );
 }
 
+function SaveClipButton({ state, you, nameOf }: {
+  state: GameState; you: PlayerId; nameOf: (s: PlayerId) => string;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState<"idle" | "ok" | "err" | "nope">("idle");
+  const label = busy ? "Saving…"
+    : saved === "ok" ? "Clip saved"
+    : saved === "err" ? "Try again"
+    : saved === "nope" ? "Sign in to save"
+    : "Save clip";
+  const onClick = async () => {
+    setBusy(true);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const u = userData.user;
+      const anon = !u || u.is_anonymous === true || (u.app_metadata?.provider ?? "") === "anonymous";
+      if (!u || anon) { setSaved("nope"); return; }
+      const { data: p } = await supabase
+        .from("players").select("id").eq("auth_user_id", u.id)
+        .not("onboarded_at", "is", null).order("onboarded_at", { ascending: false })
+        .limit(1).maybeSingle();
+      const winnerName = state.matchWinner !== null ? nameOf(state.matchWinner) : "clip";
+      const { error } = await supabase.from("saved_clips").insert({
+        owner_auth: u.id, owner_player_id: p?.id ?? null,
+        match_id: null, mode: state.mode,
+        title: `${winnerName} · ${new Date().toLocaleDateString()}`,
+        snapshot: state as unknown as Record<string, unknown>,
+      });
+      setSaved(error ? "err" : "ok");
+    } catch {
+      setSaved("err");
+    } finally {
+      setBusy(false);
+      window.setTimeout(() => setSaved("idle"), 2400);
+      void you;
+    }
+  };
+  return (
+    <button onClick={onClick} disabled={busy}
+      className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary disabled:opacity-60">
+      {label}
+    </button>
+  );
+}
+
 function Header({ ident, onOpenSettings }: { ident: Identity | null; onOpenSettings: () => void }) {
   return (
     <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
