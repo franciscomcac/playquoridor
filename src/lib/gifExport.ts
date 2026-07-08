@@ -35,7 +35,8 @@ export async function renderMatchGif(
   }
   enc.finish();
   const bytes = enc.bytes();
-  return new Blob([bytes], { type: "image/gif" });
+  const ab = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+  return new Blob([ab], { type: "image/gif" });
 }
 
 export function downloadBlob(blob: Blob, filename: string) {
