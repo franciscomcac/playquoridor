@@ -140,9 +140,22 @@ function MiniBoard({ state, snapshot, highlight }: {
 export function MoveHistory({ state, nameOf }: {
   state: GameState; nameOf: (p: PlayerId) => string;
 }) {
-  const [open, setOpen] = useState(false);
+  return <MoveHistoryPanel state={state} nameOf={nameOf} defaultOpen={false} />;
+}
+
+export function MoveHistoryPanel({ state, nameOf, defaultOpen = false, compact = false }: {
+  state: GameState; nameOf: (p: PlayerId) => string;
+  defaultOpen?: boolean; compact?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
   const history = state.moves ?? [];
   const [step, setStep] = useState(history.length);
+  // Keep step pinned to the tail so newly played moves show up during live play.
+  const stepRef = useMemo(() => ({ prevLen: history.length }), []);
+  if (stepRef.prevLen !== history.length) {
+    if (step === stepRef.prevLen) setStep(history.length);
+    stepRef.prevLen = history.length;
+  }
   const snapshot = useMemo(() => reconstruct(state, step), [state, step]);
   const highlight = step > 0 ? history[step - 1] ?? null : null;
 
@@ -154,21 +167,23 @@ export function MoveHistory({ state, nameOf }: {
   const last = () => setStep(history.length);
 
   return (
-    <div className="mt-3 w-full max-w-md text-left">
+    <div className={(compact ? "" : "mt-3 ") + "w-full max-w-md text-left"}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center justify-between rounded-lg border border-border bg-secondary/40 px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary"
         aria-expanded={open}
       >
-        <span>Review moves <span className="text-muted-foreground">· {history.length}</span></span>
+        <span>{compact ? "Move history" : "Review moves"} <span className="text-muted-foreground">· {history.length}</span></span>
         <span aria-hidden className={"transition-transform " + (open ? "rotate-180" : "")}>▾</span>
       </button>
       {open && (
         <div className="mt-2 rounded-lg border border-border bg-background/60 p-3">
-          <div className="mx-auto max-w-[220px]">
-            <MiniBoard state={state} snapshot={snapshot} highlight={highlight} />
-          </div>
+          {!compact && (
+            <div className="mx-auto max-w-[220px]">
+              <MiniBoard state={state} snapshot={snapshot} highlight={highlight} />
+            </div>
+          )}
           <div className="mt-3 flex items-center justify-between gap-2">
             <div className="text-xs text-muted-foreground">
               {step === 0 ? "Round start" : (
