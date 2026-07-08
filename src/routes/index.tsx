@@ -330,9 +330,10 @@ function Lobby() {
                 { id: "ranked", title: "Ranked", sub: "ELO 1v1" },
               ] as { id: Mode; title: string; sub: string }[]).map((m) => {
                 const on = mode === m.id;
+                const locked = m.id === "ranked" && !signedIn;
                 return (
                   <button key={m.id} onClick={() => setMode(m.id)}
-                    className={"flex-1 rounded-[12px] border p-4 text-left transition-colors " +
+                    className={"relative flex-1 rounded-[12px] border p-4 text-left transition-colors " +
                       (on
                         ? "border-[rgba(245,165,36,0.35)] bg-[rgba(245,165,36,0.14)] shadow-[0_0_24px_rgba(245,165,36,0.14)]"
                         : "border-[#232329] bg-[#17171b] hover:border-[#34343e]")}>
@@ -340,6 +341,18 @@ function Lobby() {
                     <div className={"mt-[5px] text-[10.5px] font-semibold uppercase tracking-[0.13em] " + (on ? "text-[#f5a524]" : "text-[#5c5c66]")}>
                       {m.sub}
                     </div>
+                    {locked && (
+                      <span
+                        title="Sign in to play ranked"
+                        className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full border border-[#3a3a44]/70 bg-[#0d0d10]/60 px-1.5 py-[2px] font-[IBM_Plex_Mono,monospace] text-[9px] font-semibold uppercase tracking-[0.14em] text-[#a4a4b0]/80 backdrop-blur-[2px]"
+                      >
+                        <svg width="8" height="9" viewBox="0 0 10 12" aria-hidden fill="none">
+                          <path d="M2 5V3.5a3 3 0 016 0V5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                          <rect x="1.2" y="5" width="7.6" height="6" rx="1.2" stroke="currentColor" strokeWidth="1.2"/>
+                        </svg>
+                        Locked
+                      </span>
+                    )}
                   </button>
                 );
               })}
