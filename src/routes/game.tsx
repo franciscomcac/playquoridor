@@ -3418,6 +3418,14 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
     setReadySlots((prev) => (prev.includes(YOU) ? prev : [...prev, YOU]));
   }, []);
 
+  // Auto-ready for non-anim endings (time/afk/forfeit).
+  useEffect(() => {
+    if (state.winner === null || state.matchWinner !== null) return;
+    if (roundEndAnim) return;
+    const r = state.endReason;
+    if (r === "time" || r === "afk" || r === "forfeit") requestReady();
+  }, [state.winner, state.matchWinner, state.endReason, roundEndAnim, requestReady]);
+
   // Reset ready roster whenever a new round begins.
   const prevWinnerReadyRef = useRef<PlayerId | null>(state.winner);
   useEffect(() => {
