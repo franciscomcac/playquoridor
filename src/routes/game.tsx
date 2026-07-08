@@ -258,6 +258,67 @@ function AbortedOverlay() {
   );
 }
 
+function ChaosBanner() {
+  return (
+    <div className="relative overflow-hidden rounded-xl border border-fuchsia-500/40 bg-gradient-to-r from-fuchsia-600/25 via-rose-600/20 to-amber-500/20 px-4 py-2.5 shadow-lg shadow-fuchsia-900/30">
+      <div className="pointer-events-none absolute inset-0 animate-pulse bg-gradient-to-r from-transparent via-fuchsia-500/10 to-transparent" />
+      <div className="relative flex items-center gap-3">
+        <span className="text-lg">⚡</span>
+        <div className="flex-1">
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-fuchsia-300">Chaos Mode</p>
+          <p className="text-xs font-semibold text-white">4 players. One board. All bets are off.</p>
+        </div>
+        <span className="rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-white">FFA</span>
+      </div>
+    </div>
+  );
+}
+
+function SaveClipButton({ state, you, nameOf }: {
+  state: GameState; you: PlayerId; nameOf: (s: PlayerId) => string;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState<"idle" | "ok" | "err" | "nope">("idle");
+  const label = busy ? "Saving…"
+    : saved === "ok" ? "Clip saved"
+    : saved === "err" ? "Try again"
+    : saved === "nope" ? "Sign in to save"
+    : "Save clip";
+  const onClick = async () => {
+    setBusy(true);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const u = userData.user;
+      const anon = !u || u.is_anonymous === true || (u.app_metadata?.provider ?? "") === "anonymous";
+      if (!u || anon) { setSaved("nope"); return; }
+      const { data: p } = await supabase
+        .from("players").select("id").eq("auth_user_id", u.id)
+        .not("onboarded_at", "is", null).order("onboarded_at", { ascending: false })
+        .limit(1).maybeSingle();
+      const winnerName = state.matchWinner !== null ? nameOf(state.matchWinner) : "clip";
+      const { error } = await supabase.from("saved_clips").insert({
+        owner_auth: u.id, owner_player_id: p?.id ?? null,
+        match_id: null, mode: state.mode,
+        title: `${winnerName} · ${new Date().toLocaleDateString()}`,
+        snapshot: JSON.parse(JSON.stringify(state)),
+      });
+      setSaved(error ? "err" : "ok");
+    } catch {
+      setSaved("err");
+    } finally {
+      setBusy(false);
+      window.setTimeout(() => setSaved("idle"), 2400);
+      void you;
+    }
+  };
+  return (
+    <button onClick={onClick} disabled={busy}
+      className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary disabled:opacity-60">
+      {label}
+    </button>
+  );
+}
+
 function Header({ ident, onOpenSettings }: { ident: Identity | null; onOpenSettings: () => void }) {
   return (
     <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
@@ -1065,6 +1126,7 @@ function GameScreen({
   return (
     <div className="grid w-full max-w-6xl gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div className="order-1 flex min-w-0 flex-col gap-3">
+        {state.mode === 4 && <ChaosBanner />}
         <TurnBar state={state} you={you} status={status} presence={presence} coinAnimating={!!coinflip?.animating} nameOf={nameOf} />
         {afk && state.winner === null && state.matchWinner === null && (
           <AfkBanner slot={afk.slot} deadline={afk.deadline} name={nameOf(afk.slot)} />
@@ -1704,6 +1766,7 @@ function EndScreen({ state, you, onPrimary, onLeave, nameOf }: {
             {analyzing ? "Hide analysis" : "Analyze game"}
           </button>
           <ShareResultButton state={state} you={you} nameOf={nameOf} matchOver />
+          <SaveClipButton state={state} you={you} nameOf={nameOf} />
           <button onClick={onLeave} className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary">
             Leave
           </button>

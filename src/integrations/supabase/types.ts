@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      friendships: {
+        Row: {
+          addressee_auth: string
+          addressee_id: string
+          created_at: string
+          id: string
+          requester_auth: string
+          requester_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          addressee_auth: string
+          addressee_id: string
+          created_at?: string
+          id?: string
+          requester_auth: string
+          requester_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          addressee_auth?: string
+          addressee_id?: string
+          created_at?: string
+          id?: string
+          requester_auth?: string
+          requester_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "friendships_addressee_id_fkey"
+            columns: ["addressee_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "friendships_requester_id_fkey"
+            columns: ["requester_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       match_players: {
         Row: {
           auth_user_id: string | null
@@ -261,6 +309,54 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_clips: {
+        Row: {
+          created_at: string
+          id: string
+          match_id: string | null
+          mode: number
+          owner_auth: string
+          owner_player_id: string | null
+          snapshot: Json
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          match_id?: string | null
+          mode: number
+          owner_auth: string
+          owner_player_id?: string | null
+          snapshot: Json
+          title: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          match_id?: string | null
+          mode?: number
+          owner_auth?: string
+          owner_player_id?: string | null
+          snapshot?: Json
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_clips_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saved_clips_owner_player_id_fkey"
+            columns: ["owner_player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -275,9 +371,19 @@ export type Database = {
         }
         Returns: undefined
       }
+      check_username_available: { Args: { _name: string }; Returns: boolean }
       complete_onboarding: {
         Args: { _country: string; _name: string; _player_id: string }
         Returns: undefined
+      }
+      search_players: {
+        Args: { _limit?: number; _q: string }
+        Returns: {
+          auth_user_id: string
+          country: string
+          name: string
+          player_id: string
+        }[]
       }
     }
     Enums: {

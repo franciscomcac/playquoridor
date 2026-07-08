@@ -1,88 +1,69 @@
+# Plan
 
-# Quoridor Parlour — Full Upgrade (one pass)
+Ship this in one pass. Five pieces.
 
-Networking stays PeerJS. Supabase is added only for persistent stats + leaderboard + win counter. Ball-pop FX is repurposed as pawn-elimination FX. Shipping all 7 core areas in one commit as requested.
+## 1. Signup / onboarding flow (animated, interactive)
 
-## 1. Player identity
+After a user creates an account (email or Google), route them through a 2-step onboarding overlay before landing on `/`:
 
-- Prompt for display name on first visit; validate 2–16 chars, trimmed, non-empty.
-- Persist in `localStorage` (`quoridor.playerName`, `quoridor.playerId`). `playerId` is a stable UUID minted once per device — used as the Supabase stats key.
-- Editable from a "You are: <name> [edit]" chip on the main menu.
-- Names shown everywhere: lobby list, top turn bar, wall counters, coin-flip overlay, end screen, forfeit log.
-- Uniqueness per room: host appends " 2", " 3", … on collision when a guest joins.
+**Step 1 — Pick a permanent username**
+- Text input, 3–16 chars, `[a-z0-9_]` only, lowercased.
+- Live availability check against `players.name` (debounced, 300ms). Server function `checkUsernameAvailable(name)` runs a case-insensitive `players` lookup.
+- Green check / red X animates in as you type.
 
-## 2. Matchmaking
+**Step 2 — Pick your country**
+- Typeahead search over an ISO country list. Arrow keys + enter.
+- Static SVG world map on the right (embed a lightweight world outline). When you pick a country, a glowing pin animates from center to that country's lat/lng with a spring; the country outline pulses briefly.
+- Uses a small local dataset (`src/lib/countries.ts` — name, ISO2, lat, lng, flag emoji) and a single-file world SVG so no heavy map library.
 
-- New "Quick Match" button on the main menu with a 2p/4p toggle.
-- Since we're staying on PeerJS (no server registry), Quick Match uses a tiny Supabase table `open_rooms(code, mode, host_name, seats_taken, seats_total, created_at)` as a lobby index. Host inserts on room create, updates `seats_taken` on presence changes, deletes on full/close.
-- Quick Match flow: query `open_rooms where mode=X and seats_taken<seats_total order by created_at`, join the oldest; if none, create one.
-- "Searching for players… 2/4" state with a Cancel button.
-- Auto-start when full; host "Start now" button when partial.
-- Manual room-code entry preserved unchanged.
+Both steps use framer-motion for entrance/exit and the pin animation.
+Confirming calls the existing `complete_onboarding(_player_id, _name, _country)` RPC.
 
-## 3. Leaver handling (existing PeerJS presence)
+## 2. Username permanence
 
-- Already have peer close events. Wire them to:
-  - Mark slot inactive for the rest of the match (not just the round).
-  - Log "<Name> left the game" to a new event log panel.
-  - Grey out their slot in HUD + coin-flip.
-  - If only one active player remains → auto match-win to them, jump to end screen.
-- Persist "left this match" set so `newRound` doesn't reactivate them.
+- `players.name` currently isn't unique. Migration: add `citext`-style unique index on `lower(name)`; harden `complete_onboarding` to reject a taken name.
+- Once onboarded (`onboarded_at IS NOT NULL`), remove the "edit name" affordance from the menu; the name is permanent. Anonymous / guest sessions keep the current random editable temp name.
 
-## 4. AFK detection
+## 3. Header account menu (replaces Sign in / Sign up when signed in)
 
-- Track `lastInputAt` per player on the host (authoritative).
-- 60s idle → broadcast `{afk: playerId, deadline: now+90s}` → all clients show countdown banner "<Name> is AFK — forfeiting in 1:30".
-- Any move/wall/UI click during countdown → broadcast `afk_cancel`, reset timer.
-- Countdown expires → host applies forfeit (reuses existing `applyForfeit`), same treatment as leaver.
+Signed-out: keep the current Sign in + green Sign up buttons.
 
-## 5. Animations
+Signed-in: replace both with a single avatar chip (flag + username, dropdown arrow). Dropdown items:
+- Profile (`/u/$username`) — public stats page
+- Friends (`/friends`)
+- Match history (`/history`)
+- Saved clips (`/clips`)
+- Settings
+- Sign out
 
-- Pawn elimination pop: scale 1→1.4→0 + radial particle burst (8 shards in player color) + brief white flash. CSS keyframes + absolutely-positioned particle spans; <300ms; fire-and-forget so game state never waits.
-- Wall placement: replace instant paint with slide-from-perpendicular + settle bounce (cubic-bezier overshoot) + small dust puff at each end. Existing "latest wall" glow kept.
-- All cosmetic — game logic fires immediately, visuals follow via a small `useEffect` on `state.walls.length` / `state.active` diffs.
+Uses shadcn `DropdownMenu`, animated open/close.
 
-## 6. Sound
+## 4. New pages (v1 scaffolds, real data where it exists)
 
-- Web Audio API tones (no asset licensing): pop (descending sine), wall place (thud: low sine + noise burst), join (rising two-tone), match start (triad), round win (arpeggio up), match win (longer arpeggio + sparkle), AFK warn (pulse beep), UI click (short blip).
-- `useSound()` hook lazy-inits `AudioContext` on first gesture.
-- Settings drawer: mute toggle + master volume slider, persisted in `localStorage`.
+- **`/friends`** — search users by username, send/accept friend requests, show online friends.
+  New table `public.friendships (requester uuid, addressee uuid, status text, created_at)` with RLS + grants.
+- **`/history`** — list of past matches from `matches` + `match_players` for the current user. Each row expands into an "Analysis" panel: score, walls placed, pawns eliminated, avg move time, key moments (round wins). Analysis is derived from stored data — no engine eval this pass.
+- **`/clips`** — saved clips list. Adds `public.saved_clips (id, owner uuid, match_id, title, state_snapshot jsonb, created_at)`. In-game we add a "Save clip" button on the round-end overlay that snapshots the final `GameState`. Clip view replays the snapshot on a static board.
 
-## 7. Stats + leaderboard (Supabase)
+All three routes live under `_authenticated/`.
 
-Tables (all with RLS + explicit GRANTs):
+## 5. Chaos banner on 4-player
 
-```text
-players(id uuid pk, name text, created_at)          -- upsert on name change
-player_stats(player_id uuid pk fk→players,
-             matches int, wins int, losses int,
-             pawns_eliminated int, walls_placed int, forfeits int,
-             updated_at)
-matches(id uuid pk, mode int2, rounds int2, winner_player_id uuid, ended_at)
-match_players(match_id uuid, player_id uuid, slot int2, result text, pk(match_id,slot))
-open_rooms(code text pk, mode int2, host_name text, seats_taken int, seats_total int, created_at)
-```
+Small animated banner ("⚡ CHAOS MODE — 4 players, one board") that:
+- Shows on the Quick Match 4p button in the lobby (subtle pulse).
+- Slides in at the top of the game screen when `state.mode === 4` for the first 3 seconds of a match, then persists as a small `CHAOS` chip in the header.
 
-- RLS: `players`, `player_stats`, `matches`, `match_players`, `open_rooms` all `SELECT` public. Writes: `INSERT/UPDATE` allowed to `anon` on `open_rooms` + own `players` row (validated by `player_id` matching client-supplied uuid — soft-trust model, matching the game's zero-account nature). Stats writes are anon too; this game has no accounts so server-authoritative scoring is out of scope for this pass.
-- End-of-match summary screen: winner banner, final score grid, per-player stats delta (rounds won, walls placed, pawns eliminated, forfeits).
-- Stats page (`/stats`) with a leaderboard (top 20 by wins) + a "Find me" lookup by name.
-- Persistent win counter chip on main menu tied to `playerId`.
+## Technical
 
-## Technical notes
+- No new heavy deps. framer-motion is already available if not I'll add it. World map = inline SVG (topojson-lite outline, ~40KB gzipped, committed as `src/assets/world.svg`).
+- New tables get GRANTs + RLS in the same migration.
+- All new server reads use `createServerFn` + `requireSupabaseAuth`; public username-check uses the server publishable client.
+- Chaos banner is pure presentation, no backend.
 
-- New files: `src/lib/identity.ts`, `src/lib/sound.ts`, `src/lib/stats.ts`, `src/lib/afk.ts`, `src/components/EventLog.tsx`, `src/components/EndScreen.tsx`, `src/components/SettingsDrawer.tsx`, `src/components/PawnPopFX.tsx`, `src/routes/stats.tsx`.
-- Edits: `src/lib/quoridor.ts` (leaver-persistence, elimination hooks), `src/lib/peer-room.ts` (name in `assign`/`presence`, afk + leaver + log messages), `src/components/QuoridorBoard.tsx` (wall placement animation, elimination FX mount), `src/routes/index.tsx` (Quick Match, name prompt, settings, end screen, integrations).
-- Cloud enabled via `supabase--enable`, one migration for the 5 tables + policies + grants, one migration to seed nothing.
-- Touch handling on the board already works via pointer events; verified mobile after wall-anim change.
+## Out of scope (say so up front)
 
-## Explicit non-goals for this pass
+- Real-time friend presence beyond "seen in last 5 min".
+- Engine-based move quality analysis (blunders/best move) — data model supports adding it later.
+- Video clips. "Clips" are replayable game snapshots, not video.
 
-- No account system, no ELO, no anti-cheat/server-authoritative scoring, no power-ups, no emotes, no spectator, no reconnect grace, no avatars, no tutorial overlay, no share-card image, no dailies. These are the "Extra upgrade ideas" — separate pass.
-
-## Risk / caveats
-
-- Anon writes to stats are trivially forgeable. Acceptable for a casual P2P party game; call out in end-screen tooltip. Real anti-cheat needs accounts.
-- Quick Match lobby index can go stale if a host crashes without cleanup. Mitigation: `created_at` filter drops rooms older than 15min from Quick Match query, and a "stale?" ping before joining.
-- PeerJS uses the public cloud broker — no changes there.
-
-Approve to proceed and I'll ship the whole thing.
+Confirm and I'll build it end to end.

@@ -12,7 +12,11 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as StatsRouteImport } from './routes/stats'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as PuzzleRouteImport } from './routes/puzzle'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as HistoryRouteImport } from './routes/history'
 import { Route as GameRouteImport } from './routes/game'
+import { Route as FriendsRouteImport } from './routes/friends'
+import { Route as ClipsRouteImport } from './routes/clips'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
@@ -33,9 +37,29 @@ const PuzzleRoute = PuzzleRouteImport.update({
   path: '/puzzle',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HistoryRoute = HistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GameRoute = GameRouteImport.update({
   id: '/game',
   path: '/game',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FriendsRoute = FriendsRouteImport.update({
+  id: '/friends',
+  path: '/friends',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClipsRoute = ClipsRouteImport.update({
+  id: '/clips',
+  path: '/clips',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -63,7 +87,11 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
+  '/clips': typeof ClipsRoute
+  '/friends': typeof FriendsRoute
   '/game': typeof GameRoute
+  '/history': typeof HistoryRoute
+  '/onboarding': typeof OnboardingRoute
   '/puzzle': typeof PuzzleRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
@@ -73,7 +101,11 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
+  '/clips': typeof ClipsRoute
+  '/friends': typeof FriendsRoute
   '/game': typeof GameRoute
+  '/history': typeof HistoryRoute
+  '/onboarding': typeof OnboardingRoute
   '/puzzle': typeof PuzzleRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
@@ -84,7 +116,11 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
+  '/clips': typeof ClipsRoute
+  '/friends': typeof FriendsRoute
   '/game': typeof GameRoute
+  '/history': typeof HistoryRoute
+  '/onboarding': typeof OnboardingRoute
   '/puzzle': typeof PuzzleRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
@@ -96,7 +132,11 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/auth'
+    | '/clips'
+    | '/friends'
     | '/game'
+    | '/history'
+    | '/onboarding'
     | '/puzzle'
     | '/sitemap.xml'
     | '/stats'
@@ -106,7 +146,11 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/auth'
+    | '/clips'
+    | '/friends'
     | '/game'
+    | '/history'
+    | '/onboarding'
     | '/puzzle'
     | '/sitemap.xml'
     | '/stats'
@@ -116,7 +160,11 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/auth'
+    | '/clips'
+    | '/friends'
     | '/game'
+    | '/history'
+    | '/onboarding'
     | '/puzzle'
     | '/sitemap.xml'
     | '/stats'
@@ -127,7 +175,11 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   AuthRoute: typeof AuthRoute
+  ClipsRoute: typeof ClipsRoute
+  FriendsRoute: typeof FriendsRoute
   GameRoute: typeof GameRoute
+  HistoryRoute: typeof HistoryRoute
+  OnboardingRoute: typeof OnboardingRoute
   PuzzleRoute: typeof PuzzleRouteWithChildren
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StatsRoute: typeof StatsRoute
@@ -156,11 +208,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PuzzleRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/history': {
+      id: '/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof HistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/game': {
       id: '/game'
       path: '/game'
       fullPath: '/game'
       preLoaderRoute: typeof GameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/friends': {
+      id: '/friends'
+      path: '/friends'
+      fullPath: '/friends'
+      preLoaderRoute: typeof FriendsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/clips': {
+      id: '/clips'
+      path: '/clips'
+      fullPath: '/clips'
+      preLoaderRoute: typeof ClipsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -209,7 +289,11 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   AuthRoute: AuthRoute,
+  ClipsRoute: ClipsRoute,
+  FriendsRoute: FriendsRoute,
   GameRoute: GameRoute,
+  HistoryRoute: HistoryRoute,
+  OnboardingRoute: OnboardingRoute,
   PuzzleRoute: PuzzleRouteWithChildren,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StatsRoute: StatsRoute,
