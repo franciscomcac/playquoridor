@@ -1700,14 +1700,20 @@ function GameScreen({
             disabled={status !== "connected" || state.winner !== null || state.matchWinner !== null || !state.active[you]}
           />
           <div className="flex gap-2">
-            <button onClick={newMatchAction} disabled={status !== "connected" || !!coinflip?.animating}
+            <button onClick={rematchAction} disabled={status !== "connected" || !!coinflip?.animating}
               className="flex-1 rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary disabled:opacity-40">
-              New match
+              Rematch
             </button>
             <button onClick={handleLeave} className="flex-1 rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary">
               Leave
             </button>
           </div>
+          {onRequeue && (
+            <button onClick={onRequeue}
+              className="rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-primary hover:bg-primary/20">
+              Find new match
+            </button>
+          )}
         </div>
       </MobileAsideSheet>
     </div>
