@@ -643,6 +643,16 @@ function QuickMatch({ mode, ranked, ident, onBack, onJoin, onHost }: {
   const cancelled = useRef(false);
   const registeredCode = useRef<string | null>(null);
   const transitioned = useRef(false);
+
+  // Play a soft radar loop while queued; stop as soon as we transition.
+  useEffect(() => {
+    play("searchStart");
+    const ping = window.setInterval(() => {
+      if (!cancelled.current && !transitioned.current) play("searchPing");
+    }, 1600);
+    return () => window.clearInterval(ping);
+  }, []);
+
   useEffect(() => {
     cancelled.current = false;
     transitioned.current = false;
@@ -654,6 +664,7 @@ function QuickMatch({ mode, ranked, ident, onBack, onJoin, onHost }: {
       if (existing) {
         setStatus("Joining room…");
         transitioned.current = true;
+        play("matchFound");
         onJoin(existing);
         return;
       }
@@ -698,6 +709,7 @@ function QuickMatch({ mode, ranked, ident, onBack, onJoin, onHost }: {
             registeredCode.current = null;
             // GameScreen is already mounted as host — the parent's onJoin
             // will swap the view to guest, tearing that peer session down.
+            play("matchFound");
             onJoin(older);
           } catch { /* transient; try again next tick */ }
         };
