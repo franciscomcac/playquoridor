@@ -427,11 +427,12 @@ export async function fetchRecentOpponents(myPlayerId: string, limit = 8): Promi
   const out: RecentOpponent[] = [];
   for (const o of (others ?? []) as Array<{ match_id: string; player_id: string | null; name: string }>) {
     if (!o.player_id || o.player_id === myPlayerId || seen.has(o.player_id)) continue;
-    seen.add(o.player_id);
+    const pid = o.player_id;
+    seen.add(pid);
     const m = mById.get(o.match_id) as { mode: number; ranked: boolean; ended_at: string } | undefined;
     if (!m) continue;
     out.push({
-      playerId: o.player_id,
+      playerId: pid,
       name: o.name,
       when: m.ended_at,
       mode: m.ranked ? "Ranked" : m.mode === 4 ? "4P free-for-all" : "Casual",
