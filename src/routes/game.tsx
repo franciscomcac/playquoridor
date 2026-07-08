@@ -6,6 +6,7 @@ import { MoveHistory, MoveHistoryPanel, type HistorySnapshot } from "@/component
 import { ChatPanel, type ChatEntry } from "@/components/ChatPanel";
 import { renderResultCard, shareResultCard } from "@/lib/result-card";
 import { supabase } from "@/integrations/supabase/client";
+import { AccountNav } from "@/components/AccountNav";
 
 // Warm palette for celebratory confetti — browns, creams, blues, yellows
 // pulled from the app's existing tokens (kept in-sync with styles.css).
