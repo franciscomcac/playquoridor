@@ -1053,14 +1053,19 @@ function GameScreen({
         } else if (msg.type === "chat") {
           const p = msg.payload as { slot: number; name: string; text: string; ts: number };
           const isSystem = (p.slot as number) < 0;
-          setChat((prev) => [
-            ...prev.slice(-99),
-            {
-              key: `${p.ts}-${p.slot}-${Math.random()}`,
-              slot: isSystem ? null : p.slot,
-              name: p.name, text: p.text, ts: p.ts,
-            },
-          ]);
+          setChat((prev) => {
+            // Dedupe system greetings: host already appended locally before
+            // broadcasting, and the greeting can also arrive via replay.
+            if (isSystem && prev.some((m) => m.slot === null && m.text === p.text)) return prev;
+            return [
+              ...prev.slice(-99),
+              {
+                key: `${p.ts}-${p.slot}-${Math.random()}`,
+                slot: isSystem ? null : p.slot,
+                name: p.name, text: p.text, ts: p.ts,
+              },
+            ];
+          });
           if (!isSystem) play("click");
         }
       },
