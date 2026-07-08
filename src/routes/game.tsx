@@ -6,6 +6,7 @@ import { MoveHistory, MoveHistoryPanel, type HistorySnapshot } from "@/component
 import { ChatPanel, type ChatEntry } from "@/components/ChatPanel";
 import { renderResultCard, shareResultCard } from "@/lib/result-card";
 import { supabase } from "@/integrations/supabase/client";
+import { AccountNav } from "@/components/AccountNav";
 
 // Warm palette for celebratory confetti — browns, creams, blues, yellows
 // pulled from the app's existing tokens (kept in-sync with styles.css).
@@ -29,7 +30,7 @@ import {
   getStoredIdentity, isValidName, sanitizeName, setStoredIdentity, type Identity,
 } from "@/lib/identity";
 import {
-  bumpMyStats, fetchMyStats, findOpenRoom, recordMatch,
+  bumpMyStats, fetchMyStats, fetchMyWinStreak, findOpenRoom, recordMatch,
   registerOpenRoom, removeOpenRoom, updateOpenRoomSeats, applyElo1v1,
 } from "@/lib/stats";
 import {
@@ -343,14 +344,8 @@ function Header({ ident, onOpenSettings }: { ident: Identity | null; onOpenSetti
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-        {ident && <WinsBadge playerId={ident.id} />}
-        <Link
-          to="/auth"
-          className="rounded-md border border-border bg-secondary/40 px-2.5 py-1.5 text-[10px] uppercase tracking-widest hover:bg-secondary sm:px-3"
-        >
-          <span className="hidden sm:inline">Sign in</span>
-          <span className="sm:hidden" aria-hidden>◐</span>
-        </Link>
+        {ident && <StreakBadge playerId={ident.id} />}
+        <AccountNav compact />
         <button onClick={onOpenSettings} aria-label="Settings" className="rounded-md border border-border bg-secondary/40 px-2.5 py-1.5 text-[10px] uppercase tracking-widest hover:bg-secondary sm:px-3">
           <span className="hidden sm:inline">Settings</span>
           <span className="sm:hidden" aria-hidden>⚙</span>
@@ -360,14 +355,21 @@ function Header({ ident, onOpenSettings }: { ident: Identity | null; onOpenSetti
   );
 }
 
-function WinsBadge({ playerId }: { playerId: string }) {
-  const [wins, setWins] = useState<number | null>(null);
-  useEffect(() => { void fetchMyStats(playerId).then((s) => setWins(s?.wins ?? 0)); }, [playerId]);
-  if (wins === null) return null;
+function StreakBadge({ playerId }: { playerId: string }) {
+  const [streak, setStreak] = useState<number | null>(null);
+  useEffect(() => { void fetchMyWinStreak(playerId).then(setStreak); }, [playerId]);
+  if (streak === null) return null;
+  const hot = streak >= 3;
   return (
-    <span className="hidden rounded-md border border-border bg-card px-2.5 py-1 text-[10px] uppercase tracking-widest sm:inline-flex">
-      <span className="text-muted-foreground">Wins</span>
-      <span className="ml-1.5 font-semibold text-primary">{wins}</span>
+    <span className={
+      "hidden items-center gap-1 rounded-md border px-2.5 py-1 text-[10px] uppercase tracking-widest sm:inline-flex " +
+      (hot
+        ? "border-orange-500/50 bg-orange-500/10"
+        : "border-border bg-card")
+    }>
+      <span aria-hidden>{hot ? "🔥" : "✦"}</span>
+      <span className="text-muted-foreground">Streak</span>
+      <span className={"ml-0.5 font-semibold " + (hot ? "text-orange-300" : "text-primary")}>{streak}</span>
     </span>
   );
 }
