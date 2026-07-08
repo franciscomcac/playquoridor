@@ -265,7 +265,7 @@ function ModeButton({
   );
 }
 
-function BoardArt() {
+function _BoardArt() {
   // 9x9 board silhouette with two pawns and a couple of walls — pure geometry, no state
   const cells = Array.from({ length: 81 });
   return (
