@@ -52,7 +52,7 @@ function PlayerPage() {
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-2xl font-bold">{p.name ?? "player"}</h1>
           <p className="text-[11px] uppercase tracking-widest text-zinc-500">
-            {tier.label} · {rating} · {p.country ?? "—"}
+            {tier.name} · {rating} · {p.country ?? "—"}
           </p>
           {p.bio && <p className="mt-2 text-sm text-zinc-300">{p.bio}</p>}
         </div>
