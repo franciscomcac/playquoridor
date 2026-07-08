@@ -2014,24 +2014,9 @@ function CoinflipOverlay({ starter, you, mode, nameOf }: {
     transform: "rotateY(180deg)",
   };
 
-  // 4p games fall back to the plain coin (no banners) so the reveal still works.
-  if (mode !== 2) {
-    const other = ((starter + 1) % mode) as PlayerId;
-    return (
-      <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-background/70 backdrop-blur-sm">
-        <div className="coin-stage relative h-32 w-32">
-          <div className="coin-3d h-32 w-32 rounded-full"
-            style={{ ["--end" as string]: `${1800 + (starter % 2 ? 180 : 0)}deg` } as React.CSSProperties}>
-            <div className="coin-face front text-4xl" style={frontStyle}>{starter + 1}</div>
-            <div className="coin-face back text-4xl" style={backStyle}>{other + 1}</div>
-          </div>
-        </div>
-        <p className="mt-6 text-sm uppercase tracking-[0.25em] text-foreground">Coin flip…</p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {youStart ? "You move first" : `${nameOf(starter)} moves first`}
-        </p>
-      </div>
-    );
+  // 4-player mode gets its own multi-banner intro with a spinning selector.
+  if (mode === 4) {
+    return <FourPlayerRoundStart starter={starter} you={you} nameOf={nameOf} />;
   }
 
   return (
@@ -2122,6 +2107,214 @@ function CoinflipOverlay({ starter, you, mode, nameOf }: {
         }}
       >
         {youStart ? "You " : `${nameOf(starter)} `}
+        <span style={{ color: winnerColor }}>{youStart ? "go first" : "goes first"}</span>
+      </p>
+
+      <style>{`@keyframes rs-shake{0%{transform:translate(0,0)}15%{transform:translate(-8px,3px)}30%{transform:translate(7px,-4px)}45%{transform:translate(-6px,2px)}60%{transform:translate(5px,-3px)}75%{transform:translate(-3px,2px)}100%{transform:translate(0,0)}}`}</style>
+    </div>
+  );
+}
+
+// 4-player round-start intro: four banners slide in from the corners, clash
+// in the middle, then a spinning selector cycles around all four cards
+// (decelerating) before landing on the winner. Ranks 2-4 reveal in slot
+// order afterwards. Purely cosmetic — the winner is whatever `starter` is.
+function FourPlayerRoundStart({ starter, you, nameOf }: {
+  starter: PlayerId; you: PlayerId; nameOf: (s: PlayerId) => string;
+}) {
+  const [phase, setPhase] = useState(0); // 0 idle → 1 slide → 2 impact → 3 spin → 4 reveal
+  const [shakeKey, setShakeKey] = useState(0);
+  const [spinSlot, setSpinSlot] = useState<PlayerId | null>(null);
+  const [revealedCount, setRevealedCount] = useState(0);
+
+  // Cycle order for the spotlight (top-left, top-right, bottom-right, bottom-left).
+  const cycle: PlayerId[] = [0, 1, 3, 2] as PlayerId[];
+  // Non-winner slots in slot order (deterministic across peers).
+  const others: PlayerId[] = ([0, 1, 2, 3] as PlayerId[]).filter((s) => s !== starter);
+  const revealSeq: PlayerId[] = [starter, ...others];
+
+  useEffect(() => {
+    const timers: number[] = [];
+    const t = (ms: number, fn: () => void) => timers.push(window.setTimeout(fn, ms));
+    t(100, () => setPhase(1));
+    t(900, () => { setPhase(2); setShakeKey((k) => k + 1); play("clash"); });
+    // Spinning selector: decelerating cycle that lands on the winner.
+    t(1250, () => { setPhase(3); play("coinToss"); });
+    const spinStart = 1250;
+    const widx = cycle.indexOf(starter);
+    const loops = 2;
+    const totalSteps = loops * 4 + widx;
+    let cumulative = 0;
+    for (let i = 0; i <= totalSteps; i++) {
+      const stepDelay = Math.min(60 + i * i * 2.2, 200);
+      cumulative += stepDelay;
+      const cardId = cycle[i % 4];
+      t(spinStart + cumulative, () => setSpinSlot(cardId));
+    }
+    const spinEnd = spinStart + cumulative;
+    t(spinEnd + 200, () => { setPhase(4); setRevealedCount(1); play("roundWin"); });
+    for (let i = 1; i < revealSeq.length; i++) {
+      t(spinEnd + 200 + i * 300, () => setRevealedCount(i + 1));
+    }
+    return () => { timers.forEach((id) => window.clearTimeout(id)); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const positions: Record<PlayerId, { row: 0 | 1; col: 0 | 1; from: string }> = {
+    0: { row: 0, col: 0, from: "translate(-160%,-160%)" } as never,
+    1: { row: 0, col: 1, from: "translate(160%,-160%)" } as never,
+    2: { row: 1, col: 0, from: "translate(-160%,160%)" } as never,
+    3: { row: 1, col: 1, from: "translate(160%,160%)" } as never,
+  } as Record<PlayerId, { row: 0 | 1; col: 0 | 1; from: string }>;
+
+  const rankOf: Partial<Record<PlayerId, number>> = {};
+  revealSeq.forEach((s, i) => { rankOf[s] = i + 1; });
+
+  const winnerColor = PLAYER_COLORS[starter];
+  const youStart = starter === you;
+  const winnerName = nameOf(starter);
+
+  const summaryDone = phase === 4 && revealedCount >= revealSeq.length;
+
+  return (
+    <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-lg bg-background/85 backdrop-blur-md">
+      {/* Grid + winner-tinted radial backdrop */}
+      <div className="absolute inset-0" style={{
+        backgroundImage:
+          "linear-gradient(color-mix(in oklab, var(--foreground) 3%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in oklab, var(--foreground) 3%, transparent) 1px, transparent 1px)",
+        backgroundSize: "34px 34px",
+      }} />
+      <div className="absolute inset-0" style={{
+        background: `radial-gradient(ellipse 60% 45% at 50% 50%, color-mix(in oklab, ${winnerColor} 16%, transparent), transparent 70%)`,
+      }} />
+      {/* Flash on impact */}
+      <div className="absolute inset-0" style={{
+        background: "radial-gradient(circle at 50% 50%, rgba(255,255,255,.85), color-mix(in oklab, var(--primary) 30%, transparent) 40%, transparent 70%)",
+        opacity: phase === 2 ? 1 : 0,
+        transition: phase === 2 ? "opacity .12s ease" : "opacity .35s ease",
+      }} />
+      {/* Eyebrow */}
+      <div className="absolute left-1/2 top-5 flex -translate-x-1/2 items-center gap-2"
+        style={{ opacity: phase >= 1 ? 1 : 0, transition: "opacity .5s ease" }}>
+        <span className="rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.14em] text-white"
+          style={{ background: "linear-gradient(90deg, oklch(0.65 0.22 350), oklch(0.55 0.24 305))" }}>
+          Chaos
+        </span>
+        <span className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">4 players</span>
+      </div>
+
+      <div
+        key={shakeKey}
+        className="relative flex h-full w-full items-center justify-center px-4"
+        style={phase >= 2 ? { animation: "rs-shake .32s ease" } : undefined}
+      >
+        <div className="grid w-full max-w-3xl grid-cols-2 gap-3 sm:gap-4">
+          {([0, 1, 2, 3] as PlayerId[]).map((slot) => {
+            const pos = positions[slot];
+            const landed = phase >= 1;
+            const revealed = phase >= 4 && revealSeq.slice(0, revealedCount).includes(slot);
+            const rank = rankOf[slot] ?? 0;
+            const isWinner = revealed && rank === 1;
+            const isDim = summaryDone && rank !== 1;
+            const spinlit = phase === 3 && spinSlot === slot;
+            const color = PLAYER_COLORS[slot];
+            const name = nameOf(slot);
+            return (
+              <div
+                key={slot}
+                className="relative flex items-center gap-3 rounded-2xl border px-3 py-2.5 sm:gap-4 sm:px-4 sm:py-3"
+                style={{
+                  gridRow: pos.row + 1, gridColumn: pos.col + 1,
+                  borderColor: "color-mix(in oklab, var(--border) 70%, transparent)",
+                  background: "color-mix(in oklab, var(--card) 92%, black 8%)",
+                  transform: landed ? "translate(0,0)" : pos.from,
+                  opacity: isDim ? 0.55 : 1,
+                  filter: isDim ? "grayscale(0.35) saturate(0.75)" : "none",
+                  boxShadow: isWinner
+                    ? `0 0 0 2px oklch(0.85 0.16 90), 0 16px 46px rgba(0,0,0,.5), 0 0 40px -8px oklch(0.85 0.16 90)`
+                    : spinlit
+                      ? `0 0 0 3px oklch(0.95 0.08 90), 0 16px 46px rgba(0,0,0,.5), 0 0 36px 2px oklch(0.85 0.16 90)`
+                      : "0 16px 40px rgba(0,0,0,.45)",
+                  transition: "transform .55s cubic-bezier(.2,.7,.3,1.25), opacity .5s ease, box-shadow .35s ease, filter .5s ease",
+                }}
+              >
+                <div className="absolute left-0 top-3 bottom-3 w-1 rounded-full" style={{ background: color }} />
+                {/* Rank badge (top-left corner) */}
+                <div
+                  className="absolute -left-3 -top-3 grid h-9 w-9 place-items-center rounded-full text-sm font-extrabold shadow-md"
+                  style={{
+                    background: revealed
+                      ? (rank === 1
+                          ? "linear-gradient(145deg, oklch(0.94 0.09 90), oklch(0.78 0.16 85))"
+                          : rank === 2
+                            ? "linear-gradient(145deg, oklch(0.92 0.01 260), oklch(0.78 0.02 260))"
+                            : rank === 3
+                              ? "linear-gradient(145deg, oklch(0.82 0.13 60), oklch(0.62 0.15 45))"
+                              : "linear-gradient(145deg, oklch(0.82 0.01 260), oklch(0.62 0.02 260))")
+                      : "oklch(0.24 0.01 260)",
+                    color: revealed ? "oklch(0.16 0.02 55)" : "oklch(0.65 0.02 260)",
+                    boxShadow: "inset 0 0 0 2px rgba(255,255,255,.3)",
+                    transform: revealed ? "scale(1)" : "scale(0.9)",
+                    transition: "background .3s ease, color .3s ease, transform .3s ease",
+                  }}
+                >
+                  {revealed ? rank : "?"}
+                </div>
+                {/* Goes first pill */}
+                <div
+                  className="absolute -top-2.5 right-3 rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.14em]"
+                  style={{
+                    background: "linear-gradient(90deg,#22c55e,#16a34a)",
+                    color: "#06210f",
+                    opacity: isWinner ? 1 : 0,
+                    transform: isWinner ? "translateY(0) scale(1)" : "translateY(-6px) scale(.9)",
+                    transition: "opacity .35s ease, transform .35s ease",
+                  }}
+                >
+                  Goes first
+                </div>
+                {/* Avatar */}
+                <div
+                  className="grid h-11 w-11 flex-none place-items-center rounded-full text-sm font-extrabold sm:h-12 sm:w-12 sm:text-base"
+                  style={{
+                    background: `radial-gradient(circle at 32% 28%, color-mix(in oklab, ${color} 55%, white 50%), ${color} 55%, color-mix(in oklab, ${color} 60%, black 40%) 100%)`,
+                    border: `2.5px solid ${color}`,
+                    color: "oklch(0.15 0.02 55)",
+                  }}
+                >
+                  {initialsOf(name)}
+                </div>
+                {/* Name + title */}
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <p className="truncate text-sm font-extrabold text-foreground sm:text-base">{name}</p>
+                  <p className="text-[9.5px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                    {titleFor(name)}
+                  </p>
+                </div>
+                {/* Badge slots (3) */}
+                <div className="hidden flex-none gap-1 sm:flex">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="h-5 w-5 rounded-full border border-dashed"
+                      style={{ borderColor: "color-mix(in oklab, var(--foreground) 18%, transparent)" }} />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Bottom result / order summary */}
+      <p
+        className="absolute bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap text-center text-sm font-extrabold sm:text-base"
+        style={{
+          opacity: phase >= 4 ? 1 : 0,
+          transform: phase >= 4 ? "translate(-50%, 0)" : "translate(-50%, 8px)",
+          transition: "opacity .45s ease, transform .45s ease",
+          color: "var(--foreground)",
+        }}
+      >
+        {youStart ? "You " : `${winnerName} `}
         <span style={{ color: winnerColor }}>{youStart ? "go first" : "goes first"}</span>
       </p>
 
