@@ -1714,7 +1714,6 @@ function ShareResultButton({ state, you, nameOf, matchOver }: {
   state: GameState; you: PlayerId;
   nameOf: (s: PlayerId) => string; matchOver: boolean;
 }) {
-  // (placeholder for context anchor)
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<null | "shared" | "downloaded" | "error">(null);
   const onClick = useCallback(async () => {
