@@ -3444,8 +3444,8 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
     const allReady = need.every((i) => readySlots.includes(i));
     if (!allReady || botMergingRef.current) return;
     setMerging(true);
-    const t = window.setTimeout(() => { nextRound(); }, 900);
-    return () => window.clearTimeout(t);
+    nextRound();
+    return;
   }, [state.winner, state.matchWinner, state.leftMatch, readySlots, nextRound, BOT_SLOTS]);
 
   const roundOver = state.winner !== null;
