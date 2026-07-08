@@ -727,11 +727,12 @@ const AFK_COUNTDOWN_MS = 15_000;
 
 function GameScreen({
   ident, code, isHost, mode: initialMode, initialWalls, initialRounds, onLeave,
-  quickMatch, ranked, onBotFallback,
+  quickMatch, ranked, onBotFallback, onRankedTimeout,
 }: {
   ident: Identity; code: string; isHost: boolean; mode: Mode;
   initialWalls: number; initialRounds: number; onLeave: () => void;
   quickMatch?: boolean; ranked?: boolean; onBotFallback?: () => void;
+  onRankedTimeout?: () => void;
 }) {
   const [status, setStatus] = useState<Status>("connecting");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
