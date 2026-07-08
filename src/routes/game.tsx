@@ -1536,6 +1536,15 @@ function GameScreen({
     prevMatchWinnerRef.current = state.matchWinner;
   }, [state.winner, state.matchWinner, state.endReason]);
 
+  // Auto-ready for non-anim endings (time/afk/forfeit) — no score animation
+  // plays, so trigger the next round immediately.
+  useEffect(() => {
+    if (state.winner === null || state.matchWinner !== null) return;
+    if (roundEndAnim) return;
+    const r = state.endReason;
+    if (r === "time" || r === "afk" || r === "forfeit") requestReady();
+  }, [state.winner, state.matchWinner, state.endReason, roundEndAnim, requestReady]);
+
   // ---------- Record match to Supabase (host only, once per match) ----------
   useEffect(() => {
     if (!isHost) return;
