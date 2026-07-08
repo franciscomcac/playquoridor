@@ -135,6 +135,14 @@ function Home() {
       const code = pending.slice(5).toUpperCase();
       if (code.length === 5) setView({ name: "game", isHost: false, code, mode: 2, walls: 10, rounds: 5 });
     }
+    else if (pending.startsWith("spectate:")) {
+      const code = pending.slice(9).toUpperCase();
+      if (code.length === 5) setView({ name: "spectate", code });
+      else setView({ name: "spectate" });
+    }
+    else if (pending === "spectate") {
+      setView({ name: "spectate" });
+    }
     setPending(null);
   }, [ident, pending]);
 
