@@ -253,7 +253,8 @@ function Lobby() {
         <h1 className="relative m-0 text-[50px] font-bold leading-none tracking-[-0.035em] sm:text-[66px]">
           Play <span className="text-[#f5a524]">Quoridor</span>
         </h1>
-        <div className="relative">
+        {/* Desktop / signed-in mobile: green Play Now. Signed-out mobile gets a Sign in CTA instead. */}
+        <div className={"relative " + (signedIn ? "" : "hidden sm:block")}>
           <button
             onClick={() => {
               if (hasActiveGame()) { void navigate({ to: "/game" }); return; }
@@ -268,6 +269,26 @@ function Lobby() {
             Play Now
           </button>
         </div>
+        {!signedIn && (
+          <div className="relative mt-10 flex flex-col items-center gap-3 sm:hidden">
+            <button
+              onClick={() => void navigate({ to: "/auth" })}
+              className="w-full max-w-[280px] rounded-[10px] bg-[#f5a524] px-6 py-4 text-[15px] font-bold uppercase tracking-[0.08em] text-[#160e00] transition-[filter] hover:brightness-110"
+              style={{ boxShadow: "0 4px 26px rgba(245,165,36,.25)" }}
+            >
+              Sign in
+            </button>
+            <button
+              onClick={() => {
+                if (hasActiveGame()) { void navigate({ to: "/game" }); return; }
+                go("quick2");
+              }}
+              className="text-[12px] font-medium uppercase tracking-[0.14em] text-[#83838e] hover:text-[#ececf1]"
+            >
+              or play as guest →
+            </button>
+          </div>
+        )}
         <div className="relative mt-4 text-[12px] text-[#83838e]">
           Free — no account needed
         </div>
@@ -294,7 +315,7 @@ function Lobby() {
       </section>
 
       {/* Main grid */}
-      <div id="play" className="mx-auto grid max-w-[1240px] items-start gap-5 px-8 pb-6 lg:grid-cols-[280px_1fr_300px]">
+      <div id="play" className={"mx-auto grid max-w-[1240px] items-start gap-5 px-8 pb-6 lg:grid-cols-[280px_1fr_300px] " + (signedIn ? "" : "hidden sm:grid")}>
         {/* Left column */}
         <div className="hidden flex-col gap-4 lg:flex">
           <Card>
