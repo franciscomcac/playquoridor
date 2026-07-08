@@ -13,6 +13,7 @@ import { Route as StatsRouteImport } from './routes/stats'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as PuzzleRouteImport } from './routes/puzzle'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as HistoryRouteImport } from './routes/history'
 import { Route as GameRouteImport } from './routes/game'
 import { Route as FriendsRouteImport } from './routes/friends'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -38,6 +39,11 @@ const PuzzleRoute = PuzzleRouteImport.update({
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HistoryRoute = HistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GameRoute = GameRouteImport.update({
@@ -77,6 +83,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/friends': typeof FriendsRoute
   '/game': typeof GameRoute
+  '/history': typeof HistoryRoute
   '/onboarding': typeof OnboardingRoute
   '/puzzle': typeof PuzzleRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -89,6 +96,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/friends': typeof FriendsRoute
   '/game': typeof GameRoute
+  '/history': typeof HistoryRoute
   '/onboarding': typeof OnboardingRoute
   '/puzzle': typeof PuzzleRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -102,6 +110,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/friends': typeof FriendsRoute
   '/game': typeof GameRoute
+  '/history': typeof HistoryRoute
   '/onboarding': typeof OnboardingRoute
   '/puzzle': typeof PuzzleRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -116,6 +125,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/friends'
     | '/game'
+    | '/history'
     | '/onboarding'
     | '/puzzle'
     | '/sitemap.xml'
@@ -128,6 +138,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/friends'
     | '/game'
+    | '/history'
     | '/onboarding'
     | '/puzzle'
     | '/sitemap.xml'
@@ -140,6 +151,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/friends'
     | '/game'
+    | '/history'
     | '/onboarding'
     | '/puzzle'
     | '/sitemap.xml'
@@ -153,6 +165,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   FriendsRoute: typeof FriendsRoute
   GameRoute: typeof GameRoute
+  HistoryRoute: typeof HistoryRoute
   OnboardingRoute: typeof OnboardingRoute
   PuzzleRoute: typeof PuzzleRouteWithChildren
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -187,6 +200,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding'
       fullPath: '/onboarding'
       preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/history': {
+      id: '/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof HistoryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/game': {
@@ -251,6 +271,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   FriendsRoute: FriendsRoute,
   GameRoute: GameRoute,
+  HistoryRoute: HistoryRoute,
   OnboardingRoute: OnboardingRoute,
   PuzzleRoute: PuzzleRouteWithChildren,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
