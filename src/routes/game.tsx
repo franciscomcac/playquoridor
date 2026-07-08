@@ -86,8 +86,14 @@ function Home() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [pending, setPending] = useState<string | null>(null);
   const navigate = useNavigate();
+  const bootRan = useRef(false);
 
   useEffect(() => {
+    // StrictMode invokes mount effects twice in dev; guard so we don't
+    // consume the sessionStorage handoff on the first pass and then
+    // redirect away on the second.
+    if (bootRan.current) return;
+    bootRan.current = true;
     setIdent(getStoredIdentity());
     let hasPending = false;
     try {
