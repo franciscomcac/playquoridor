@@ -1028,6 +1028,13 @@ function GameScreen({
       clearInterruptedGame();
       return;
     }
+    // Don't persist an "active game" while the host is still alone in the
+    // queue — otherwise leaving the queue would surface a stale Resume
+    // prompt and block the player from starting a new match.
+    const bothIn = presence.count >= presence.expected;
+    if (!bothIn && !matchStartedRef.current) {
+      return;
+    }
     saveInterruptedGame({
       isHost,
       code,
@@ -1038,7 +1045,7 @@ function GameScreen({
       ranked,
       savedAt: Date.now(),
     });
-  }, [state.matchWinner, isHost, code, initialMode, initialWalls, initialRounds, quickMatch, ranked]);
+  }, [state.matchWinner, isHost, code, initialMode, initialWalls, initialRounds, quickMatch, ranked, presence.count, presence.expected]);
 
   const [matchMuted, setMatchMuted] = useState(false);
   const [chatBan, setChatBan] = useState<null | { until: string | null; reason: string | null }>(null);
