@@ -731,6 +731,7 @@ function GameScreen({
   const [chat, setChat] = useState<ChatEntry[]>([]);
   const roomRef = useRef<Room | null>(null);
   const matchRecordedRef = useRef(false);
+  const matchStartedRef = useRef(false);
 
   // Ready-up state for the between-rounds flow (replaces "Next round" button).
   const [readySlots, setReadySlots] = useState<PlayerId[]>([]);
@@ -774,6 +775,7 @@ function GameScreen({
 
   const hostStartMatch = useCallback(() => {
     matchRecordedRef.current = false;
+    matchStartedRef.current = true;
     const { totalWalls, totalRounds, mode } = stateRef.current;
     hostStartRound(initialState(mode, totalWalls, totalRounds));
     // Kick every match off with a friendly reminder. Host is the source of
@@ -802,6 +804,7 @@ function GameScreen({
   // Explicit leave: notify other players so they get "X left the match" and
   // (in 2-player rooms) an immediate win, instead of a generic disconnect.
   const handleLeave = useCallback(() => {
+    clearInterruptedGame();
     const s = stateRef.current;
     const inMatch = s.matchWinner === null && (status === "connected" || status === "waiting");
     if (inMatch) {
@@ -856,11 +859,14 @@ function GameScreen({
         setState((prev) => (prev.mode === m ? prev : initialState(m, initialWalls, initialRounds)));
       },
       onGuestJoined: (_s: number, name: string) => { pushLog(`${name} joined`); play("join"); },
-      onGuestLeft: (_s: number, name: string) => { pushLog(`${name} left the game`); },
+      onGuestLeft: (_s: number, name: string) => { pushLog(`${name} disconnected`); },
       onFull: () => {
         if (cancelled) return;
         setStatus("connected");
-        if (isHost) { void removeOpenRoom(code); hostStartMatch(); }
+        if (isHost) {
+          void removeOpenRoom(code);
+          if (!matchStartedRef.current) hostStartMatch();
+        }
       },
       onDisconnect: () => { if (!cancelled) setStatus("disconnected"); },
       onMessage: (msg: PeerMessage) => {
@@ -967,6 +973,23 @@ function GameScreen({
   }, [code, isHost, initialMode]);
 
   const you = slot;
+
+  useEffect(() => {
+    if (state.matchWinner !== null) {
+      clearInterruptedGame();
+      return;
+    }
+    saveInterruptedGame({
+      isHost,
+      code,
+      mode: initialMode,
+      walls: initialWalls,
+      rounds: initialRounds,
+      quickMatch,
+      ranked,
+      savedAt: Date.now(),
+    });
+  }, [state.matchWinner, isHost, code, initialMode, initialWalls, initialRounds, quickMatch, ranked]);
 
   const [matchMuted, setMatchMuted] = useState(false);
   const [chatBan, setChatBan] = useState<null | { until: string | null; reason: string | null }>(null);
