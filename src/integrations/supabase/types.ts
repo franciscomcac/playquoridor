@@ -123,6 +123,7 @@ export type Database = {
           mode: number
           ranked: boolean
           rounds: number
+          snapshot: Json | null
           winner_player_id: string | null
         }
         Insert: {
@@ -131,6 +132,7 @@ export type Database = {
           mode: number
           ranked?: boolean
           rounds: number
+          snapshot?: Json | null
           winner_player_id?: string | null
         }
         Update: {
@@ -139,6 +141,7 @@ export type Database = {
           mode?: number
           ranked?: boolean
           rounds?: number
+          snapshot?: Json | null
           winner_player_id?: string | null
         }
         Relationships: [
