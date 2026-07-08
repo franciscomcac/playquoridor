@@ -35,7 +35,7 @@ export type GameState = {
   clocks?: ClockState;
   // Why the current round ended (set when winner !== null). Used purely for
   // UI messaging; the engine never reads it back.
-  endReason?: "goal" | "time" | "forfeit" | "afk";
+  endReason?: "goal" | "time" | "forfeit" | "afk" | "left";
   endLoser?: PlayerId;
   // Total moves played this round (pawn moves + wall placements).
   moveCount?: number;
