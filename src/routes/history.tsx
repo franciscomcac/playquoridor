@@ -25,6 +25,7 @@ type MatchRow = {
   ended_at: string;
   winner_player_id: string | null;
   snapshot: unknown;
+  elo_delta: number | null;
   players: Array<{
     slot: number;
     name: string;
@@ -58,7 +59,7 @@ function HistoryPage() {
       if (ids.length === 0) { setRows([]); return; }
       const { data: matches } = await supabase
         .from("matches")
-        .select("id,mode,rounds,ranked,ended_at,winner_player_id,snapshot")
+        .select("id,mode,rounds,ranked,ended_at,winner_player_id,snapshot,elo_delta")
         .in("id", ids)
         .order("ended_at", { ascending: false });
       const { data: mps } = await supabase
@@ -73,6 +74,7 @@ function HistoryPage() {
         ended_at: m.ended_at,
         winner_player_id: m.winner_player_id,
         snapshot: (m as unknown as { snapshot?: unknown }).snapshot ?? null,
+        elo_delta: (m as unknown as { elo_delta?: number | null }).elo_delta ?? null,
         players: (mps ?? []).filter((p) => p.match_id === m.id).sort((a, b) => a.slot - b.slot),
       }));
       setRows(grouped);
@@ -129,6 +131,16 @@ function HistoryPage() {
                       <span className={"rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-widest ring-1 " + tone.chip}>{tone.label}</span>
                       <span className="truncate">vs {oppName}</span>
                       {m.ranked && <span className="rounded-md bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-primary ring-1 ring-primary/40">Ranked</span>}
+                      {m.ranked && typeof m.elo_delta === "number" && outcome !== "forfeit" && (
+                        <span className={
+                          "rounded-md px-1.5 py-0.5 font-mono text-[11px] font-bold ring-1 " +
+                          (iWon
+                            ? "bg-emerald-500/15 text-emerald-300 ring-emerald-500/40"
+                            : "bg-rose-500/15 text-rose-300 ring-rose-500/40")
+                        }>
+                          {iWon ? "+" : "−"}{m.elo_delta} ELO
+                        </span>
+                      )}
                     </p>
                     <p className="mt-0.5 text-[11px] text-zinc-500">
                       <span className="font-mono text-zinc-400">{myRounds}<span className="mx-1 text-zinc-600">–</span>{oppRounds}</span>

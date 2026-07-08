@@ -118,6 +118,7 @@ export type Database = {
       }
       matches: {
         Row: {
+          elo_delta: number | null
           ended_at: string
           id: string
           mode: number
@@ -127,6 +128,7 @@ export type Database = {
           winner_player_id: string | null
         }
         Insert: {
+          elo_delta?: number | null
           ended_at?: string
           id?: string
           mode: number
@@ -136,6 +138,7 @@ export type Database = {
           winner_player_id?: string | null
         }
         Update: {
+          elo_delta?: number | null
           ended_at?: string
           id?: string
           mode?: number
@@ -472,7 +475,7 @@ export type Database = {
           _winner_name: string
           _winner_player_id: string
         }
-        Returns: undefined
+        Returns: number
       }
       check_username_available: { Args: { _name: string }; Returns: boolean }
       complete_onboarding: {
