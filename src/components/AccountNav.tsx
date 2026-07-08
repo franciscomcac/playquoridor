@@ -139,14 +139,14 @@ function AccountMenu({ username, country, compact }: { username: string; country
               </p>
             </div>
             <ul className="py-1 text-sm">
-              <MenuItem to="/friends" label="Friends" icon="👥" />
-              <MenuItem to="/history" label="Match history" icon="📜" />
-              <MenuItem to="/clips" label="Saved clips" icon="🎞️" />
-              <MenuItem to="/stats" label="Leaderboard" icon="🏆" />
+              <MenuItem to="/friends" label="Friends" />
+              <MenuItem to="/history" label="Match history" />
+              <MenuItem to="/clips" label="Saved clips" />
+              <MenuItem to="/stats" label="Leaderboard" />
               <li className="my-1 border-t border-zinc-800" />
               <li>
-                <button onClick={signOut} className="flex w-full items-center gap-3 px-4 py-2 text-left text-rose-400 hover:bg-zinc-900">
-                  <span>↩</span><span>Sign out</span>
+                <button onClick={signOut} className="flex w-full items-center px-4 py-2 text-left text-rose-400 hover:bg-zinc-900">
+                  Sign out
                 </button>
               </li>
             </ul>
@@ -157,11 +157,11 @@ function AccountMenu({ username, country, compact }: { username: string; country
   );
 }
 
-function MenuItem({ to, label, icon }: { to: string; label: string; icon: string }) {
+function MenuItem({ to, label }: { to: string; label: string }) {
   return (
     <li>
-      <Link to={to} className="flex items-center gap-3 px-4 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white">
-        <span>{icon}</span><span>{label}</span>
+      <Link to={to} className="flex items-center px-4 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white">
+        {label}
       </Link>
     </li>
   );
