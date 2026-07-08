@@ -3057,8 +3057,8 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
   const startCoinflip = useCallback((starter: PlayerId) => {
     setCoinflip({ starter, animating: true });
     play("matchStart");
-    window.setTimeout(() => setCoinflip((cf) => (cf ? { ...cf, animating: false } : cf)), 4200);
-  }, []);
+    window.setTimeout(() => setCoinflip((cf) => (cf ? { ...cf, animating: false } : cf)), introDurationMs(mode));
+  }, [mode]);
 
   const startRound = useCallback((base?: GameState) => {
     const src = base ?? stateRef.current;
@@ -3069,7 +3069,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
       ...ns,
       clocks: {
         remaining: Array.from({ length: mode }, () => DEFAULT_CLOCK_MS),
-        turnStartedAt: Date.now() + 4200,
+        turnStartedAt: Date.now() + introDurationMs(mode),
         total: DEFAULT_CLOCK_MS,
       },
     };
