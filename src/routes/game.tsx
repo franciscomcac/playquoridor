@@ -36,7 +36,7 @@ import {
   getStoredIdentity, setStoredIdentity, type Identity,
 } from "@/lib/identity";
 import {
-  bumpMyStats, fetchMyStats, fetchMyWinStreak, findOpenRoom, recordMatch,
+  bumpMyStats, fetchMyStats, fetchMyWinStreak, findOpenRoom, recordMatch, setMatchEloDelta,
   registerOpenRoom, removeOpenRoom, updateOpenRoomSeats, applyElo1v1,
 } from "@/lib/stats";
 import {
