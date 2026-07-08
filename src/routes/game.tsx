@@ -3657,6 +3657,14 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave }:
           onRematch={startMatch} onNewMatch={startMatch} onLeave={onLeave} />
       )}
 
+      {rankUp && (
+        <RankUpOverlay
+          oldRating={rankUp.oldRating}
+          newRating={rankUp.newRating}
+          onDone={() => setRankUp(null)}
+        />
+      )}
+
       <MobileAsideSheet chat={<ChatPanel entries={chat} onSend={sendChat} you={YOU} />}>
         <ScoreCard state={state} you={YOU} nameOf={nameOf} />
         <PlayersCard state={state} you={YOU} nameOf={nameOf} />
