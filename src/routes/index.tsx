@@ -116,9 +116,9 @@ function LobbyInner() {
           </h1>
           <button
             onClick={() => goPlay("quick2")}
-            className="mt-6 inline-flex items-center gap-2.5 rounded-xl bg-emerald-600 px-8 py-4 text-base font-bold text-white shadow-lg shadow-emerald-900/40 transition-all hover:-translate-y-0.5 hover:bg-emerald-500"
+            className="group mt-8 inline-flex items-center gap-3 rounded-2xl bg-gradient-to-b from-emerald-500 to-emerald-600 px-12 py-5 text-lg font-bold text-white shadow-[0_20px_50px_-15px_rgba(16,185,129,0.6)] ring-1 ring-emerald-400/50 transition-all hover:-translate-y-0.5 hover:from-emerald-400 hover:to-emerald-500 hover:shadow-[0_25px_55px_-15px_rgba(16,185,129,0.75)] active:translate-y-0"
           >
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M8 5v14l11-7z" /></svg>
+            <svg className="h-5 w-5 transition-transform group-hover:scale-110" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M8 5v14l11-7z" /></svg>
             Play Now
           </button>
           <p className="mt-3 text-xs text-zinc-500">Free — no account needed</p>
@@ -179,18 +179,18 @@ function LobbyInner() {
             </div>
 
             <div className="mt-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">Find Match</div>
-            <div className="mt-2 grid grid-cols-3 gap-2">
+            <div className="mt-3 grid grid-cols-3 gap-3">
               <ModeButton label="2 Players" sub="Casual" onClick={() => goPlay("quick2")} />
               <ModeButton label="4 Players" sub="Free-for-all" onClick={() => goPlay("quick4")} />
               <ModeButton label="Ranked" sub="ELO 1v1" tone="primary" onClick={() => goPlay("ranked2")} />
             </div>
 
-            <div className="mt-5 border-t border-zinc-800 pt-4">
+            <div className="mt-6 border-t border-zinc-800 pt-5">
               <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Play With Friends</div>
-              <div className="mt-2 flex gap-2">
+              <div className="mt-3 flex gap-2">
                 <button
                   onClick={() => goPlay("create")}
-                  className="rounded-lg bg-amber-500 px-4 py-2 text-xs font-bold uppercase tracking-widest text-zinc-950 transition-colors hover:bg-amber-400"
+                  className="rounded-xl bg-amber-500 px-5 py-3 text-xs font-bold uppercase tracking-widest text-zinc-950 shadow-lg shadow-amber-900/30 transition-all hover:-translate-y-0.5 hover:bg-amber-400"
                 >
                   + Create Room
                 </button>
@@ -203,12 +203,12 @@ function LobbyInner() {
                     onChange={(e) => setCode(e.target.value)}
                     placeholder="Enter room code…"
                     maxLength={5}
-                    className="flex-1 rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 font-mono text-sm uppercase tracking-[0.3em] text-amber-400 placeholder:normal-case placeholder:tracking-normal placeholder:text-zinc-600 focus:border-amber-500/60 focus:outline-none"
+                    className="flex-1 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 font-mono text-sm uppercase tracking-[0.3em] text-amber-400 placeholder:normal-case placeholder:tracking-normal placeholder:text-zinc-600 focus:border-amber-500/60 focus:outline-none"
                   />
                   <button
                     type="submit"
                     disabled={cleanCode.length !== 5}
-                    className="rounded-lg bg-zinc-800 px-4 py-2 text-xs font-bold uppercase tracking-widest transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="rounded-xl bg-zinc-800 px-5 py-3 text-xs font-bold uppercase tracking-widest text-zinc-100 transition-all hover:-translate-y-0.5 hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0"
                   >
                     Join
                   </button>
@@ -270,11 +270,11 @@ function TopBar() {
         <span className="text-sm font-semibold tracking-tight text-zinc-100">playquoridor.online</span>
       </Link>
       <div className="flex items-center gap-2">
-        <Link to="/auth" className="rounded-md border border-zinc-800 bg-zinc-900/60 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-zinc-300 hover:bg-zinc-800">
+        <Link
+          to="/auth"
+          className="rounded-lg border border-zinc-800 bg-zinc-900/60 px-5 py-2.5 text-xs font-semibold uppercase tracking-widest text-zinc-200 transition-colors hover:border-zinc-600 hover:bg-zinc-800 hover:text-white"
+        >
           Sign in
-        </Link>
-        <Link to="/game" className="rounded-md bg-amber-500 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-950 hover:bg-amber-400">
-          Lobby
         </Link>
       </div>
     </nav>
@@ -286,14 +286,14 @@ function ModeButton({
 }: { label: string; sub?: string; tone?: "primary" | "ghost"; onClick: () => void }) {
   const styles =
     tone === "primary"
-      ? "border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20"
-      : "border-zinc-800 bg-zinc-950/60 hover:border-zinc-600 hover:bg-zinc-900";
+      ? "border-amber-500/50 bg-gradient-to-b from-amber-500/20 to-amber-500/5 shadow-lg shadow-amber-900/20 hover:border-amber-400 hover:from-amber-500/30 hover:to-amber-500/10"
+      : "border-zinc-800 bg-zinc-950/60 hover:border-zinc-500 hover:bg-zinc-900";
   return (
     <button
       onClick={onClick}
-      className={`group flex flex-col items-start gap-0.5 rounded-xl border px-3 py-2.5 text-left transition-all hover:-translate-y-0.5 ${styles}`}
+      className={`group flex flex-col items-start gap-1 rounded-xl border px-4 py-4 text-left transition-all hover:-translate-y-1 ${styles}`}
     >
-      <span className={`text-sm font-bold tracking-tight ${tone === "primary" ? "text-amber-400" : "text-zinc-100"}`}>
+      <span className={`text-base font-bold tracking-tight ${tone === "primary" ? "text-amber-300" : "text-zinc-100"}`}>
         {label}
       </span>
       {sub && (
@@ -372,14 +372,14 @@ function CpuBtn({
   return (
     <button
       onClick={onClick}
-      className={`group flex w-full items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/40 px-3 py-2 text-left transition-all ${hover} hover:-translate-y-0.5`}
+      className={`group flex w-full items-center justify-between rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-3 text-left transition-all hover:-translate-y-0.5 hover:bg-zinc-900 ${hover}`}
     >
-      <span className="flex items-center gap-2">
-        <span className={`h-1.5 w-1.5 rounded-full ${dot}`} aria-hidden />
-        <span className="text-xs font-semibold text-zinc-200">{tier}</span>
-        <span className="text-[10px] text-zinc-500">— {name}</span>
+      <span className="flex items-center gap-2.5">
+        <span className={`h-2 w-2 rounded-full ${dot} shadow-[0_0_8px_currentColor]`} aria-hidden />
+        <span className="text-sm font-bold text-zinc-100">{tier}</span>
+        <span className="text-[11px] text-zinc-500">— {name}</span>
       </span>
-      <svg className="h-3.5 w-3.5 text-zinc-600 transition-transform group-hover:translate-x-0.5 group-hover:text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+      <svg className="h-4 w-4 text-zinc-600 transition-transform group-hover:translate-x-0.5 group-hover:text-zinc-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
       </svg>
     </button>
