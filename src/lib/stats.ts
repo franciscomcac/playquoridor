@@ -312,7 +312,7 @@ export async function fetchHeadToHead(aPlayerId: string, bPlayerId: string): Pro
 /** Update the caller's profile (bio + avatar_color). */
 export async function updateMyProfile(
   playerId: string,
-  patch: { bio?: string | null; avatar_color?: string | null; name?: string },
+  patch: { bio?: string | null; avatar_color?: string | null },
 ): Promise<{ error: string | null }> {
   try {
     const uid = await ensureAuthSession();
@@ -322,7 +322,6 @@ export async function updateMyProfile(
       .update({
         ...(patch.bio !== undefined ? { bio: patch.bio } : {}),
         ...(patch.avatar_color !== undefined ? { avatar_color: patch.avatar_color } : {}),
-        ...(patch.name !== undefined ? { name: patch.name } : {}),
         updated_at: new Date().toISOString(),
       })
       .eq("id", playerId)
@@ -333,10 +332,31 @@ export async function updateMyProfile(
   }
 }
 
+/** Rename the caller's display name (30-day cooldown, server-enforced). */
+export async function renameMyPlayer(playerId: string, newName: string): Promise<{
+  ok: boolean; nextAllowedAt: string | null; message: string;
+}> {
+  try {
+    await ensureAuthSession();
+    const { data, error } = await supabase.rpc("rename_player", {
+      _player_id: playerId, _new_name: newName,
+    });
+    if (error) return { ok: false, nextAllowedAt: null, message: error.message };
+    const row = Array.isArray(data) ? data[0] : data;
+    return {
+      ok: !!row?.ok,
+      nextAllowedAt: row?.next_allowed_at ?? null,
+      message: row?.message ?? "",
+    };
+  } catch (err) {
+    return { ok: false, nextAllowedAt: null, message: (err as Error)?.message ?? "rename failed" };
+  }
+}
+
 /** Get a full profile view for the given player (players + stats + rank). */
 export async function fetchProfile(playerId: string) {
   const [{ data: p }, { data: s }] = await Promise.all([
-    supabase.from("players").select("id,name,country,bio,avatar_color,created_at").eq("id", playerId).maybeSingle(),
+    supabase.from("players").select("id,name,country,bio,avatar_color,avatar_url,created_at,name_changed_at").eq("id", playerId).maybeSingle(),
     supabase.from("player_stats").select("*").eq("player_id", playerId).maybeSingle(),
   ]);
   let rank: number | null = null;

@@ -341,6 +341,7 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          name_changed_at: string | null
           onboarded_at: string | null
           updated_at: string
         }
@@ -353,6 +354,7 @@ export type Database = {
           created_at?: string
           id: string
           name: string
+          name_changed_at?: string | null
           onboarded_at?: string | null
           updated_at?: string
         }
@@ -365,6 +367,7 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          name_changed_at?: string | null
           onboarded_at?: string | null
           updated_at?: string
         }
@@ -479,6 +482,14 @@ export type Database = {
           active_until: string
           kind: string
           reason: string
+        }[]
+      }
+      rename_player: {
+        Args: { _new_name: string; _player_id: string }
+        Returns: {
+          message: string
+          next_allowed_at: string
+          ok: boolean
         }[]
       }
       search_players: {
