@@ -285,13 +285,26 @@ function Home() {
                 initialRounds={view.rounds}
                 quickMatch={view.quickMatch}
                 ranked={view.ranked}
-                onBotFallback={view.ranked ? undefined : () => setView({
+                onBotFallback={view.ranked && view.mode === 2 ? async () => {
+                  // Ranked queue empty → drop into a ranked bot game whose
+                  // difficulty and stored ELO match the player's rating.
+                  const stats = await fetchMyStats(ident.id).catch(() => null);
+                  const rating = (stats as { rating?: number } | null)?.rating ?? 1000;
+                  const bot = rankedBotForRating(rating);
+                  setView({
+                    name: "bot",
+                    mode: 2,
+                    difficulty: bot.difficulty,
+                    opponentNames: [bot.name],
+                    rankedBot: bot,
+                  });
+                } : view.ranked ? undefined : () => setView({
                   name: "bot",
                   mode: view.mode,
                   difficulty: randomDifficulty().value,
                   opponentNames: Array.from({ length: view.mode - 1 }, () => randomGamerName()),
                 })}
-                onRankedTimeout={view.ranked ? () => { void navigate({ to: "/" }); } : undefined}
+                onRankedTimeout={undefined}
                 onRequeue={view.quickMatch ? () => {
                   clearInterruptedGame();
                   setView({ name: "quick", mode: view.mode, ranked: view.ranked });
@@ -305,6 +318,7 @@ function Home() {
                 mode={view.mode}
                 difficulty={view.difficulty}
                 opponentNames={view.opponentNames}
+                rankedBot={view.rankedBot}
                 onLeave={goHome}
               />
             )}
