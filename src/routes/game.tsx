@@ -3474,7 +3474,10 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
             {coinflip?.animating && (
               <CoinflipOverlay starter={coinflip.starter} you={YOU} mode={mode} nameOf={nameOf} />
             )}
-            {roundOver && !matchOver && !coinflip?.animating && (
+            {roundOver && !matchOver && !coinflip?.animating && roundEndAnim && (
+              <RoundEndScoreAnim state={state} nameOf={nameOf} onDone={() => setRoundEndAnim(false)} />
+            )}
+            {roundOver && !matchOver && !coinflip?.animating && !roundEndAnim && (
               <RoundEndReady
                 state={state} you={YOU} nameOf={nameOf}
                 readySlots={readySlots} merging={merging}
