@@ -315,6 +315,38 @@ function Footer() {
   );
 }
 
+function ForfeitButton({ onConfirm, disabled }: { onConfirm: () => void; disabled?: boolean }) {
+  const [armed, setArmed] = useState(false);
+  const timerRef = useRef<number | null>(null);
+  useEffect(() => () => { if (timerRef.current) window.clearTimeout(timerRef.current); }, []);
+  useEffect(() => { if (disabled) setArmed(false); }, [disabled]);
+  const click = () => {
+    if (disabled) return;
+    if (!armed) {
+      setArmed(true);
+      if (timerRef.current) window.clearTimeout(timerRef.current);
+      timerRef.current = window.setTimeout(() => setArmed(false), 3000);
+      return;
+    }
+    if (timerRef.current) { window.clearTimeout(timerRef.current); timerRef.current = null; }
+    setArmed(false);
+    onConfirm();
+  };
+  return (
+    <button
+      onClick={click}
+      disabled={disabled}
+      className={
+        "rounded-lg border px-3 py-2 text-xs font-medium uppercase tracking-widest transition-colors disabled:opacity-40 " +
+        (armed ? "bg-[color:var(--destructive)] text-white hover:opacity-90" : "hover:bg-secondary/50")
+      }
+      style={armed ? { borderColor: "var(--destructive)" } : { borderColor: "var(--destructive)", color: "var(--destructive)" }}
+    >
+      {armed ? "Click again to confirm" : "Forfeit round"}
+    </button>
+  );
+}
+
 function NamePrompt({ onSubmit, initial = "" }: { onSubmit: (n: string) => void; initial?: string }) {
   const [name, setName] = useState(initial);
   const clean = sanitizeName(name);
