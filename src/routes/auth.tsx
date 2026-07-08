@@ -2,7 +2,18 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
-import { linkAuthToPlayer } from "@/lib/identity";
+import { linkAuthToPlayer, getStoredIdentity } from "@/lib/identity";
+
+async function nextRouteAfterSignIn(): Promise<"/" | "/onboarding"> {
+  const ident = getStoredIdentity();
+  if (!ident) return "/onboarding";
+  const { data } = await supabase
+    .from("players")
+    .select("onboarded_at,country")
+    .eq("id", ident.id)
+    .maybeSingle();
+  return data?.onboarded_at && data?.country ? "/" : "/onboarding";
+}
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -54,7 +65,10 @@ function AuthPage() {
       });
       if (result.error) throw result.error;
       // Redirected flow will navigate away; direct flow lands here.
-      if (!result.redirected) { await linkAuthToPlayer(); navigate({ to: "/" }); }
+      if (!result.redirected) {
+        await linkAuthToPlayer();
+        navigate({ to: await nextRouteAfterSignIn() });
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Google sign-in failed.");
     } finally { setBusy(false); }
@@ -75,7 +89,7 @@ function AuthPage() {
         if (err) throw err;
       }
       await linkAuthToPlayer();
-      navigate({ to: "/" });
+      navigate({ to: await nextRouteAfterSignIn() });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sign-in failed.");
     } finally { setBusy(false); }
