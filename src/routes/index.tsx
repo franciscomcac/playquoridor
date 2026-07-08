@@ -679,7 +679,7 @@ function GameScreen({
   const hostApplyForfeit = useCallback((
     who: PlayerId,
     permanent = false,
-    reason: "time" | "forfeit" | "afk" = "forfeit",
+    reason: "time" | "forfeit" | "afk" | "left" = "forfeit",
   ) => {
     const ns = applyForfeit(stateRef.current, who, permanent);
     if (!ns) return;
@@ -688,6 +688,25 @@ function GameScreen({
     roomRef.current?.send({ type: "state", payload: ns });
     play("pop");
   }, []);
+
+  // Explicit leave: notify other players so they get "X left the match" and
+  // (in 2-player rooms) an immediate win, instead of a generic disconnect.
+  const handleLeave = useCallback(() => {
+    const s = stateRef.current;
+    const inMatch = s.matchWinner === null && (status === "connected" || status === "waiting");
+    if (inMatch) {
+      try {
+        if (isHost) {
+          hostApplyForfeit(slotRef.current, true, "left");
+        } else {
+          roomRef.current?.send({ type: "leave", payload: { slot: slotRef.current } });
+        }
+      } catch { /* best-effort */ }
+    }
+    // Small delay so the leave/state message actually flushes over the wire
+    // before we tear the peer connection down.
+    window.setTimeout(() => { onLeave(); }, 120);
+  }, [status, isHost, hostApplyForfeit, onLeave]);
 
   // Host-authoritative ready tracking. Guest clicks send a "ready" message;
   // host writes to local state and broadcasts the canonical list.
@@ -760,7 +779,8 @@ function GameScreen({
           hostApplyForfeit(p.from, false, "forfeit");
         } else if (msg.type === "leave" && isHost) {
           const p = msg.payload as { slot: number };
-          hostApplyForfeit(p.slot as PlayerId, true, "forfeit");
+          pushLog(`${nameOf(p.slot as PlayerId)} left the match`);
+          hostApplyForfeit(p.slot as PlayerId, true, "left");
         } else if (msg.type === "nextRound" && isHost) {
           if (stateRef.current.matchWinner === null) hostStartRound();
         } else if (msg.type === "newMatch" && isHost) {
@@ -1127,7 +1147,7 @@ function GameScreen({
               className="flex-1 rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary disabled:opacity-40">
               New match
             </button>
-            <button onClick={onLeave} className="flex-1 rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary">
+            <button onClick={handleLeave} className="flex-1 rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary">
               Leave
             </button>
           </div>
@@ -1578,6 +1598,11 @@ function WinOverlay({ state, you, matchOver, onPrimary, primaryLabel, onLeave, n
       return youLost
         ? "You forfeited the round."
         : `${loserName} forfeited the round.`;
+    }
+    if (reason === "left") {
+      return youLost
+        ? "You left the match."
+        : `${loserName} left the match — you win by default.`;
     }
     return youWon ? "You reached your goal." : `${nameOf(winner)} reached their goal first.`;
   })();
