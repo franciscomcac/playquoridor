@@ -2,8 +2,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PLAYER_COLORS, QuoridorBoard } from "@/components/QuoridorBoard";
-import { MoveHistory } from "@/components/MoveHistory";
+import { MoveHistory, MoveHistoryPanel } from "@/components/MoveHistory";
+import { ChatPanel, type ChatEntry } from "@/components/ChatPanel";
 import { renderResultCard, shareResultCard } from "@/lib/result-card";
+import { supabase } from "@/integrations/supabase/client";
 
 // Warm palette for celebratory confetti — browns, creams, blues, yellows
 // pulled from the app's existing tokens (kept in-sync with styles.css).
@@ -624,6 +626,7 @@ function GameScreen({
   const [toast, setToast] = useState<string | null>(null);
   const [log, setLog] = useState<EventEntry[]>([]);
   const [afk, setAfk] = useState<AfkState>(null);
+  const [chat, setChat] = useState<ChatEntry[]>([]);
   const roomRef = useRef<Room | null>(null);
   const matchRecordedRef = useRef(false);
 
@@ -778,6 +781,13 @@ function GameScreen({
         } else if (msg.type === "readyState") {
           const p = msg.payload as { slots: number[] };
           setReadySlots(p.slots as PlayerId[]);
+        } else if (msg.type === "chat") {
+          const p = msg.payload as { slot: number; name: string; text: string; ts: number };
+          setChat((prev) => [
+            ...prev.slice(-99),
+            { key: `${p.ts}-${p.slot}-${Math.random()}`, slot: p.slot, name: p.name, text: p.text, ts: p.ts },
+          ]);
+          play("click");
         }
       },
       onError: (err: Error) => {
@@ -813,6 +823,17 @@ function GameScreen({
   }, [code, isHost, initialMode]);
 
   const you = slot;
+
+  const sendChat = useCallback((text: string) => {
+    const s = slotRef.current;
+    const name = rosterRef.current.find((e) => e.slot === s)?.name ?? `Player ${s + 1}`;
+    const entry = { slot: s as number, name, text, ts: Date.now() };
+    setChat((prev) => [
+      ...prev.slice(-99),
+      { key: `${entry.ts}-${s}-me-${Math.random()}`, ...entry },
+    ]);
+    roomRef.current?.send({ type: "chat", payload: entry });
+  }, []);
 
   // ---------- Activity + AFK (host authoritative) ----------
   const lastInputRef = useRef<number[]>(Array.from({ length: initialMode }, () => Date.now()));
@@ -1089,6 +1110,8 @@ function GameScreen({
 
         <ScoreCard state={state} you={you} nameOf={nameOf} />
         <PlayersCard state={state} you={you} nameOf={nameOf} />
+        <MoveHistoryPanel state={state} nameOf={nameOf} compact defaultOpen />
+        <ChatPanel entries={chat} onSend={sendChat} disabled={status !== "connected"} you={you} />
         <EventLog entries={log} />
 
         <div className="flex flex-col gap-2">
@@ -1529,6 +1552,7 @@ function WinOverlay({ state, you, matchOver, onPrimary, primaryLabel, onLeave, n
   onPrimary: () => void; primaryLabel: string; onLeave: () => void;
   nameOf: (s: PlayerId) => string;
 }) {
+  const [analyzing, setAnalyzing] = useState(false);
   const winner = (matchOver ? state.matchWinner : state.winner) as PlayerId;
   const youWon = winner === you;
   const winnerColor = PLAYER_COLORS[winner];
@@ -1589,12 +1613,17 @@ function WinOverlay({ state, you, matchOver, onPrimary, primaryLabel, onLeave, n
           <button onClick={onPrimary} className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5">
             {primaryLabel}
           </button>
+          <button onClick={() => setAnalyzing((v) => !v)}
+            className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary">
+            {analyzing ? "Hide analysis" : "Analyze game"}
+          </button>
           <ShareResultButton state={state} you={you} nameOf={nameOf} matchOver={matchOver} />
           <button onClick={onLeave} className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary">
             Leave
           </button>
         </div>
-        <MoveHistory state={state} nameOf={nameOf} />
+        <MoveHistoryPanel key={analyzing ? "open" : "closed"} state={state} nameOf={nameOf} defaultOpen={analyzing} />
+        <SignUpNudge />
       </div>
     </div>
   );
@@ -1605,6 +1634,7 @@ function EndScreen({ state, you, onPrimary, onLeave, nameOf }: {
   onPrimary: () => void; onLeave: () => void;
   nameOf: (s: PlayerId) => string;
 }) {
+  const [analyzing, setAnalyzing] = useState(false);
   const winner = state.matchWinner as PlayerId;
   const youWon = winner === you;
   const winnerColor = PLAYER_COLORS[winner];
@@ -1665,12 +1695,17 @@ function EndScreen({ state, you, onPrimary, onLeave, nameOf }: {
           <button onClick={onPrimary} className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5">
             New match
           </button>
+          <button onClick={() => setAnalyzing((v) => !v)}
+            className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary">
+            {analyzing ? "Hide analysis" : "Analyze game"}
+          </button>
           <ShareResultButton state={state} you={you} nameOf={nameOf} matchOver />
           <button onClick={onLeave} className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary">
             Leave
           </button>
         </div>
-        <MoveHistory state={state} nameOf={nameOf} />
+        <MoveHistoryPanel key={analyzing ? "open" : "closed"} state={state} nameOf={nameOf} defaultOpen={analyzing} />
+        <SignUpNudge />
       </div>
     </div>
   );
@@ -1710,6 +1745,31 @@ function ShareResultButton({ state, you, nameOf, matchOver }: {
       className="rounded-lg border border-border bg-accent/70 px-5 py-2 text-sm font-medium text-accent-foreground transition-transform hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-70">
       {label}
     </button>
+  );
+}
+
+function SignUpNudge() {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    void supabase.auth.getUser().then(({ data }) => {
+      if (!alive) return;
+      const u = data.user;
+      const anon = !u || u.is_anonymous === true || (u.app_metadata?.provider ?? "") === "anonymous";
+      setShow(anon);
+    });
+    return () => { alive = false; };
+  }, []);
+  if (!show) return null;
+  return (
+    <div className="mt-3 w-full max-w-md rounded-lg border border-border bg-secondary/30 px-4 py-3 text-center">
+      <p className="text-sm font-semibold">Create a free account</p>
+      <p className="mt-1 text-xs text-muted-foreground">Save your games, chat in-match, and get a rating.</p>
+      <Link to="/auth"
+        className="mt-2 inline-block rounded-md bg-primary px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-primary-foreground hover:-translate-y-0.5 transition-transform">
+        Sign up
+      </Link>
+    </div>
   );
 }
 
@@ -1997,6 +2057,7 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
       <aside className="order-2 flex min-w-0 flex-col gap-3">
         <ScoreCard state={state} you={YOU} nameOf={nameOf} />
         <PlayersCard state={state} you={YOU} nameOf={nameOf} />
+        <MoveHistoryPanel state={state} nameOf={nameOf} compact defaultOpen />
 
         {toast && (
           <div className="toast-in rounded-xl border border-border bg-card p-3 text-xs uppercase tracking-widest text-primary">
