@@ -2715,7 +2715,7 @@ function SpectatorGame({ ident, code, onLeave }: {
         </div>
       </div>
 
-      <aside className="order-2 flex min-w-0 flex-col gap-3">
+      <MobileAsideSheet>
         <div className="rounded-xl border border-border bg-card p-3 sm:p-4">
           <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Spectating</p>
           <div className="mt-1 flex items-center justify-between gap-2">
@@ -2739,7 +2739,7 @@ function SpectatorGame({ ident, code, onLeave }: {
         >
           Leave
         </button>
-      </aside>
+      </MobileAsideSheet>
     </div>
   );
 }
