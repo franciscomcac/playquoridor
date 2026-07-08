@@ -11,7 +11,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
-import { ensureAuthSession, linkAuthToPlayer } from "../lib/identity";
+import { ensureAuthSession, linkAuthToPlayer, getStoredIdentity } from "../lib/identity";
 import { supabase } from "../integrations/supabase/client";
 
 function NotFoundComponent() {
@@ -136,9 +136,25 @@ function RootComponent() {
     // is authenticated under the new RLS. Link the auth uid to the local
     // player row once we have one.
     void ensureAuthSession().then(() => { void linkAuthToPlayer(); });
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" || event === "USER_UPDATED") {
-        void linkAuthToPlayer();
+        void (async () => {
+          await linkAuthToPlayer();
+          const u = session?.user;
+          const isAnon = !u || (u.app_metadata?.provider ?? "") === "anonymous" || u.is_anonymous === true;
+          if (isAnon) return;
+          if (window.location.pathname === "/onboarding") return;
+          const ident = getStoredIdentity();
+          if (!ident) return;
+          const { data } = await supabase
+            .from("players")
+            .select("onboarded_at,country")
+            .eq("id", ident.id)
+            .maybeSingle();
+          if (!data?.onboarded_at || !data?.country) {
+            window.location.assign("/onboarding");
+          }
+        })();
       }
     });
     return () => { sub.subscription.unsubscribe(); };
