@@ -83,6 +83,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:site_name", content: "playquoridor.online" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { title: "Quoridor Online — Play now, free" },
+      { property: "og:title", content: "Quoridor Online — Play now, free" },
+      { name: "twitter:title", content: "Quoridor Online — Play now, free" },
+      { name: "description", content: "Play Quoridor free in your browser. Quick match, private rooms, 4-player free-for-alls, bot practice. No download, no signup." },
+      { property: "og:description", content: "Play Quoridor free in your browser. Quick match, private rooms, 4-player free-for-alls, bot practice. No download, no signup." },
+      { name: "twitter:description", content: "Play Quoridor free in your browser. Quick match, private rooms, 4-player free-for-alls, bot practice. No download, no signup." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/G0936umxfkP8XUxHjCHkuY6oOfS2/social-images/social-1783523351464-Screenshot_2026-07-08_152511.webp" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/G0936umxfkP8XUxHjCHkuY6oOfS2/social-images/social-1783523351464-Screenshot_2026-07-08_152511.webp" },
     ],
     links: [
       {
