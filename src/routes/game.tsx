@@ -438,8 +438,8 @@ function JoinRoom({ onBack, onJoin }: { onBack: () => void; onJoin: (code: strin
   );
 }
 
-function QuickMatch({ mode, ident, onBack, onJoin, onHost }: {
-  mode: Mode; ident: Identity;
+function QuickMatch({ mode, ranked, ident, onBack, onJoin, onHost }: {
+  mode: Mode; ranked?: boolean; ident: Identity;
   onBack: () => void; onJoin: (code: string) => void; onHost: (code: string) => void;
 }) {
   const [status, setStatus] = useState("Searching…");
@@ -447,22 +447,22 @@ function QuickMatch({ mode, ident, onBack, onJoin, onHost }: {
   useEffect(() => {
     cancelled.current = false;
     (async () => {
-      const existing = await findOpenRoom(mode);
+      const existing = await findOpenRoom(mode, !!ranked);
       if (cancelled.current) return;
       if (existing) { setStatus("Joining room…"); onJoin(existing); return; }
       const code = makeRoomCode();
       setStatus("No matches — hosting a new room…");
-      await registerOpenRoom(code, mode, ident.name);
+      await registerOpenRoom(code, mode, ident.name, !!ranked);
       if (cancelled.current) { await removeOpenRoom(code); return; }
       onHost(code);
     })();
     return () => { cancelled.current = true; };
-  }, [mode, ident.name, onJoin, onHost]);
+  }, [mode, ranked, ident.name, onJoin, onHost]);
   return (
     <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-2xl text-center">
       <div className="spinner mx-auto h-12 w-12 rounded-full border-2 border-primary border-t-transparent" />
       <p className="mt-4 text-sm uppercase tracking-[0.25em]">{status}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{mode} players</p>
+      <p className="mt-1 text-xs text-muted-foreground">{ranked ? "Ranked · " : ""}{mode} players</p>
       <button onClick={onBack} className="mt-6 rounded-lg border border-border bg-secondary/40 px-4 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary">
         Cancel
       </button>
