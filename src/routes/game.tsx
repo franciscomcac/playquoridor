@@ -477,32 +477,31 @@ function ForfeitButton({ onConfirm, disabled }: { onConfirm: () => void; disable
   );
 }
 
-function NamePrompt({ onSubmit, initial = "" }: { onSubmit: (n: string) => void; initial?: string }) {
-  const [name, setName] = useState(initial);
-  const clean = sanitizeName(name);
-  const ok = isValidName(name);
+function ResumeMatchPrompt({ game, onReturn, onAbort }: { game: SavedGame; onReturn: () => void; onAbort: () => void }) {
   return (
-    <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-2xl">
-      <h1 className="text-3xl">What should we call you?</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Your display name shows up in the lobby, on the board, and on the leaderboard.
-      </p>
-      <input
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        maxLength={16}
-        autoFocus
-        placeholder="Chico"
-        className="mt-6 w-full rounded-lg border border-border bg-background/40 px-4 py-3 text-lg focus:border-primary focus:outline-none"
-      />
-      <p className="mt-1 text-[11px] text-muted-foreground">{clean.length}/16 · 2–16 characters</p>
-      <button
-        disabled={!ok}
-        onClick={() => ok && onSubmit(name)}
-        className="mt-6 w-full rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
-      >
-        Continue →
-      </button>
+    <div className="fixed inset-0 z-[100] grid place-items-center bg-background px-4">
+      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl sm:p-8">
+        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary">Interrupted match</p>
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight">Return to game?</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Room {game.code} is still reserved. Choose one action before continuing.
+        </p>
+        <div className="mt-6 grid gap-3">
+          <button
+            onClick={onReturn}
+            autoFocus
+            className="rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground"
+          >
+            Return to game
+          </button>
+          <button
+            onClick={onAbort}
+            className="rounded-lg border border-border bg-secondary/30 px-5 py-3 text-sm font-semibold hover:bg-secondary"
+          >
+            Abort game
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
