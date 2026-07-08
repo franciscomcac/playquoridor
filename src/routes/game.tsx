@@ -2279,6 +2279,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
   useEffect(() => {
     if (state.matchWinner === null) return;
     if (botRecordedRef.current) return;
+    if ((state.moveCount ?? 0) === 0) return;
     botRecordedRef.current = true;
     const winnerSlot = state.matchWinner;
     const winnerIsYou = winnerSlot === YOU;
