@@ -252,3 +252,211 @@ export async function fetchRecentMatches(playerId: string, limit = 5): Promise<R
     };
   });
 }
+
+/** Full ranked leaderboard rows, up to `limit`. Adds streak from recent matches. */
+export type FullLeaderRow = LeaderRow & { streak: number; delta7d: number };
+
+/** Approximate 7-day rating delta from ranked match count in the last week (±16 per ranked match, capped). */
+async function fetchDelta7dMap(playerIds: string[]): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  if (!playerIds.length) return out;
+  const since = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+  const { data } = await supabase
+    .from("match_players")
+    .select("player_id, result, matches!inner(ranked, ended_at)")
+    .in("player_id", playerIds)
+    .gte("matches.ended_at", since)
+    .eq("matches.ranked", true);
+  for (const r of (data ?? []) as Array<{ player_id: string; result: string }>) {
+    const cur = out.get(r.player_id) ?? 0;
+    out.set(r.player_id, cur + (r.result === "win" ? 16 : -16));
+  }
+  return out;
+}
+
+async function fetchStreakMap(playerIds: string[]): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  for (const pid of playerIds) {
+    // Simple sequential fetch per player. Small N (top 10-20).
+    // eslint-disable-next-line no-await-in-loop
+    const s = await fetchMyWinStreak(pid);
+    out.set(pid, s);
+  }
+  return out;
+}
+
+export async function fetchFullLeaderboard(limit = 50, rankedOnly = true): Promise<FullLeaderRow[]> {
+  const base = await fetchLeaderboard(limit, rankedOnly);
+  const ids = base.map((r) => r.id);
+  const [dmap, smap] = await Promise.all([fetchDelta7dMap(ids), fetchStreakMap(ids)]);
+  return base.map((r) => ({ ...r, streak: smap.get(r.id) ?? 0, delta7d: dmap.get(r.id) ?? 0 }));
+}
+
+/** Head-to-head record between two players (wins for a, wins for b). */
+export async function fetchHeadToHead(aPlayerId: string, bPlayerId: string): Promise<{ a: number; b: number }> {
+  const { data: aRows } = await supabase
+    .from("match_players").select("match_id, result").eq("player_id", aPlayerId);
+  const { data: bRows } = await supabase
+    .from("match_players").select("match_id, result").eq("player_id", bPlayerId);
+  const aById = new Map((aRows ?? []).map((r) => [r.match_id, r.result]));
+  const bById = new Map((bRows ?? []).map((r) => [r.match_id, r.result]));
+  let a = 0, b = 0;
+  for (const [mid, ar] of aById) {
+    const br = bById.get(mid); if (!br) continue;
+    if (ar === "win" && br !== "win") a++;
+    if (br === "win" && ar !== "win") b++;
+  }
+  return { a, b };
+}
+
+/** Update the caller's profile (bio + avatar_color). */
+export async function updateMyProfile(
+  playerId: string,
+  patch: { bio?: string | null; avatar_color?: string | null; name?: string },
+): Promise<{ error: string | null }> {
+  try {
+    const uid = await ensureAuthSession();
+    const { error } = await supabase
+      .from("players")
+      .update({
+        ...(patch.bio !== undefined ? { bio: patch.bio } : {}),
+        ...(patch.avatar_color !== undefined ? { avatar_color: patch.avatar_color } : {}),
+        ...(patch.name !== undefined ? { name: patch.name } : {}),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", playerId)
+      .eq("auth_user_id", uid);
+    return { error: error?.message ?? null };
+  } catch (err) {
+    return { error: (err as Error)?.message ?? "update failed" };
+  }
+}
+
+/** Get a full profile view for the given player (players + stats + rank). */
+export async function fetchProfile(playerId: string) {
+  const [{ data: p }, { data: s }] = await Promise.all([
+    supabase.from("players").select("id,name,country,bio,avatar_color,created_at").eq("id", playerId).maybeSingle(),
+    supabase.from("player_stats").select("*").eq("player_id", playerId).maybeSingle(),
+  ]);
+  let rank: number | null = null;
+  if (s && (s as { rating?: number }).rating != null) {
+    const { count } = await supabase
+      .from("player_stats")
+      .select("player_id", { count: "exact", head: true })
+      .gt("rating", (s as { rating: number }).rating)
+      .gt("ranked_matches", 0);
+    rank = (count ?? 0) + 1;
+  }
+  return { player: p, stats: s, rank };
+}
+
+/** Players marked as friends of the given auth user (accepted only). */
+export type FriendListItem = {
+  friendshipId: string;
+  playerId: string;
+  authUserId: string;
+  name: string;
+  country: string | null;
+  avatarColor: string | null;
+  rating: number;
+  matches: number;
+};
+export async function fetchAcceptedFriends(myAuthId: string): Promise<FriendListItem[]> {
+  const { data } = await supabase
+    .from("friendships")
+    .select("id, requester_id, addressee_id, requester_auth, addressee_auth, status")
+    .eq("status", "accepted");
+  if (!data?.length) return [];
+  const items = data
+    .map((r: { id: string; requester_id: string; addressee_id: string; requester_auth: string; addressee_auth: string }) => {
+      const iAmReq = r.requester_auth === myAuthId;
+      return {
+        friendshipId: r.id,
+        otherPlayerId: iAmReq ? r.addressee_id : r.requester_id,
+        otherAuth: iAmReq ? r.addressee_auth : r.requester_auth,
+      };
+    });
+  const ids = items.map((i) => i.otherPlayerId);
+  const [{ data: players }, { data: stats }] = await Promise.all([
+    supabase.from("players").select("id,name,country,avatar_color,auth_user_id").in("id", ids),
+    supabase.from("player_stats").select("player_id,rating,matches").in("player_id", ids),
+  ]);
+  const pById = new Map((players ?? []).map((p: { id: string } & Record<string, unknown>) => [p.id, p]));
+  const sById = new Map((stats ?? []).map((s: { player_id: string } & Record<string, unknown>) => [s.player_id, s]));
+  return items
+    .map((i) => {
+      const p = pById.get(i.otherPlayerId) as { name?: string; country?: string | null; avatar_color?: string | null; auth_user_id?: string } | undefined;
+      const s = sById.get(i.otherPlayerId) as { rating?: number; matches?: number } | undefined;
+      if (!p) return null;
+      return {
+        friendshipId: i.friendshipId,
+        playerId: i.otherPlayerId,
+        authUserId: p.auth_user_id ?? i.otherAuth,
+        name: p.name ?? "player",
+        country: p.country ?? null,
+        avatarColor: p.avatar_color ?? null,
+        rating: s?.rating ?? 1000,
+        matches: s?.matches ?? 0,
+      } as FriendListItem;
+    })
+    .filter((x): x is FriendListItem => !!x);
+}
+
+/** Recent unique opponents (by player_id) the caller has faced, excluding accepted friends. */
+export type RecentOpponent = {
+  playerId: string;
+  name: string;
+  when: string;
+  mode: string;
+};
+export async function fetchRecentOpponents(myPlayerId: string, limit = 8): Promise<RecentOpponent[]> {
+  const { data: mine } = await supabase
+    .from("match_players")
+    .select("match_id")
+    .eq("player_id", myPlayerId)
+    .order("match_id", { ascending: false })
+    .limit(40);
+  const ids = Array.from(new Set((mine ?? []).map((r) => r.match_id)));
+  if (!ids.length) return [];
+  const [{ data: others }, { data: matches }] = await Promise.all([
+    supabase.from("match_players").select("match_id, player_id, name").in("match_id", ids),
+    supabase.from("matches").select("id, mode, ranked, ended_at").in("id", ids),
+  ]);
+  const mById = new Map((matches ?? []).map((m: { id: string } & Record<string, unknown>) => [m.id, m]));
+  const seen = new Set<string>();
+  const out: RecentOpponent[] = [];
+  for (const o of (others ?? []) as Array<{ match_id: string; player_id: string | null; name: string }>) {
+    if (!o.player_id || o.player_id === myPlayerId || seen.has(o.player_id)) continue;
+    seen.add(o.player_id);
+    const m = mById.get(o.match_id) as { mode: number; ranked: boolean; ended_at: string } | undefined;
+    if (!m) continue;
+    out.push({
+      playerId: o.player_id,
+      name: o.name,
+      when: m.ended_at,
+      mode: m.ranked ? "Ranked" : m.mode === 4 ? "4P free-for-all" : "Casual",
+    });
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+/** Head-to-head history rows between me and them (up to `limit`). */
+export async function fetchH2HHistory(mePlayerId: string, themPlayerId: string, limit = 5): Promise<RecentMatchRow[]> {
+  const { data: mine } = await supabase
+    .from("match_players").select("match_id, result").eq("player_id", mePlayerId);
+  const { data: theirs } = await supabase
+    .from("match_players").select("match_id, result, name").eq("player_id", themPlayerId);
+  const mineById = new Map((mine ?? []).map((r) => [r.match_id, r.result as RecentMatchRow["result"]]));
+  const commonIds = (theirs ?? []).filter((r) => mineById.has(r.match_id)).map((r) => r.match_id);
+  if (!commonIds.length) return [];
+  const { data: matches } = await supabase
+    .from("matches").select("id, mode, ranked, ended_at")
+    .in("id", commonIds).order("ended_at", { ascending: false }).limit(limit);
+  const nameByMatch = new Map((theirs ?? []).map((r) => [r.match_id, r.name]));
+  return (matches ?? []).map((m: { id: string; mode: number; ranked: boolean; ended_at: string }) => ({
+    matchId: m.id, mode: m.mode as 2 | 4, ranked: !!m.ranked,
+    endedAt: m.ended_at, result: mineById.get(m.id) ?? "loss",
+    opponentName: nameByMatch.get(m.id) ?? "opponent",
+  }));
+}
