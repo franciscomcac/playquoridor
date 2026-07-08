@@ -13,6 +13,7 @@ import { renderResultCard, shareResultCard } from "@/lib/result-card";
 import { supabase } from "@/integrations/supabase/client";
 import { AccountNav } from "@/components/AccountNav";
 import { QueuePuzzle } from "@/components/QueuePuzzle";
+import { RankUpOverlay, tierIndexFor } from "@/components/RankUpOverlay";
 
 // Warm palette for celebratory confetti — browns, creams, blues, yellows
 // pulled from the app's existing tokens (kept in-sync with styles.css).
