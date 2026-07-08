@@ -2199,10 +2199,7 @@ function FourPlayerRoundStart({ starter, you, nameOf }: {
   if (phase >= 6) return null;
 
   return (
-    <div
-      className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-lg bg-background/85 backdrop-blur-md"
-      style={{ opacity: exiting ? 0 : 1, transition: "opacity .6s ease" }}
-    >
+    <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-lg bg-background/85 backdrop-blur-md">
       {/* Grid + winner-tinted radial backdrop */}
       <div className="absolute inset-0" style={{
         backgroundImage:
