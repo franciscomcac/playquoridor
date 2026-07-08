@@ -279,7 +279,7 @@ function Lobby() {
       {/* Main grid */}
       <div id="play" className="mx-auto grid max-w-[1240px] items-start gap-5 px-8 pb-6 lg:grid-cols-[280px_1fr_300px]">
         {/* Left column */}
-        <div className="flex flex-col gap-4">
+        <div className="hidden flex-col gap-4 lg:flex">
           <Card>
             <CardHeader eyebrow="🏆 Leaderboard" action={<Link to="/stats" className="text-[11.5px] font-semibold uppercase tracking-[0.06em] text-[#f5a524] hover:text-[#ffc45e]">View all</Link>} />
             <div className="mt-3">
