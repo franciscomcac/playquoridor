@@ -224,16 +224,13 @@ export function play(name: SfxName) {
       break;
     // Radar-style ping while queued; quiet enough to loop.
     case "searchPing":
-      {
-        const c = ensureCtx();
-        if (!c || !master) break;
-        if (!radarPingBuffer) { loadRadarPing(c); radarPing(); break; }
-        const src = c.createBufferSource();
-        src.buffer = radarPingBuffer;
-        const g = c.createGain(); g.gain.value = 0.85;
-        src.connect(g).connect(master);
-        src.start(c.currentTime);
-      }
+      if (!playSample("searchPing", 0.85)) radarPing();
+      break;
+    case "clash":
+      playSample("clash", 0.95);
+      break;
+    case "coinToss":
+      playSample("coinToss", 0.9);
       break;
     // Bright confirmation when an opponent is found.
     case "matchFound":
