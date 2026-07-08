@@ -266,8 +266,8 @@ function WorldMap({ country }: { country: Country | null }) {
   const pin = country ? projectLatLng(country.lat, country.lng) : null;
   const hlPath = country ? COUNTRY_PATHS[country.iso] : null;
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-zinc-800 bg-gradient-to-br from-zinc-900 via-zinc-950 to-black p-4 shadow-2xl">
-      <svg viewBox={WORLD_VIEWBOX} className="h-auto w-full">
+    <div className="relative self-start overflow-hidden rounded-2xl border border-zinc-800 bg-gradient-to-br from-zinc-900 via-zinc-950 to-black p-4 shadow-2xl lg:sticky lg:top-8">
+      <svg viewBox={WORLD_VIEWBOX} preserveAspectRatio="xMidYMid meet" className="block h-auto w-full">
         {/* Ocean glow */}
         <defs>
           <radialGradient id="ocean" cx="50%" cy="50%" r="65%">
