@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   BOARD, goalsFor, startsFor,
   type GameState, type MoveRecord, type PlayerId, type Pos, type Wall,
@@ -175,6 +175,15 @@ export function MoveHistoryPanel({ state, nameOf, defaultOpen = false, compact =
     return () => { onView(null); };
   }, [reviewing, snapshot, onView]);
 
+  // Auto-scroll the moves list to the bottom whenever a new move is appended
+  // and the user is pinned to the latest move (not reviewing history).
+  const listRef = useRef<HTMLOListElement | null>(null);
+  useEffect(() => {
+    if (reviewing) return;
+    const el = listRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [history.length, reviewing]);
+
   const first = () => setStep(0);
   const prev = () => setStep((s) => Math.max(0, s - 1));
   const next = () => setStep((s) => Math.min(history.length, s + 1));
@@ -218,7 +227,7 @@ export function MoveHistoryPanel({ state, nameOf, defaultOpen = false, compact =
         </div>
 
         {/* Moves list — fixed height reserves space so adding moves never shifts. */}
-        <ol className="mt-2 grid h-[4.5rem] grid-cols-2 gap-x-3 gap-y-0.5 overflow-y-auto pr-1 text-xs">
+        <ol ref={listRef} className="mt-2 grid h-[4.5rem] grid-cols-2 gap-x-3 gap-y-0.5 overflow-y-auto pr-1 text-xs">
           {history.length === 0 ? (
             <li className="col-span-2 pt-4 text-center text-muted-foreground/60">
               Moves will appear here.
