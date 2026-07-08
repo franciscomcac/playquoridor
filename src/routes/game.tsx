@@ -43,7 +43,7 @@ import {
 import {
   getVolume, initSoundOnGesture, isMuted, play, playWheelSpin, setMuted, setVolume, startSampleLoop,
 } from "@/lib/sound";
-import { humanThinkTimeMs, pickBotMove, randomDifficulty } from "@/lib/bot";
+import { humanThinkTimeMs, pickBotMove, randomDifficulty, rankedBotForRating, type RankedBot } from "@/lib/bot";
 import { randomGamerName } from "@/lib/names";
 import {
   DEFAULT_CLOCK_MS, endTurn, formatClock, initClocks, liveRemaining,
@@ -85,7 +85,7 @@ type View =
   | { name: "join" }
   | { name: "quick"; mode: Mode; ranked?: boolean }
   | { name: "game"; isHost: boolean; code: string; mode: Mode; walls: number; rounds: number; quickMatch?: boolean; ranked?: boolean }
-  | { name: "bot"; mode: Mode; difficulty: number; opponentNames: string[] }
+  | { name: "bot"; mode: Mode; difficulty: number; opponentNames: string[]; rankedBot?: RankedBot }
   | { name: "spectate" }
   | { name: "spectating"; code: string };
 
@@ -285,13 +285,26 @@ function Home() {
                 initialRounds={view.rounds}
                 quickMatch={view.quickMatch}
                 ranked={view.ranked}
-                onBotFallback={view.ranked ? undefined : () => setView({
+                onBotFallback={view.ranked && view.mode === 2 ? async () => {
+                  // Ranked queue empty → drop into a ranked bot game whose
+                  // difficulty and stored ELO match the player's rating.
+                  const stats = await fetchMyStats(ident.id).catch(() => null);
+                  const rating = (stats as { rating?: number } | null)?.rating ?? 1000;
+                  const bot = rankedBotForRating(rating);
+                  setView({
+                    name: "bot",
+                    mode: 2,
+                    difficulty: bot.difficulty,
+                    opponentNames: [bot.name],
+                    rankedBot: bot,
+                  });
+                } : view.ranked ? undefined : () => setView({
                   name: "bot",
                   mode: view.mode,
                   difficulty: randomDifficulty().value,
                   opponentNames: Array.from({ length: view.mode - 1 }, () => randomGamerName()),
                 })}
-                onRankedTimeout={view.ranked ? () => { void navigate({ to: "/" }); } : undefined}
+                onRankedTimeout={undefined}
                 onRequeue={view.quickMatch ? () => {
                   clearInterruptedGame();
                   setView({ name: "quick", mode: view.mode, ranked: view.ranked });
@@ -305,6 +318,7 @@ function Home() {
                 mode={view.mode}
                 difficulty={view.difficulty}
                 opponentNames={view.opponentNames}
+                rankedBot={view.rankedBot}
                 onLeave={goHome}
               />
             )}
@@ -3236,11 +3250,12 @@ function SettingsDrawer({ onClose }: { onClose: () => void }) {
 
 // ---------------- BOT GAME (opponent presented as a human player) ----------------
 
-function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
+function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave }: {
   ident: Identity;
   mode: Mode;
   difficulty: number;
   opponentNames: string[];
+  rankedBot?: RankedBot;
   onLeave: () => void;
 }) {
   const YOU: PlayerId = 0;
@@ -3263,6 +3278,26 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
 
   // Record bot matches to history so they show up alongside multiplayer games.
   const botRecordedRef = useRef(false);
+  // Snapshot pre-match rating so we can trigger the rank-up overlay when a
+  // ranked bot game ends.
+  const preRatingRef = useRef<number | null>(null);
+  const preRankedMatchesRef = useRef<number>(0);
+  const rankUpFiredRef = useRef(false);
+  const [rankUp, setRankUp] = useState<{ oldRating: number; newRating: number } | null>(null);
+  useEffect(() => {
+    if (!rankedBot) return;
+    let cancel = false;
+    void (async () => {
+      const s = await fetchMyStats(ident.id).catch(() => null);
+      if (cancel) return;
+      const r = (s as { rating?: number } | null)?.rating;
+      preRatingRef.current = typeof r === "number" ? r : 1000;
+      const rm = (s as { ranked_matches?: number } | null)?.ranked_matches;
+      preRankedMatchesRef.current = typeof rm === "number" ? rm : 0;
+    })();
+    return () => { cancel = true; };
+  }, [rankedBot, ident.id]);
+
   useEffect(() => {
     if (state.matchWinner === null) return;
     if (botRecordedRef.current) return;
@@ -3279,26 +3314,68 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
       matches: 1, wins: winnerIsYou ? 1 : 0, losses: winnerIsYou ? 0 : 1,
       walls_placed: walls, pawns_eliminated: pops, forfeits: forfeited ? 1 : 0,
     });
-    void recordMatch({
-      mode: mode as 2 | 4,
-      rounds: state.totalRounds,
-      ranked: false,
-      winnerId: winnerIsYou ? ident.id : null,
-      snapshot: botMatchHistory.getSnapshot(),
-      players: Array.from({ length: mode }, (_, i) => {
-        const isYou = i === YOU;
-        const botName = opponentNames[i - 1] ?? `Bot ${i}`;
-        return {
-          id: isYou ? ident.id : null,
-          slot: i,
-          name: isYou ? ident.name : botName,
-          roundsWon: state.score[i] ?? 0,
-          wallsPlaced: state.wallsPlacedByPlayer[i] ?? 0,
-          pawnsEliminated: state.pawnsEliminatedByPlayer[i] ?? 0,
-          forfeited: state.leftMatch[i] ?? false,
-        };
-      }),
-    });
+    void (async () => {
+      const winnerId = winnerIsYou
+        ? ident.id
+        : rankedBot?.playerId ?? null;
+      const matchId = await recordMatch({
+        mode: mode as 2 | 4,
+        rounds: state.totalRounds,
+        ranked: !!rankedBot,
+        winnerId,
+        snapshot: botMatchHistory.getSnapshot(),
+        players: Array.from({ length: mode }, (_, i) => {
+          const isYou = i === YOU;
+          const botName = opponentNames[i - 1] ?? `Bot ${i}`;
+          // In a ranked bot game the single opponent IS the tier bot; stamp
+          // its stable playerId so applyElo1v1 has a real row to update.
+          const botPid = rankedBot && !isYou ? rankedBot.playerId : null;
+          return {
+            id: isYou ? ident.id : botPid,
+            slot: i,
+            name: isYou ? ident.name : botName,
+            roundsWon: state.score[i] ?? 0,
+            wallsPlaced: state.wallsPlacedByPlayer[i] ?? 0,
+            pawnsEliminated: state.pawnsEliminatedByPlayer[i] ?? 0,
+            forfeited: state.leftMatch[i] ?? false,
+          };
+        }),
+      });
+
+      // ----- Ranked bot: apply ELO and trigger rank-up overlay -----
+      if (rankedBot && mode === 2) {
+        const winnerPid = winnerIsYou ? ident.id : rankedBot.playerId;
+        const loserPid  = winnerIsYou ? rankedBot.playerId : ident.id;
+        const winnerName = winnerIsYou ? ident.name : rankedBot.name;
+        const loserName  = winnerIsYou ? rankedBot.name : ident.name;
+        const delta = await applyElo1v1(winnerPid, winnerName, loserPid, loserName);
+        if (matchId && typeof delta === "number") await setMatchEloDelta(matchId, delta);
+
+        if (winnerIsYou && !rankUpFiredRef.current) {
+          rankUpFiredRef.current = true;
+          const pre = preRatingRef.current ?? 1000;
+          const preRM = preRankedMatchesRef.current ?? 0;
+          // Poll for the updated stats — same shape as GameScreen.
+          let attempts = 0;
+          const poll = async () => {
+            attempts++;
+            const s = await fetchMyStats(ident.id).catch(() => null);
+            const next = (s as { rating?: number } | null)?.rating;
+            const nextRM = (s as { ranked_matches?: number } | null)?.ranked_matches ?? preRM;
+            if (typeof next === "number" && next !== pre) {
+              const placementCompleted = preRM < 5 && nextRM >= 5;
+              const tieredUp = preRM >= 5 && tierIndexFor(next) > tierIndexFor(pre);
+              if (placementCompleted || tieredUp) {
+                setRankUp({ oldRating: pre, newRating: next });
+              }
+              return;
+            }
+            if (attempts < 8) window.setTimeout(poll, 900);
+          };
+          window.setTimeout(poll, 1200);
+        }
+      }
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.matchWinner]);
 
@@ -3578,6 +3655,14 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
         <EndScreen state={state} you={YOU} nameOf={nameOf}
           snapshot={botMatchHistory.getSnapshot()}
           onRematch={startMatch} onNewMatch={startMatch} onLeave={onLeave} />
+      )}
+
+      {rankUp && (
+        <RankUpOverlay
+          oldRating={rankUp.oldRating}
+          newRating={rankUp.newRating}
+          onDone={() => setRankUp(null)}
+        />
       )}
 
       <MobileAsideSheet chat={<ChatPanel entries={chat} onSend={sendChat} you={YOU} />}>
