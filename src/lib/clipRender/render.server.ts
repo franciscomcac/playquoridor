@@ -144,9 +144,10 @@ export function renderClip(
   snapshot: MatchSnapshot,
   options: ClipRenderOptions,
 ): { bytes: Uint8Array; mime: string; ext: string } {
-  // 9:16 portrait, downscaled to keep encode time inside the Worker CPU budget.
-  const W = 360;
-  const H = 640;
+  // 9:16 portrait. Bumped from 360x640 to 540x960 for a much sharper clip;
+  // 128-color palette (up from 64) keeps wall/pawn colours crisp.
+  const W = 540;
+  const H = 960;
   const frames = replay(snapshot);
   if (frames.length === 0) throw new Error("empty match");
 
@@ -164,7 +165,7 @@ export function renderClip(
     drawStateRGBA(buf, W, H, f.state);
     if (options.pov === "top") rotate180(buf, W, H);
 
-    const palette = quantize(buf, 64);
+    const palette = quantize(buf, 128);
     const index = applyPalette(buf, palette);
 
     const isLast = i === frames.length - 1;

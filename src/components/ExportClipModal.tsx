@@ -19,8 +19,8 @@ type Props = {
 
 type Phase = "preview" | "rendering" | "done" | "error";
 
-const PREVIEW_W = 270;
-const PREVIEW_H = 480;
+const PREVIEW_W = 360;
+const PREVIEW_H = 640;
 const BASE_MS = 500;
 
 function beep(ctx: AudioContext, freq = 620, ms = 55) {
@@ -145,7 +145,7 @@ export function ExportClipModal({ open, snapshot, onClose, filename }: Props) {
       aria-label="Export clip"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-zinc-950 p-4 shadow-2xl">
+      <div className="w-full max-w-lg max-h-[95vh] overflow-y-auto rounded-2xl border border-white/10 bg-zinc-950 p-4 shadow-2xl">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold uppercase tracking-widest text-zinc-300">Export clip</h2>
           <button
@@ -168,7 +168,7 @@ export function ExportClipModal({ open, snapshot, onClose, filename }: Props) {
             />
           </div>
           <p className="mt-2 text-[10px] uppercase tracking-widest text-zinc-500">
-            Live preview - 9:16 - {frames.length} frames
+            Live preview - 9:16 - {frames.length} frames - Export: 540x960 GIF
           </p>
         </div>
 
