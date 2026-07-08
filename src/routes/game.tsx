@@ -40,7 +40,7 @@ import {
   registerOpenRoom, removeOpenRoom, updateOpenRoomSeats, applyElo1v1,
 } from "@/lib/stats";
 import {
-  getVolume, initSoundOnGesture, isMuted, play, setMuted, setVolume,
+  getVolume, initSoundOnGesture, isMuted, play, setMuted, setVolume, startSampleLoop,
 } from "@/lib/sound";
 import { humanThinkTimeMs, pickBotMove, randomDifficulty } from "@/lib/bot";
 import { randomGamerName } from "@/lib/names";
