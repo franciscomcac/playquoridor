@@ -13,6 +13,7 @@ import { renderResultCard, shareResultCard } from "@/lib/result-card";
 import { supabase } from "@/integrations/supabase/client";
 import { AccountNav } from "@/components/AccountNav";
 import { QueuePuzzle } from "@/components/QueuePuzzle";
+import { RankUpOverlay, tierIndexFor } from "@/components/RankUpOverlay";
 
 // Warm palette for celebratory confetti — browns, creams, blues, yellows
 // pulled from the app's existing tokens (kept in-sync with styles.css).
@@ -892,6 +893,22 @@ function GameScreen({
   const matchRecordedRef = useRef(false);
   const matchStartedRef = useRef(false);
 
+  // ---------- Rank-up overlay (ranked 1v1 only) ----------
+  const preRatingRef = useRef<number | null>(null);
+  const rankUpFiredRef = useRef(false);
+  const [rankUp, setRankUp] = useState<{ oldRating: number; newRating: number } | null>(null);
+  useEffect(() => {
+    if (!ranked || initialMode !== 2) return;
+    let cancel = false;
+    void (async () => {
+      const s = await fetchMyStats(ident.id).catch(() => null);
+      if (cancel) return;
+      const r = (s as { rating?: number } | null)?.rating;
+      preRatingRef.current = typeof r === "number" ? r : 1000;
+    })();
+    return () => { cancel = true; };
+  }, [ranked, initialMode, ident.id]);
+
   // Ready-up state for the between-rounds flow (replaces "Next round" button).
   const [readySlots, setReadySlots] = useState<PlayerId[]>([]);
   const [merging, setMerging] = useState(false);
@@ -1610,6 +1627,36 @@ function GameScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.matchWinner]);
 
+  // ---------- Detect ranked tier-up and trigger rank-up overlay ----------
+  useEffect(() => {
+    if (!ranked || state.mode !== 2) return;
+    if (state.matchWinner === null) return;
+    if (rankUpFiredRef.current) return;
+    // Only local player who was seated & won can rank up in a transfer.
+    if (state.matchWinner !== you) return;
+    rankUpFiredRef.current = true;
+    const pre = preRatingRef.current ?? 1000;
+    let cancelled = false;
+    let attempts = 0;
+    const poll = async () => {
+      attempts++;
+      const s = await fetchMyStats(ident.id).catch(() => null);
+      if (cancelled) return;
+      const next = (s as { rating?: number } | null)?.rating;
+      if (typeof next === "number" && next !== pre) {
+        if (tierIndexFor(next) > tierIndexFor(pre)) {
+          setRankUp({ oldRating: pre, newRating: next });
+        }
+        return;
+      }
+      if (attempts < 8) window.setTimeout(poll, 900);
+    };
+    // Give host a beat to call the RPC and DB to settle before first read.
+    const t = window.setTimeout(poll, 1200);
+    return () => { cancelled = true; window.clearTimeout(t); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.matchWinner]);
+
   const roundOver = state.winner !== null;
   const matchOver = state.matchWinner !== null;
   const [review, setReview] = useState<HistorySnapshot | null>(null);
@@ -1718,6 +1765,14 @@ function GameScreen({
           onRequeue={onRequeue}
           onNewMatch={onRequeue ?? newMatchAction}
           onLeave={onLeave} />
+      )}
+
+      {rankUp && (
+        <RankUpOverlay
+          oldRating={rankUp.oldRating}
+          newRating={rankUp.newRating}
+          onDone={() => setRankUp(null)}
+        />
       )}
 
       <MobileAsideSheet
