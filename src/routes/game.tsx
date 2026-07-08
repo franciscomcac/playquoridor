@@ -2309,7 +2309,6 @@ function EndScreen({ state, you, onRematch, onNewMatch, onRequeue, onLeave, name
   nameOf: (s: PlayerId) => string;
   snapshot: MatchSnapshot | null;
 }) {
-  const [analyzing, setAnalyzing] = useState(false);
   const winner = state.matchWinner as PlayerId;
   const youWon = winner === you;
   const winnerColor = PLAYER_COLORS[winner];
