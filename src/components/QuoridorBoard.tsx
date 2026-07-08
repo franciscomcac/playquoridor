@@ -24,6 +24,7 @@ export const PLAYER_NAMES = ["Gold", "Slate", "Crimson", "Jade"];
 
 type HoverTarget = { kind: "cell"; r: number; c: number } | { kind: "wall"; wall: WallSpec };
 const WALL_SNAP_RADIUS = 0.2;
+const WALL_SNAP_RADIUS_TOUCH = 0.34;
 
 type Pop = { key: number; player: PlayerId; r: number; c: number };
 
@@ -31,6 +32,11 @@ const FILES = ["a", "b", "c", "d", "e", "f", "g", "h", "i"];
 
 export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: Props) {
   const [hover, setHover] = useState<HoverTarget | null>(null);
+  // Touch users get a two-tap flow: first tap arms a ghost wall; second tap
+  // in the same spot places it. The armed spec also drives an on-board
+  // orientation toggle (H↔V) so mis-picks are cheap to fix.
+  const [armed, setArmed] = useState<WallSpec | null>(null);
+  const [isTouch, setIsTouch] = useState(false);
   const boardRef = useRef<HTMLDivElement>(null);
 
   // Per-player POV rotation so each seat sees their pawn on the bottom.
@@ -69,7 +75,7 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
   const goals = goalsFor(state.mode);
   const yourColor = PLAYER_COLORS[you];
 
-  function targetFor(e: { clientX: number; clientY: number }): HoverTarget | null {
+  function targetFor(e: { clientX: number; clientY: number }, touch = false): HoverTarget | null {
     const el = boardRef.current;
     if (!el) return null;
     const rect = el.getBoundingClientRect();
@@ -92,7 +98,8 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
     const gx = Math.min(BOARD - 1, Math.max(1, Math.round(x)));
     const dy = Math.abs(y - gy);
     const dx = Math.abs(x - gx);
-    if (Math.min(dx, dy) < WALL_SNAP_RADIUS) {
+    const snap = touch ? WALL_SNAP_RADIUS_TOUCH : WALL_SNAP_RADIUS;
+    if (Math.min(dx, dy) < snap) {
       if (dy <= dx) {
         const r = gy - 1;
         const c = Math.min(BOARD - 2, Math.max(0, Math.round(x) - 1));
@@ -109,6 +116,7 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
   }
 
   function handlePointerMove(e: React.PointerEvent) {
+    if (e.pointerType !== "mouse") return; // touch/pen use tap flow
     if (!isYourTurn) { if (hover) setHover(null); return; }
     const t = targetFor(e);
     setHover((prev) => {
@@ -120,25 +128,62 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
     });
   }
 
-  function handleClick(e: React.MouseEvent) {
+  function handlePointerUp(e: React.PointerEvent) {
     if (!isYourTurn) return;
-    const t = targetFor(e);
-    if (!t) return;
+    const touch = e.pointerType !== "mouse";
+    if (touch !== isTouch) setIsTouch(touch);
+    const t = targetFor(e, touch);
+    if (!t) { setArmed(null); return; }
     onActivity?.();
+
     if (t.kind === "cell") {
+      // Tapping a cell always cancels an armed wall.
+      if (armed) setArmed(null);
       if (legalSet.has(`${t.r},${t.c}`)) onMove({ kind: "pawn", to: [t.r, t.c] });
       else play("denied");
-    } else {
+      return;
+    }
+
+    // Wall target.
+    if (!touch) {
+      // Mouse: single click places (current desktop behavior).
       if (state.wallsLeft[you] > 0 && canPlaceWall(state, you, t.wall)) {
         onMove({ kind: "wall", wall: t.wall });
       } else {
         play("denied");
       }
+      return;
+    }
+
+    // Touch: two-tap confirm on the same spec.
+    const same = armed && armed.r === t.wall.r && armed.c === t.wall.c && armed.o === t.wall.o;
+    if (same) {
+      if (state.wallsLeft[you] > 0 && canPlaceWall(state, you, armed!)) {
+        onMove({ kind: "wall", wall: armed! });
+        setArmed(null);
+      } else {
+        play("denied");
+      }
+    } else {
+      setArmed(t.wall);
     }
   }
 
-  const ghostWall = hover && hover.kind === "wall" && state.wallsLeft[you] > 0 && canPlaceWall(state, you, hover.wall) ? hover.wall : null;
-  const invalidGhost = hover && hover.kind === "wall" && !ghostWall ? hover.wall : null;
+  function rotateArmed() {
+    if (!armed) return;
+    const flipped: WallSpec = { ...armed, o: armed.o === "h" ? "v" : "h" };
+    setArmed(flipped);
+  }
+  function clearArmed() { setArmed(null); }
+
+  // Mouse hover ghost.
+  const hoverGhost = hover && hover.kind === "wall" && state.wallsLeft[you] > 0 && canPlaceWall(state, you, hover.wall) ? hover.wall : null;
+  const hoverInvalid = hover && hover.kind === "wall" && !hoverGhost ? hover.wall : null;
+  // Touch armed ghost (persistent until placed or cancelled).
+  const armedValid = armed && state.wallsLeft[you] > 0 && canPlaceWall(state, you, armed) ? armed : null;
+  const armedInvalid = armed && !armedValid ? armed : null;
+  const ghostWall = armedValid ?? hoverGhost;
+  const invalidGhost = armedInvalid ?? hoverInvalid;
   const hoverCell = hover && hover.kind === "cell" ? hover : null;
   const cursor = ghostWall || (hoverCell && legalSet.has(`${hoverCell.r},${hoverCell.c}`)) ? "pointer" : "default";
 
@@ -202,13 +247,17 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
         ))}
       </div>
       <div className="wood-frame aspect-square w-full min-w-0">
-      <div ref={boardRef} onPointerMove={handlePointerMove} onPointerLeave={() => setHover(null)} onClick={handleClick}
+      <div ref={boardRef}
+        onPointerMove={handlePointerMove}
+        onPointerLeave={() => setHover(null)}
+        onPointerUp={handlePointerUp}
         className="relative h-full w-full select-none overflow-hidden rounded-md"
         style={{
           cursor,
           background: "var(--board-bg)",
           transform: rotation ? `rotate(${rotation}deg)` : undefined,
           transition: "transform 240ms ease",
+          touchAction: "manipulation",
         }}>
         <div className="grid h-full w-full"
           style={{ gridTemplateColumns: `repeat(${BOARD}, 1fr)`, gridTemplateRows: `repeat(${BOARD}, 1fr)` }}>
@@ -247,6 +296,21 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
           <span key={f} className="text-center leading-none">{f}</span>
         ))}
       </div>
+      {armed && (
+        <div className="pointer-events-auto col-span-2 -mt-1 flex items-center justify-center gap-2 rounded-lg border border-border bg-card/95 px-3 py-2 text-xs shadow-lg backdrop-blur">
+          <span className="uppercase tracking-widest text-muted-foreground">
+            Tap again to place
+          </span>
+          <button onClick={rotateArmed}
+            className="rounded-md border border-border bg-secondary/60 px-2 py-1 text-[11px] font-semibold uppercase tracking-widest hover:bg-secondary">
+            Rotate {armed.o === "h" ? "→ V" : "→ H"}
+          </button>
+          <button onClick={clearArmed}
+            className="rounded-md border border-border bg-secondary/30 px-2 py-1 text-[11px] uppercase tracking-widest hover:bg-secondary">
+            Cancel
+          </button>
+        </div>
+      )}
     </div>
   );
 }
