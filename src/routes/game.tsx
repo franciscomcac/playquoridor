@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PLAYER_COLORS, QuoridorBoard } from "@/components/QuoridorBoard";
 import { MoveHistory, MoveHistoryPanel, type HistorySnapshot } from "@/components/MoveHistory";
@@ -1518,12 +1518,17 @@ function GameScreen({
   // ---------- Sound on round/match transitions ----------
   const prevWinnerRef = useRef<PlayerId | null>(null);
   const prevMatchWinnerRef = useRef<PlayerId | null>(null);
+  const [roundEndAnim, setRoundEndAnim] = useState(false);
   useEffect(() => {
     if (state.winner !== null && prevWinnerRef.current === null) {
       const r = state.endReason;
       if (r === "time" || r === "afk" || r === "forfeit") play("afkWarn");
-      play("roundWin");
+      // Score animation owns the win SFX (whoosh + point). Fall back to
+      // the classic chime only for non-goal endings (time/afk/forfeit).
+      if (r === "time" || r === "afk" || r === "forfeit") play("roundWin");
+      else setRoundEndAnim(true);
     }
+    if (state.winner === null) setRoundEndAnim(false);
     if (state.matchWinner !== null && prevMatchWinnerRef.current === null) play("matchWin");
     prevWinnerRef.current = state.winner;
     prevMatchWinnerRef.current = state.matchWinner;
@@ -1678,7 +1683,10 @@ function GameScreen({
             {status === "disconnected" && !roundOver && (
               <MessageOverlay title="Disconnected" body="Connection to the room was lost." onLeave={onLeave} />
             )}
-            {roundOver && !matchOver && !coinflip?.animating && (
+            {roundOver && !matchOver && !coinflip?.animating && roundEndAnim && (
+              <RoundEndScoreAnim state={state} nameOf={nameOf} onDone={() => setRoundEndAnim(false)} />
+            )}
+            {roundOver && !matchOver && !coinflip?.animating && !roundEndAnim && (
               <RoundEndReady
                 state={state} you={you} nameOf={nameOf}
                 readySlots={readySlots} merging={merging}
@@ -2648,6 +2656,191 @@ function RoundEndReady({
   );
 }
 
+// Round-end score animation: winner tag, then the winner's score bumps by +1
+// with a "+1" flying up (points sound + whoosh). Fires once per round, then
+// fades out and hands off to <RoundEndReady>. Durations mirror the design
+// doc (2p: 3700ms, 4p: 3850ms).
+export const ROUND_END_ANIM_MS_2P = 3700;
+export const ROUND_END_ANIM_MS_4P = 3850;
+function roundEndAnimMs(mode: Mode): number { return mode === 4 ? ROUND_END_ANIM_MS_4P : ROUND_END_ANIM_MS_2P; }
+
+function RoundEndScoreAnim({ state, nameOf, onDone }: {
+  state: GameState; nameOf: (s: PlayerId) => string; onDone: () => void;
+}) {
+  const winner = state.winner as PlayerId;
+  const [phase, setPhase] = useState<"idle" | "show" | "bump" | "exit">("idle");
+  const totalMs = roundEndAnimMs(state.mode as Mode);
+  const bumpAt = 1150;
+  const exitAt = state.mode === 4 ? 3200 : 3050;
+  useEffect(() => {
+    play("whooshEnd");
+    const timers: number[] = [];
+    const t = (ms: number, fn: () => void) => timers.push(window.setTimeout(fn, ms));
+    t(120, () => setPhase("show"));
+    t(bumpAt, () => { setPhase("bump"); play("pointScore"); });
+    t(bumpAt + 900, () => setPhase("show"));
+    t(exitAt, () => setPhase("exit"));
+    t(totalMs, onDone);
+    return () => { timers.forEach((id) => window.clearTimeout(id)); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Pre-bump scores: the game state already includes the +1 for the winner,
+  // so subtract it during the "idle/show" frames.
+  const bumped = phase === "bump" || phase === "exit";
+  const scoreFor = (slot: PlayerId): number => {
+    const s = state.score[slot] ?? 0;
+    return bumped || slot !== winner ? s : Math.max(0, s - 1);
+  };
+  const slots: PlayerId[] = Array.from({ length: state.mode }, (_, i) => i as PlayerId);
+  const winnerColor = PLAYER_COLORS[winner];
+  const winnerName = nameOf(winner);
+  const isFourP = state.mode === 4;
+  const target = winsNeeded(state.totalRounds, state.mode);
+  const dimLosers = phase === "exit";
+
+  const roundIdx = (state.score?.reduce((a, b) => a + (b ?? 0), 0)) ?? 1;
+
+  return (
+    <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-lg bg-background/85 backdrop-blur-md">
+      {/* Winner-tinted glow backdrop */}
+      <div className="absolute inset-0" style={{
+        background: `radial-gradient(ellipse 60% 45% at 50% 50%, color-mix(in oklab, ${winnerColor} 16%, transparent), transparent 70%)`,
+        transition: "background .6s ease",
+      }} />
+      <div className="absolute inset-0" style={{
+        backgroundImage:
+          "linear-gradient(color-mix(in oklab, var(--foreground) 3%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in oklab, var(--foreground) 3%, transparent) 1px, transparent 1px)",
+        backgroundSize: "34px 34px",
+      }} />
+
+      <div
+        className="relative flex h-full w-full flex-col items-center justify-center gap-8 px-4"
+        style={{
+          opacity: phase === "idle" || phase === "exit" ? 0 : 1,
+          transform: phase === "idle"
+            ? "scale(.96) translateY(6px)"
+            : phase === "exit"
+              ? "scale(.95) translateY(-10px)"
+              : "scale(1) translateY(0)",
+          transition: "opacity .5s ease, transform .5s ease",
+        }}
+      >
+        {/* Header */}
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="grid h-9 w-9 flex-none place-items-center rounded-full border-2 text-sm font-extrabold"
+            style={{ background: "oklch(0.24 0.01 260)", color: "oklch(0.85 0.02 260)", borderColor: "color-mix(in oklab, var(--foreground) 15%, transparent)" }}>
+            {roundIdx}
+          </div>
+          <div className="flex flex-col gap-1">
+            <p className="text-lg font-extrabold text-foreground sm:text-2xl">
+              <span style={{ color: winnerColor }}>{winnerName}</span> took the round
+            </p>
+            <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground sm:text-[11px]">
+              {isFourP && (
+                <span className="rounded-full px-2 py-0.5 text-[9px] font-extrabold text-white"
+                  style={{ background: "linear-gradient(90deg, oklch(0.65 0.22 350), oklch(0.55 0.24 305))" }}>
+                  Chaos
+                </span>
+              )}
+              {isFourP
+                ? <span>{state.mode} players · first to {target}</span>
+                : <span>{state.mode}-player · best of {state.totalRounds}</span>}
+            </div>
+          </div>
+        </div>
+
+        {/* Score row */}
+        <div className={"flex items-start " + (isFourP ? "gap-4 sm:gap-8" : "gap-8 sm:gap-14")}>
+          {slots.map((slot, i) => {
+            const isWinner = slot === winner;
+            const bumping = phase === "bump" && isWinner;
+            const color = PLAYER_COLORS[slot];
+            const name = nameOf(slot);
+            return (
+              <React.Fragment key={slot}>
+                {i > 0 && !isFourP && (
+                  <div className="flex flex-col items-center gap-1.5 self-stretch justify-center">
+                    <div className="h-10 w-px" style={{ background: "color-mix(in oklab, var(--foreground) 14%, transparent)" }} />
+                    <span className="whitespace-nowrap text-[10px] font-extrabold uppercase tracking-[0.14em] text-muted-foreground">First to {target}</span>
+                    <div className="h-10 w-px" style={{ background: "color-mix(in oklab, var(--foreground) 14%, transparent)" }} />
+                  </div>
+                )}
+                <div
+                  className="flex flex-col items-center gap-2 sm:gap-3"
+                  style={{
+                    opacity: dimLosers && !isWinner ? 0.5 : 1,
+                    filter: dimLosers && !isWinner ? "grayscale(.3) saturate(.8)" : "none",
+                    transition: "opacity .5s ease, filter .5s ease",
+                  }}
+                >
+                  <div className="relative">
+                    <div
+                      className={"grid place-items-center rounded-full text-base font-extrabold " + (isFourP ? "h-16 w-16 sm:h-20 sm:w-20 sm:text-lg" : "h-20 w-20 sm:h-24 sm:w-24 sm:text-xl")}
+                      style={{
+                        background: `radial-gradient(circle at 32% 28%, color-mix(in oklab, ${color} 55%, white 50%), ${color} 55%, color-mix(in oklab, ${color} 60%, black 40%) 100%)`,
+                        border: `3px solid ${color}`,
+                        color: "oklch(0.15 0.02 55)",
+                      }}
+                    >
+                      {initialsOf(name)}
+                    </div>
+                    {bumping && (
+                      <span
+                        key={`glow-${phase}`}
+                        className="absolute rounded-full"
+                        style={{
+                          inset: -10,
+                          boxShadow: `0 0 0 4px color-mix(in oklab, ${color} 50%, transparent), 0 0 36px 6px color-mix(in oklab, ${color} 55%, transparent)`,
+                          animation: "rs-avpulse .7s ease",
+                          pointerEvents: "none",
+                        }}
+                      />
+                    )}
+                  </div>
+                  <p className={"font-bold text-foreground " + (isFourP ? "max-w-[110px] truncate text-xs sm:text-sm" : "text-sm sm:text-base")}>{name}</p>
+                  <div className="relative grid place-items-center" style={{ width: isFourP ? 64 : 88, height: isFourP ? 52 : 78 }}>
+                    <span
+                      key={bumping ? `bump-${slot}` : `n-${slot}-${scoreFor(slot)}`}
+                      className={"font-extrabold tabular-nums " + (isFourP ? "text-4xl sm:text-5xl" : "text-5xl sm:text-6xl")}
+                      style={{
+                        color: bumping ? color : "var(--foreground)",
+                        animation: bumping ? "rs-bump .6s cubic-bezier(.3,1.6,.4,1)" : undefined,
+                        lineHeight: 1,
+                      }}
+                    >
+                      {scoreFor(slot)}
+                    </span>
+                    {bumping && (
+                      <span
+                        key={`p1-${slot}`}
+                        className="absolute -top-1 left-1/2 whitespace-nowrap text-lg font-extrabold sm:text-xl"
+                        style={{
+                          color,
+                          animation: "rs-fly .8s ease-out",
+                          transform: "translate(-50%, 0)",
+                        }}
+                      >
+                        +1
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes rs-bump { 0%{transform:scale(1)} 35%{transform:scale(1.38)} 100%{transform:scale(1)} }
+        @keyframes rs-fly { 0%{opacity:0;transform:translate(-50%,6px) scale(.8)} 25%{opacity:1;transform:translate(-50%,-8px) scale(1.1)} 100%{opacity:0;transform:translate(-50%,-46px) scale(1)} }
+        @keyframes rs-avpulse { 0%{opacity:0;transform:scale(.8)} 30%{opacity:1;transform:scale(1.06)} 100%{opacity:0;transform:scale(1.16)} }
+      `}</style>
+    </div>
+  );
+}
+
 function WaitingOverlay({ count, expected, isHost, onStart }: { count: number; expected: number; isHost: boolean; onStart: () => void }) {
   return (
     <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-background/55 backdrop-blur-[3px]">
@@ -3098,12 +3291,15 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
   // Sound cues.
   const prevWinnerRef = useRef<PlayerId | null>(null);
   const prevMatchWinnerRef = useRef<PlayerId | null>(null);
+  const [roundEndAnim, setRoundEndAnim] = useState(false);
   useEffect(() => {
     if (state.winner !== null && prevWinnerRef.current === null) {
       const r = state.endReason;
       if (r === "time" || r === "afk" || r === "forfeit") play("afkWarn");
-      play("roundWin");
+      if (r === "time" || r === "afk" || r === "forfeit") play("roundWin");
+      else setRoundEndAnim(true);
     }
+    if (state.winner === null) setRoundEndAnim(false);
     if (state.matchWinner !== null && prevMatchWinnerRef.current === null) play("matchWin");
     prevWinnerRef.current = state.winner;
     prevMatchWinnerRef.current = state.matchWinner;
@@ -3278,7 +3474,10 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
             {coinflip?.animating && (
               <CoinflipOverlay starter={coinflip.starter} you={YOU} mode={mode} nameOf={nameOf} />
             )}
-            {roundOver && !matchOver && !coinflip?.animating && (
+            {roundOver && !matchOver && !coinflip?.animating && roundEndAnim && (
+              <RoundEndScoreAnim state={state} nameOf={nameOf} onDone={() => setRoundEndAnim(false)} />
+            )}
+            {roundOver && !matchOver && !coinflip?.animating && !roundEndAnim && (
               <RoundEndReady
                 state={state} you={YOU} nameOf={nameOf}
                 readySlots={readySlots} merging={merging}
