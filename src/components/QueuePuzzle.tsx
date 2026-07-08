@@ -65,7 +65,7 @@ export function QueuePuzzle() {
   const wallsLeft = state.wallsLeft[you] ?? 0;
 
   return (
-    <div className="w-full max-w-md rounded-3xl border border-zinc-800 bg-zinc-950/70 p-5 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.6)]">
+    <div className="w-full max-w-2xl rounded-3xl border border-zinc-800 bg-zinc-950/70 p-5 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.6)]">
       <div className="mb-3 flex items-center justify-between">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-emerald-400">While you wait</p>
