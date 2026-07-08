@@ -1,7 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { LobbyChrome } from "@/components/LobbyChrome";
-import { requireRealUser } from "@/lib/auth-gate";
 import { supabase } from "@/integrations/supabase/client";
 import {
   fetchGamesToday,
