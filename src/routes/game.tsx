@@ -1126,6 +1126,10 @@ function GameScreen({
       if (s.matchWinner !== null || s.winner !== null) return;
       // Don't run the AFK timer while waiting for players or during the coinflip intro.
       if (status !== "connected") return;
+      if (presenceRef.current.count < presenceRef.current.expected) {
+        if (afk) setAfk(null);
+        return;
+      }
       if (coinflip?.animating) return;
       const turn = s.turn;
       if (!s.active[turn]) return;
@@ -1155,6 +1159,7 @@ function GameScreen({
       const s = stateRef.current;
       if (!s.clocks) return;
       if (status !== "connected") return;
+      if (presenceRef.current.count < presenceRef.current.expected) return;
       if (coinflip?.animating) return;
       if (s.winner !== null || s.matchWinner !== null) return;
       const turn = s.turn;
@@ -1314,7 +1319,7 @@ function GameScreen({
   const displayState = review
     ? { ...state, pawns: review.pawns, walls: review.walls, lastWall: review.lastWall }
     : state;
-  const boardInteractive = status === "connected" && state.winner === null && !coinflip?.animating && !review;
+  const boardInteractive = status === "connected" && presence.count >= presence.expected && state.winner === null && !coinflip?.animating && !review;
 
   // Quick / ranked matchmaking: keep the radar visible from the start of
   // the game view until both players are connected AND one full radar
