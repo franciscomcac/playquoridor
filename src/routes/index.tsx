@@ -780,6 +780,13 @@ function GameScreen({
         } else if (msg.type === "readyState") {
           const p = msg.payload as { slots: number[] };
           setReadySlots(p.slots as PlayerId[]);
+        } else if (msg.type === "chat") {
+          const p = msg.payload as { slot: number; name: string; text: string; ts: number };
+          setChat((prev) => [
+            ...prev.slice(-99),
+            { key: `${p.ts}-${p.slot}-${Math.random()}`, slot: p.slot, name: p.name, text: p.text, ts: p.ts },
+          ]);
+          play("click");
         }
       },
       onError: (err: Error) => {
