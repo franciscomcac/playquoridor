@@ -846,6 +846,13 @@ type AfkState = { slot: PlayerId; deadline: number } | null;
 const AFK_IDLE_MS = 45_000;
 const AFK_COUNTDOWN_MS = 15_000;
 
+// Total round-start intro duration (including out animation) per mode. Used
+// by the parent to keep the CoinflipOverlay / FourPlayerRoundStart mounted
+// until the fade-out finishes, and to offset the first turn's clock start.
+function introDurationMs(mode: Mode): number {
+  return mode === 4 ? 7300 : 5400;
+}
+
 function GameScreen({
   ident, code, isHost, mode: initialMode, initialWalls, initialRounds, onLeave,
   quickMatch, ranked, onBotFallback, onRankedTimeout, onRequeue,
@@ -897,7 +904,8 @@ function GameScreen({
   const startCoinflip = useCallback((starter: PlayerId) => {
     setCoinflip({ starter, animating: true });
     play("matchStart");
-    window.setTimeout(() => setCoinflip((cf) => (cf ? { ...cf, animating: false } : cf)), 4200);
+    const dur = introDurationMs(stateRef.current.mode as Mode);
+    window.setTimeout(() => setCoinflip((cf) => (cf ? { ...cf, animating: false } : cf)), dur);
   }, []);
 
   const hostStartRound = useCallback((base?: GameState) => {
@@ -911,7 +919,7 @@ function GameScreen({
       ...rawNs,
       clocks: {
         remaining: Array.from({ length: rawNs.mode }, () => DEFAULT_CLOCK_MS),
-        turnStartedAt: Date.now() + 4200,
+        turnStartedAt: Date.now() + introDurationMs(rawNs.mode as Mode),
         total: DEFAULT_CLOCK_MS,
       },
     };
@@ -3049,8 +3057,8 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
   const startCoinflip = useCallback((starter: PlayerId) => {
     setCoinflip({ starter, animating: true });
     play("matchStart");
-    window.setTimeout(() => setCoinflip((cf) => (cf ? { ...cf, animating: false } : cf)), 4200);
-  }, []);
+    window.setTimeout(() => setCoinflip((cf) => (cf ? { ...cf, animating: false } : cf)), introDurationMs(mode));
+  }, [mode]);
 
   const startRound = useCallback((base?: GameState) => {
     const src = base ?? stateRef.current;
@@ -3061,7 +3069,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
       ...ns,
       clocks: {
         remaining: Array.from({ length: mode }, () => DEFAULT_CLOCK_MS),
-        turnStartedAt: Date.now() + 4200,
+        turnStartedAt: Date.now() + introDurationMs(mode),
         total: DEFAULT_CLOCK_MS,
       },
     };
@@ -3383,8 +3391,8 @@ function SpectatorGame({ ident, code, onLeave }: {
   const startCoinflip = useCallback((starter: PlayerId) => {
     setCoinflip({ starter, animating: true });
     play("matchStart");
-    window.setTimeout(() => setCoinflip((cf) => (cf ? { ...cf, animating: false } : cf)), 4200);
-  }, []);
+    window.setTimeout(() => setCoinflip((cf) => (cf ? { ...cf, animating: false } : cf)), introDurationMs(mode));
+  }, [mode]);
 
   useEffect(() => {
     let cancelled = false;
