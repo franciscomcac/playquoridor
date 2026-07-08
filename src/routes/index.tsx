@@ -276,6 +276,13 @@ function TopBar() {
         >
           Sign in
         </Link>
+        <Link
+          to="/auth"
+          search={{ mode: "signup" }}
+          className="rounded-lg border border-emerald-500/60 bg-gradient-to-b from-emerald-500/20 to-emerald-600/10 px-5 py-2.5 text-xs font-semibold uppercase tracking-widest text-emerald-100 shadow-lg shadow-emerald-900/30 transition-colors hover:border-emerald-400 hover:from-emerald-500/30 hover:to-emerald-600/20 hover:text-white"
+        >
+          Sign up
+        </Link>
       </div>
     </nav>
   );
