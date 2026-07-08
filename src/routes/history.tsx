@@ -100,27 +100,49 @@ function HistoryPage() {
         {(rows ?? []).map((m) => {
           const mine = m.players.find((p) => p.player_id === me.playerId);
           const iWon = m.winner_player_id === me.playerId;
+          const iForfeited = !!mine?.forfeited;
+          const outcome: "win" | "loss" | "forfeit" = iWon ? "win" : iForfeited ? "forfeit" : "loss";
+          const opp = m.players.find((p) => p.slot !== mine?.slot);
+          const oppName = opp?.name ?? (m.mode > 2 ? "Room" : "Opponent");
+          const myRounds = mine?.rounds_won ?? 0;
+          const oppRounds = opp?.rounds_won ?? 0;
           const dateStr = new Date(m.ended_at).toLocaleString();
           const isOpen = openId === m.match_id;
+          const tone =
+            outcome === "win"
+              ? { bar: "bg-emerald-500", chip: "bg-emerald-500/15 text-emerald-300 ring-emerald-500/40", label: "Win",     border: "border-emerald-500/25 hover:border-emerald-400/50", glow: "shadow-[inset_3px_0_0_0_theme(colors.emerald.500)]" }
+              : outcome === "forfeit"
+                ? { bar: "bg-amber-500",   chip: "bg-amber-500/15 text-amber-300 ring-amber-500/40",   label: "Forfeit", border: "border-amber-500/25 hover:border-amber-400/50",   glow: "shadow-[inset_3px_0_0_0_theme(colors.amber.500)]" }
+                : { bar: "bg-rose-500",    chip: "bg-rose-500/15 text-rose-300 ring-rose-500/40",     label: "Loss",    border: "border-rose-500/25 hover:border-rose-400/50",     glow: "shadow-[inset_3px_0_0_0_theme(colors.rose.500)]" };
           return (
-            <li key={m.match_id} className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/50">
+            <li key={m.match_id} className={"overflow-hidden rounded-xl border bg-zinc-900/50 transition-colors " + tone.border + " " + tone.glow}>
               <button
                 onClick={() => setOpenId(isOpen ? null : m.match_id)}
                 className="flex w-full items-center justify-between gap-4 px-4 py-3 text-left hover:bg-zinc-900"
               >
-                <div className="flex items-center gap-3">
-                  <span className={"grid h-8 w-8 place-items-center rounded-full text-[10px] font-black uppercase " + (iWon ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/40" : "bg-zinc-800 text-zinc-400")}>
-                    {iWon ? "W" : "L"}
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className={"grid h-10 w-10 flex-none place-items-center rounded-full text-[11px] font-black uppercase tracking-wide ring-1 " + tone.chip}>
+                    {outcome === "win" ? "W" : outcome === "forfeit" ? "FF" : "L"}
                   </span>
-                  <div>
-                    <p className="text-sm font-semibold text-zinc-100">{m.mode}p · {m.rounds} rounds {m.ranked ? "· Ranked" : ""}</p>
-                    <p className="text-[11px] text-zinc-500">{dateStr}</p>
+                  <div className="min-w-0">
+                    <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-zinc-100">
+                      <span className={"rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-widest ring-1 " + tone.chip}>{tone.label}</span>
+                      <span className="truncate">vs {oppName}</span>
+                      {m.ranked && <span className="rounded-md bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-primary ring-1 ring-primary/40">Ranked</span>}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-zinc-500">
+                      <span className="font-mono text-zinc-400">{myRounds}<span className="mx-1 text-zinc-600">–</span>{oppRounds}</span>
+                      <span className="mx-2 text-zinc-700">·</span>
+                      {m.mode}p · {m.rounds} rounds
+                      <span className="mx-2 text-zinc-700">·</span>
+                      {dateStr}
+                    </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-none items-center gap-3">
                   {mine && (
                     <span className="hidden text-[11px] text-zinc-400 sm:inline">
-                      {mine.rounds_won} rounds · {mine.walls_placed} walls
+                      {mine.walls_placed} walls · {mine.pawns_eliminated} pops
                     </span>
                   )}
                   <svg className={"h-4 w-4 text-zinc-600 transition-transform " + (isOpen ? "rotate-180" : "")} viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4z" /></svg>
