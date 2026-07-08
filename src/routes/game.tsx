@@ -599,7 +599,11 @@ function CreateRoom({ mode, walls, rounds, setMode, setWalls, setRounds, onBack,
       </div>
       <div className="mt-6 rounded-lg border border-border bg-secondary/20 px-4 py-3 text-xs text-muted-foreground">
         <p className="text-[10px] uppercase tracking-[0.2em]">Format</p>
-        <p className="mt-1 text-sm font-semibold text-foreground">Best of 3 · first to 2 · max 3 rounds</p>
+        <p className="mt-1 text-sm font-semibold text-foreground">
+          {mode === 4
+            ? "4 players · first to 2 wins · max 5 rounds"
+            : "Best of 3 · first to 2 · max 3 rounds"}
+        </p>
       </div>
       <div className="mt-6 rounded-lg border border-dashed border-border bg-background/40 p-4">
         <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Room code</p>
