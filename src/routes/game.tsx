@@ -86,8 +86,15 @@ function Home() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [pending, setPending] = useState<string | null>(null);
   const navigate = useNavigate();
+  const bootRan = useRef(false);
+  const goHome = () => { void navigate({ to: "/" }); };
 
   useEffect(() => {
+    // StrictMode invokes mount effects twice in dev; guard so we don't
+    // consume the sessionStorage handoff on the first pass and then
+    // redirect away on the second.
+    if (bootRan.current) return;
+    bootRan.current = true;
     setIdent(getStoredIdentity());
     let hasPending = false;
     try {
@@ -139,19 +146,19 @@ function Home() {
                 setMode={(m) => setView({ ...view, mode: m, walls: defaultWallsFor(m) })}
                 setWalls={(w) => setView({ ...view, walls: w })}
                 setRounds={(r) => setView({ ...view, rounds: r })}
-                onBack={() => setView({ name: "menu" })}
+                onBack={goHome}
                 onStart={(code) => setView({ name: "game", isHost: true, code, mode: view.mode, walls: view.walls, rounds: view.rounds })}
               />
             )}
             {view.name === "join" && (
               <JoinRoom
-                onBack={() => setView({ name: "menu" })}
+                onBack={goHome}
                 onJoin={(code) => setView({ name: "game", isHost: false, code, mode: 2, walls: 10, rounds: 5 })}
               />
             )}
             {view.name === "spectate" && (
               <SpectateRoom
-                onBack={() => setView({ name: "menu" })}
+                onBack={goHome}
                 onJoin={(code) => setView({ name: "spectating", code })}
               />
             )}
@@ -160,7 +167,7 @@ function Home() {
                 key={"spec-" + view.code}
                 ident={ident}
                 code={view.code}
-                onLeave={() => setView({ name: "menu" })}
+                onLeave={goHome}
               />
             )}
             {view.name === "quick" && (
@@ -168,7 +175,7 @@ function Home() {
                 mode={view.mode}
                 ranked={!!view.ranked}
                 ident={ident}
-                onBack={() => setView({ name: "menu" })}
+                onBack={goHome}
                 onJoin={(code) => setView({ name: "game", isHost: false, code, mode: view.mode, walls: defaultWallsFor(view.mode), rounds: 5, ranked: !!view.ranked })}
                 onHost={(code) => setView({ name: "game", isHost: true, code, mode: view.mode, walls: defaultWallsFor(view.mode), rounds: 5, quickMatch: true, ranked: !!view.ranked })}
               />
@@ -189,7 +196,7 @@ function Home() {
                   difficulty: randomDifficulty().value,
                   opponentName: randomGamerName(),
                 })}
-                onLeave={() => setView({ name: "menu" })}
+                onLeave={goHome}
               />
             )}
             {view.name === "bot" && (
@@ -197,7 +204,7 @@ function Home() {
                 ident={ident}
                 difficulty={view.difficulty}
                 opponentName={view.opponentName}
-                onLeave={() => setView({ name: "menu" })}
+                onLeave={goHome}
               />
             )}
           </div>
