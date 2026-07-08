@@ -176,7 +176,6 @@ function Home() {
           </div>
         )}
 
-        <SeoContent />
         <Footer />
       </div>
 
