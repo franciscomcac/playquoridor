@@ -590,23 +590,70 @@ function QuickMatch({ mode, ranked, ident, onBack, onJoin, onHost }: {
 }) {
   const [status, setStatus] = useState("Searching…");
   const cancelled = useRef(false);
+  const registeredCode = useRef<string | null>(null);
+  const transitioned = useRef(false);
   useEffect(() => {
     cancelled.current = false;
+    transitioned.current = false;
+    registeredCode.current = null;
     (async () => {
       const existing = await findOpenRoom(mode, !!ranked);
       if (cancelled.current) return;
-      if (existing) { setStatus("Joining room…"); onJoin(existing); return; }
+      if (existing) {
+        setStatus("Joining room…");
+        transitioned.current = true;
+        onJoin(existing);
+        return;
+      }
       const code = makeRoomCode();
       setStatus("No matches — hosting a new room…");
-      await registerOpenRoom(code, mode, ident.name, !!ranked);
-      if (cancelled.current) { await removeOpenRoom(code); return; }
+      try {
+        await registerOpenRoom(code, mode, ident.name, !!ranked);
+        registeredCode.current = code;
+      } catch {
+        // If registering the queue slot fails, fall back to hosting a
+        // local room anyway so the player is never stuck.
+      }
+      if (cancelled.current) {
+        if (registeredCode.current) await removeOpenRoom(registeredCode.current);
+        registeredCode.current = null;
+        return;
+      }
+      transitioned.current = true;
       onHost(code);
     })();
-    return () => { cancelled.current = true; };
+    const onUnload = () => {
+      if (registeredCode.current && !transitioned.current) {
+        // Best-effort — the tab is closing, fire-and-forget.
+        void removeOpenRoom(registeredCode.current);
+      }
+    };
+    window.addEventListener("beforeunload", onUnload);
+    return () => {
+      cancelled.current = true;
+      window.removeEventListener("beforeunload", onUnload);
+      if (registeredCode.current && !transitioned.current) {
+        void removeOpenRoom(registeredCode.current);
+        registeredCode.current = null;
+      }
+    };
   }, [mode, ranked, ident.name, onJoin, onHost]);
 
   return (
-    <SearchingAnimation status={status} ranked={!!ranked} mode={mode} onBack={onBack} />
+    <SearchingAnimation
+      status={status}
+      ranked={!!ranked}
+      mode={mode}
+      onBack={() => {
+        // Explicit back: make sure the queue slot is released before we
+        // navigate away. Cleanup will also fire but this is defensive.
+        if (registeredCode.current && !transitioned.current) {
+          void removeOpenRoom(registeredCode.current);
+          registeredCode.current = null;
+        }
+        onBack();
+      }}
+    />
   );
 }
 
