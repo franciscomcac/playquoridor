@@ -218,7 +218,7 @@ export function MoveHistoryPanel({ state, nameOf, defaultOpen = false, compact =
         </div>
 
         {/* Moves list — fixed height reserves space so adding moves never shifts. */}
-        <ol className="mt-2 grid h-40 grid-cols-2 gap-x-3 gap-y-0.5 overflow-y-auto pr-1 text-xs">
+        <ol className="mt-2 grid h-[4.5rem] grid-cols-2 gap-x-3 gap-y-0.5 overflow-y-auto pr-1 text-xs">
           {history.length === 0 ? (
             <li className="col-span-2 pt-4 text-center text-muted-foreground/60">
               Moves will appear here.
