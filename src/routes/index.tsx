@@ -116,9 +116,9 @@ function LobbyInner() {
           </h1>
           <button
             onClick={() => goPlay("quick2")}
-            className="mt-6 inline-flex items-center gap-2.5 rounded-xl bg-emerald-600 px-8 py-4 text-base font-bold text-white shadow-lg shadow-emerald-900/40 transition-all hover:-translate-y-0.5 hover:bg-emerald-500"
+            className="group mt-8 inline-flex items-center gap-3 rounded-2xl bg-gradient-to-b from-emerald-500 to-emerald-600 px-12 py-5 text-lg font-bold text-white shadow-[0_20px_50px_-15px_rgba(16,185,129,0.6)] ring-1 ring-emerald-400/50 transition-all hover:-translate-y-0.5 hover:from-emerald-400 hover:to-emerald-500 hover:shadow-[0_25px_55px_-15px_rgba(16,185,129,0.75)] active:translate-y-0"
           >
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M8 5v14l11-7z" /></svg>
+            <svg className="h-5 w-5 transition-transform group-hover:scale-110" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M8 5v14l11-7z" /></svg>
             Play Now
           </button>
           <p className="mt-3 text-xs text-zinc-500">Free — no account needed</p>
@@ -179,18 +179,18 @@ function LobbyInner() {
             </div>
 
             <div className="mt-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">Find Match</div>
-            <div className="mt-2 grid grid-cols-3 gap-2">
+            <div className="mt-3 grid grid-cols-3 gap-3">
               <ModeButton label="2 Players" sub="Casual" onClick={() => goPlay("quick2")} />
               <ModeButton label="4 Players" sub="Free-for-all" onClick={() => goPlay("quick4")} />
               <ModeButton label="Ranked" sub="ELO 1v1" tone="primary" onClick={() => goPlay("ranked2")} />
             </div>
 
-            <div className="mt-5 border-t border-zinc-800 pt-4">
+            <div className="mt-6 border-t border-zinc-800 pt-5">
               <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Play With Friends</div>
-              <div className="mt-2 flex gap-2">
+              <div className="mt-3 flex gap-2">
                 <button
                   onClick={() => goPlay("create")}
-                  className="rounded-lg bg-amber-500 px-4 py-2 text-xs font-bold uppercase tracking-widest text-zinc-950 transition-colors hover:bg-amber-400"
+                  className="rounded-xl bg-amber-500 px-5 py-3 text-xs font-bold uppercase tracking-widest text-zinc-950 shadow-lg shadow-amber-900/30 transition-all hover:-translate-y-0.5 hover:bg-amber-400"
                 >
                   + Create Room
                 </button>
@@ -203,12 +203,12 @@ function LobbyInner() {
                     onChange={(e) => setCode(e.target.value)}
                     placeholder="Enter room code…"
                     maxLength={5}
-                    className="flex-1 rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 font-mono text-sm uppercase tracking-[0.3em] text-amber-400 placeholder:normal-case placeholder:tracking-normal placeholder:text-zinc-600 focus:border-amber-500/60 focus:outline-none"
+                    className="flex-1 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 font-mono text-sm uppercase tracking-[0.3em] text-amber-400 placeholder:normal-case placeholder:tracking-normal placeholder:text-zinc-600 focus:border-amber-500/60 focus:outline-none"
                   />
                   <button
                     type="submit"
                     disabled={cleanCode.length !== 5}
-                    className="rounded-lg bg-zinc-800 px-4 py-2 text-xs font-bold uppercase tracking-widest transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="rounded-xl bg-zinc-800 px-5 py-3 text-xs font-bold uppercase tracking-widest text-zinc-100 transition-all hover:-translate-y-0.5 hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0"
                   >
                     Join
                   </button>
