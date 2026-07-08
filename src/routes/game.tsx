@@ -3427,10 +3427,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
     for (const bot of BOT_SLOTS) {
       if (state.leftMatch[bot]) continue;
       if (readySlots.includes(bot)) continue;
-      const delay = 1400 + Math.random() * 2200;
-      timers.push(window.setTimeout(() => {
-        setReadySlots((prev) => (prev.includes(bot) ? prev : [...prev, bot]));
-      }, delay));
+      setReadySlots((prev) => (prev.includes(bot) ? prev : [...prev, bot]));
     }
     return () => { for (const t of timers) window.clearTimeout(t); };
   }, [state.winner, state.matchWinner, state.leftMatch, readySlots, BOT_SLOTS]);
