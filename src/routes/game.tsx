@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PLAYER_COLORS, QuoridorBoard } from "@/components/QuoridorBoard";
 import { MoveHistory, MoveHistoryPanel, type HistorySnapshot } from "@/components/MoveHistory";
 import { ChatPanel, type ChatEntry } from "@/components/ChatPanel";
+import { MobileAsideSheet } from "@/components/MobileAsideSheet";
 import { useServerFn } from "@tanstack/react-start";
 import { moderateChatMessage, myChatBan } from "@/lib/moderation.functions";
 import { renderResultCard, shareResultCard } from "@/lib/result-card";
