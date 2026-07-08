@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   BOARD, goalsFor, startsFor,
   type GameState, type MoveRecord, type PlayerId, type Pos, type Wall,
@@ -37,7 +37,7 @@ function MiniBoard({ state, snapshot, highlight }: {
   state: GameState; snapshot: Snapshot; highlight: MoveRecord | null;
 }) {
   const goals = goalsFor(state.mode);
-  const cells = [] as JSX.Element[];
+  const cells: ReactNode[] = [];
   for (let r = 0; r < BOARD; r++) {
     for (let c = 0; c < BOARD; c++) {
       cells.push(
@@ -125,9 +125,7 @@ function MiniBoard({ state, snapshot, highlight }: {
     <div
       className="grid aspect-square w-full rounded-md border border-border bg-background p-2"
       style={{
-        gridTemplateColumns: `repeat(${BOARD}, 1fr ${BOARD - 1 > 0 ? "0.14fr" : ""}) 1fr`.replace(/1fr$/, "1fr").trim()
-          ? `repeat(${BOARD - 1}, 1fr 0.14fr) 1fr`
-          : undefined,
+        gridTemplateColumns: `repeat(${BOARD - 1}, 1fr 0.14fr) 1fr`,
         gridTemplateRows: `repeat(${BOARD - 1}, 1fr 0.14fr) 1fr`,
         gap: 0,
       }}
