@@ -1580,6 +1580,11 @@ function WinOverlay({ state, you, matchOver, onPrimary, primaryLabel, onLeave, n
         ? "You forfeited the round."
         : `${loserName} forfeited the round.`;
     }
+    if (reason === "left") {
+      return youLost
+        ? "You left the match."
+        : `${loserName} left the match — you win by default.`;
+    }
     return youWon ? "You reached your goal." : `${nameOf(winner)} reached their goal first.`;
   })();
   const sub = matchOver
