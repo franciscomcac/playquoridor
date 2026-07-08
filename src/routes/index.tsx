@@ -264,6 +264,88 @@ function TopBar() {
   );
 }
 
+function ModeButton({
+  label, tone, badge, onClick,
+}: { label: string; tone: "primary" | "ghost"; badge?: string; onClick: () => void }) {
+  const base =
+    "group relative inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold tracking-tight transition-all hover:-translate-y-0.5";
+  const styles =
+    tone === "primary"
+      ? "bg-amber-500 text-zinc-950 shadow-lg shadow-amber-500/10 hover:bg-amber-400"
+      : "border border-zinc-800 bg-zinc-900/60 text-zinc-100 hover:border-zinc-600";
+  return (
+    <button onClick={onClick} className={`${base} ${styles}`}>
+      {label}
+      {badge && (
+        <span className="rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.2em] text-amber-400">
+          {badge}
+        </span>
+      )}
+      <svg className="h-3.5 w-3.5 opacity-70 transition-transform group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M8 5v14l11-7z" /></svg>
+    </button>
+  );
+}
+
+function BoardArt() {
+  // 9x9 board silhouette with two pawns and a couple of walls — pure geometry, no state
+  const cells = Array.from({ length: 81 });
+  return (
+    <div className="relative mx-auto w-full max-w-md">
+      <div className="absolute -inset-8 rounded-[2rem] bg-gradient-to-br from-amber-500/10 via-transparent to-transparent blur-2xl" aria-hidden />
+      <div className="relative rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4 shadow-2xl shadow-black/40">
+        <div className="grid aspect-square grid-cols-9 gap-1.5">
+          {cells.map((_, i) => {
+            const row = Math.floor(i / 9);
+            const col = i % 9;
+            const isTop = row === 0 && col === 4;
+            const isBot = row === 8 && col === 4;
+            return (
+              <div
+                key={i}
+                className={
+                  "relative rounded-[3px] " +
+                  (isTop || isBot ? "bg-zinc-800" : "bg-zinc-900/70 ring-1 ring-inset ring-zinc-800/60")
+                }
+              >
+                {isTop && <span className="absolute inset-1 rounded-full bg-zinc-200 shadow-[0_0_10px_rgba(255,255,255,0.35)]" />}
+                {isBot && <span className="absolute inset-1 rounded-full bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.6)]" />}
+              </div>
+            );
+          })}
+        </div>
+        {/* Two decorative walls */}
+        <span className="pointer-events-none absolute left-[24%] top-[38%] h-1.5 w-[20%] rounded-full bg-amber-500/80" aria-hidden />
+        <span className="pointer-events-none absolute right-[20%] top-[58%] h-1.5 w-[20%] rounded-full bg-zinc-200/80" aria-hidden />
+      </div>
+    </div>
+  );
+}
+
+function _LegacyTopBar() {
+  return (
+    <nav className="flex items-center justify-between">
+      <Link to="/" className="flex items-center gap-2.5">
+        <img
+          src="/favicon.png"
+          alt="Quoridor"
+          width={32}
+          height={32}
+          className="h-8 w-8 rounded-md ring-1 ring-zinc-800"
+        />
+        <span className="text-sm font-semibold tracking-tight text-zinc-100">playquoridor.online</span>
+      </Link>
+      <div className="flex items-center gap-2">
+        <Link to="/auth" className="rounded-md border border-zinc-800 bg-zinc-900/60 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-zinc-300 hover:bg-zinc-800">
+          Sign in
+        </Link>
+        <Link to="/game" className="rounded-md bg-amber-500 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-950 hover:bg-amber-400">
+          Lobby
+        </Link>
+      </div>
+    </nav>
+  );
+}
+
 function QuickTile({
   to, label, sub, icon, onClick,
 }: { to: string; label: string; sub: string; icon: React.ReactNode; onClick?: () => void }) {
