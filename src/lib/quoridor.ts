@@ -265,7 +265,7 @@ export function applyMove(state: GameState, player: PlayerId, move: Move): GameS
     if (winner !== null) {
       score = [...state.score];
       score[winner] += 1;
-      if (score[winner] >= winsNeeded(state.totalRounds)) matchWinner = winner;
+      if (score[winner] >= winsNeeded(state.totalRounds, state.mode)) matchWinner = winner;
     }
     return { ...state, pawns, active,
       turn: winner !== null ? player : nextTurn(state.mode, active, player),
@@ -309,7 +309,7 @@ export function applyForfeit(state: GameState, player: PlayerId, permanent = fal
     if (remaining.length === 1) {
       winner = remaining[0];
       score = [...state.score]; score[winner] += 1;
-      if (score[winner] >= winsNeeded(state.totalRounds)) matchWinner = winner;
+      if (score[winner] >= winsNeeded(state.totalRounds, state.mode)) matchWinner = winner;
       turn = winner;
     } else if (remaining.length === 0) {
       // Everyone left — no winner.
