@@ -18,7 +18,7 @@ export type ResultCardInput = {
   winner: PlayerId;
   you: PlayerId;
   nameOf: (s: PlayerId) => string;
-  reason?: "goal" | "time" | "forfeit" | "afk";
+  reason?: "goal" | "time" | "forfeit" | "afk" | "left";
   matchOver: boolean;
 };
 
