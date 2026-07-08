@@ -167,11 +167,9 @@ export const saveAvatar = createServerFn({ method: "POST" })
 // ---------- Current chat-ban state for the caller ----------
 export const myChatBan = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<ChatBanState> => {
-    const { data } = await context.supabase.rpc("my_active_chat_ban");
-    const row = (data ?? [])[0] as { kind: Kind; active_until: string | null; reason: string | null } | undefined;
-    if (!row) return { active: false };
-    return { active: true, kind: row.kind, until: row.active_until, reason: row.reason };
+  .handler(async (): Promise<ChatBanState> => {
+    // Chat bans disabled — always report clear.
+    return { active: false };
   });
 
 // ---------- Username moderation (no penalty — just accept/reject) ----------
