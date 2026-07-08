@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       match_players: {
         Row: {
+          auth_user_id: string | null
           forfeited: boolean
           match_id: string
           name: string
@@ -27,6 +28,7 @@ export type Database = {
           walls_placed: number
         }
         Insert: {
+          auth_user_id?: string | null
           forfeited?: boolean
           match_id: string
           name: string
@@ -38,6 +40,7 @@ export type Database = {
           walls_placed?: number
         }
         Update: {
+          auth_user_id?: string | null
           forfeited?: boolean
           match_id?: string
           name?: string
@@ -99,6 +102,7 @@ export type Database = {
       }
       open_rooms: {
         Row: {
+          auth_user_id: string | null
           code: string
           created_at: string
           host_name: string
@@ -108,6 +112,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          auth_user_id?: string | null
           code: string
           created_at?: string
           host_name: string
@@ -117,6 +122,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          auth_user_id?: string | null
           code?: string
           created_at?: string
           host_name?: string
@@ -129,6 +135,7 @@ export type Database = {
       }
       player_stats: {
         Row: {
+          auth_user_id: string | null
           forfeits: number
           losses: number
           matches: number
@@ -139,6 +146,7 @@ export type Database = {
           wins: number
         }
         Insert: {
+          auth_user_id?: string | null
           forfeits?: number
           losses?: number
           matches?: number
@@ -149,6 +157,7 @@ export type Database = {
           wins?: number
         }
         Update: {
+          auth_user_id?: string | null
           forfeits?: number
           losses?: number
           matches?: number
@@ -170,18 +179,21 @@ export type Database = {
       }
       players: {
         Row: {
+          auth_user_id: string | null
           created_at: string
           id: string
           name: string
           updated_at: string
         }
         Insert: {
+          auth_user_id?: string | null
           created_at?: string
           id: string
           name: string
           updated_at?: string
         }
         Update: {
+          auth_user_id?: string | null
           created_at?: string
           id?: string
           name?: string
