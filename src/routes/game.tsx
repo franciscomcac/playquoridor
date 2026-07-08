@@ -67,56 +67,6 @@ export const Route = createFileRoute("/game")({
       { name: "twitter:description", content: SEO_OG_DESCRIPTION },
     ],
     links: [{ rel: "canonical", href: SITE_URL }],
-    scripts: [
-      {
-        type: "application/ld+json",
-        children: JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "WebApplication",
-          name: "Play Quoridor Online",
-          url: SITE_URL,
-          description:
-            "Free online Quoridor game. Move your pawn and place walls to block your opponent from reaching the other side. Strategy board game playable in browser.",
-          applicationCategory: "GameApplication",
-          genre: "Strategy",
-          operatingSystem: "Web Browser",
-          offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
-        }),
-      },
-      {
-        type: "application/ld+json",
-        children: JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "FAQPage",
-          mainEntity: [
-            {
-              "@type": "Question",
-              name: "What is the game where you place walls to block your opponent?",
-              acceptedAnswer: {
-                "@type": "Answer",
-                text: "It's called Quoridor — a two- or four-player strategy board game where each player moves a pawn across a 9×9 grid while placing walls (fences) to slow the opponent down. First pawn to reach the opposite side wins.",
-              },
-            },
-            {
-              "@type": "Question",
-              name: "What is the balls and walls game called?",
-              acceptedAnswer: {
-                "@type": "Answer",
-                text: "The board game people describe as 'balls and walls' — round pawns you push forward while dropping wall segments to block the other player — is Quoridor. You can play it free in your browser at playquoridor.online.",
-              },
-            },
-            {
-              "@type": "Question",
-              name: "How do you play the wall blocking board game?",
-              acceptedAnswer: {
-                "@type": "Answer",
-                text: "On your turn you either move your pawn one square (up, down, left, or right) or place one of your walls between two rows or columns to block a path. Walls cannot completely trap the opponent — they must always have a route to their goal edge. First player to reach the opposite side wins.",
-              },
-            },
-          ],
-        }),
-      },
-    ],
   }),
 });
 
