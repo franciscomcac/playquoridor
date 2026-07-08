@@ -895,6 +895,7 @@ function GameScreen({
 
   // ---------- Rank-up overlay (ranked 1v1 only) ----------
   const preRatingRef = useRef<number | null>(null);
+  const preRankedMatchesRef = useRef<number>(0);
   const rankUpFiredRef = useRef(false);
   const [rankUp, setRankUp] = useState<{ oldRating: number; newRating: number } | null>(null);
   useEffect(() => {
@@ -905,6 +906,8 @@ function GameScreen({
       if (cancel) return;
       const r = (s as { rating?: number } | null)?.rating;
       preRatingRef.current = typeof r === "number" ? r : 1000;
+      const rm = (s as { ranked_matches?: number } | null)?.ranked_matches;
+      preRankedMatchesRef.current = typeof rm === "number" ? rm : 0;
     })();
     return () => { cancel = true; };
   }, [ranked, initialMode, ident.id]);
@@ -1636,6 +1639,7 @@ function GameScreen({
     if (state.matchWinner !== you) return;
     rankUpFiredRef.current = true;
     const pre = preRatingRef.current ?? 1000;
+    const preRM = preRankedMatchesRef.current ?? 0;
     let cancelled = false;
     let attempts = 0;
     const poll = async () => {
@@ -1643,8 +1647,14 @@ function GameScreen({
       const s = await fetchMyStats(ident.id).catch(() => null);
       if (cancelled) return;
       const next = (s as { rating?: number } | null)?.rating;
+      const nextRM = (s as { ranked_matches?: number } | null)?.ranked_matches ?? preRM;
       if (typeof next === "number" && next !== pre) {
-        if (tierIndexFor(next) > tierIndexFor(pre)) {
+        // Don't celebrate rating jumps while still in placement — the
+        // player has no tier yet. Fire on placement-completion or on
+        // any real tier-up thereafter.
+        const placementCompleted = preRM < 5 && nextRM >= 5;
+        const tieredUp = preRM >= 5 && tierIndexFor(next) > tierIndexFor(pre);
+        if (placementCompleted || tieredUp) {
           setRankUp({ oldRating: pre, newRating: next });
         }
         return;

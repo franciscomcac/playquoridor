@@ -142,6 +142,21 @@ export function tierFromRating(rating: number): Tier {
   };
 }
 
+/* ---------- placement (unranked) helpers ---------- */
+// New players are unranked until they finish this many ranked 1v1 games.
+// During placement, the server applies a larger K-factor so the rating
+// moves toward their true skill quickly.
+export const PLACEMENT_GAMES = 5;
+export const UNRANKED_COLOR = "#83838e";
+
+export function isPlacement(rankedMatches?: number | null): boolean {
+  return (rankedMatches ?? 0) < PLACEMENT_GAMES;
+}
+
+export function placementRemaining(rankedMatches?: number | null): number {
+  return Math.max(0, PLACEMENT_GAMES - (rankedMatches ?? 0));
+}
+
 export function avatarColorFor(name: string, override?: string | null): string {
   if (override) return override;
   let h = 0;

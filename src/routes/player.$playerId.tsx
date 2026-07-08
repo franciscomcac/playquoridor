@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Avatar, tierFromRating } from "@/components/LobbyChrome";
+import { Avatar, PLACEMENT_GAMES, UNRANKED_COLOR, isPlacement, placementRemaining, tierFromRating } from "@/components/LobbyChrome";
 import { fetchProfile, fetchRecentMatches, type RecentMatchRow } from "@/lib/stats";
 
 export const Route = createFileRoute("/player/$playerId")({
@@ -38,10 +38,12 @@ function PlayerPage() {
 
   if (loading) return <Shell><p className="text-zinc-500">Loading…</p></Shell>;
   const p = profile?.player as { name?: string; country?: string | null; bio?: string | null; avatar_color?: string | null; avatar_url?: string | null } | null | undefined;
-  const s = profile?.stats as { rating?: number; matches?: number; wins?: number; losses?: number; walls_placed?: number; pawns_eliminated?: number } | null | undefined;
+  const s = profile?.stats as { rating?: number; matches?: number; wins?: number; losses?: number; walls_placed?: number; pawns_eliminated?: number; ranked_matches?: number } | null | undefined;
   if (!p) return <Shell><p className="text-rose-400">Player not found.</p></Shell>;
 
   const rating = s?.rating ?? 1000;
+  const rankedMatches = s?.ranked_matches ?? 0;
+  const unranked = isPlacement(rankedMatches);
   const tier = tierFromRating(rating);
   const winRate = s && (s.matches ?? 0) > 0 ? Math.round((100 * (s.wins ?? 0)) / (s.matches ?? 1)) : null;
 
@@ -51,12 +53,14 @@ function PlayerPage() {
         <Avatar name={p.name ?? "player"} color={p.avatar_color} imageUrl={p.avatar_url ?? undefined} size={72} />
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-2xl font-bold">{p.name ?? "player"}</h1>
-          <p className="text-[11px] uppercase tracking-widest text-zinc-500">
-            {tier.name} · {rating} · {p.country ?? "—"}
+          <p className="text-[11px] uppercase tracking-widest" style={{ color: unranked ? UNRANKED_COLOR : undefined }}>
+            {unranked
+              ? `Unranked · ${placementRemaining(rankedMatches)}/${PLACEMENT_GAMES} placements left · ${p.country ?? "—"}`
+              : `${tier.name} · ${rating} · ${p.country ?? "—"}`}
           </p>
           {p.bio && <p className="mt-2 text-sm text-zinc-300">{p.bio}</p>}
         </div>
-        {profile?.rank && (
+        {!unranked && profile?.rank && (
           <div className="text-right">
             <p className="text-[10px] uppercase tracking-widest text-zinc-500">Rank</p>
             <p className="text-2xl font-bold">#{profile.rank}</p>
