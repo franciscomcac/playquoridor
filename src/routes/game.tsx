@@ -1626,9 +1626,7 @@ function GameScreen({
               />
             )}
             {matchOver && (
-              <EndScreen state={state} you={you} nameOf={nameOf}
-                snapshot={matchHistory.getSnapshot()}
-                onPrimary={newMatchAction} onLeave={onLeave} />
+              <div className="pointer-events-none absolute inset-0 rounded-lg bg-background/70 backdrop-blur-sm" />
             )}
           </div>
           <div className="hidden sm:contents">
@@ -1636,6 +1634,12 @@ function GameScreen({
           </div>
         </div>
       </div>
+
+      {matchOver && (
+        <EndScreen state={state} you={you} nameOf={nameOf}
+          snapshot={matchHistory.getSnapshot()}
+          onPrimary={newMatchAction} onLeave={onLeave} />
+      )}
 
       <MobileAsideSheet
         chat={<ChatPanel entries={chat} onSend={sendChat} disabled={status !== "connected" || matchMuted || !!chatBan} you={you} />}
