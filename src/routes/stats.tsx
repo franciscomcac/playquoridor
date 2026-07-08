@@ -74,7 +74,7 @@ function LeaderboardPage() {
     <LobbyChrome>
       <div className="mx-auto max-w-[1240px] px-8 pb-14 pt-[70px]">
         <div className="text-center">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.26em] text-[#f5a524]">Season 4 · Ends in 18 days</div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.26em] text-[#f5a524]">{season.label} · {season.endsLabel}</div>
           <h1 className="mt-4 text-[42px] font-bold tracking-[-0.03em]">Leaderboard</h1>
           <div className="mt-4 flex items-center justify-center gap-2">
             <span className="h-[7px] w-[7px] rounded-full bg-[#2fd575] shadow-[0_0_8px_#2fd575]" />
