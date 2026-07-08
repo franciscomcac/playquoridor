@@ -254,6 +254,13 @@ function Header({ ident, onOpenSettings }: { ident: Identity | null; onOpenSetti
       </div>
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
         {ident && <WinsBadge playerId={ident.id} />}
+        <Link
+          to="/auth"
+          className="rounded-md border border-border bg-secondary/40 px-2.5 py-1.5 text-[10px] uppercase tracking-widest hover:bg-secondary sm:px-3"
+        >
+          <span className="hidden sm:inline">Sign in</span>
+          <span className="sm:hidden" aria-hidden>◐</span>
+        </Link>
         <button onClick={onOpenSettings} aria-label="Settings" className="rounded-md border border-border bg-secondary/40 px-2.5 py-1.5 text-[10px] uppercase tracking-widest hover:bg-secondary sm:px-3">
           <span className="hidden sm:inline">Settings</span>
           <span className="sm:hidden" aria-hidden>⚙</span>

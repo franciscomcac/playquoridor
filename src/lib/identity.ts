@@ -7,6 +7,46 @@ const NAME_KEY = "quoridor.playerName";
 
 export type Identity = { id: string; name: string };
 
+let authReady: Promise<string | null> | null = null;
+
+// Ensure a Supabase auth session exists (anonymous by default). Idempotent —
+// subsequent calls return the cached promise. Returns the auth.uid() or null
+// if sign-in failed (network / provider off). All writes should await this
+// before hitting the DB so RLS sees an authenticated user.
+export function ensureAuthSession(): Promise<string | null> {
+  if (authReady) return authReady;
+  authReady = (async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) return session.user.id;
+      const { data, error } = await supabase.auth.signInAnonymously();
+      if (error) { console.warn("anon sign-in failed", error); return null; }
+      return data.user?.id ?? null;
+    } catch (e) {
+      console.warn("ensureAuthSession failed", e);
+      return null;
+    }
+  })();
+  return authReady;
+}
+
+// Link the currently-authenticated user to the local player row. Safe to call
+// on every SIGNED_IN event; RLS allows the first claim and no-op thereafter.
+export async function linkAuthToPlayer(): Promise<void> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    const ident = getStoredIdentity();
+    if (!uid || !ident) return;
+    await supabase.from("players").upsert({
+      id: ident.id, name: ident.name, auth_user_id: uid,
+      updated_at: new Date().toISOString(),
+    });
+  } catch (e) {
+    console.warn("linkAuthToPlayer failed", e);
+  }
+}
+
 function randomUuid(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
@@ -36,9 +76,14 @@ export function setStoredIdentity(name: string): Identity {
   if (!id) { id = randomUuid(); localStorage.setItem(ID_KEY, id); }
   localStorage.setItem(NAME_KEY, clean);
   const ident = { id, name: clean };
-  void supabase.from("players")
-    .upsert({ id, name: clean, updated_at: new Date().toISOString() })
-    .then(({ error }) => { if (error) console.warn("player upsert failed", error); });
+  void (async () => {
+    const uid = await ensureAuthSession();
+    const { error } = await supabase.from("players").upsert({
+      id, name: clean, auth_user_id: uid,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) console.warn("player upsert failed", error);
+  })();
   return ident;
 }
 export function ensureUniqueName(taken: string[], candidate: string): string {
