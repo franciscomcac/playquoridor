@@ -1802,7 +1802,7 @@ function AfkBanner({ deadline, name }: { slot: PlayerId; deadline: number; name:
 }
 
 function ScoreCard({ state, you, nameOf }: { state: GameState; you: PlayerId; nameOf: (s: PlayerId) => string }) {
-  const target = winsNeeded(state.totalRounds);
+  const target = winsNeeded(state.totalRounds, state.mode);
   const prevScoreRef = useRef<number[]>(state.score);
   const [bumped, setBumped] = useState<number | null>(null);
   useEffect(() => {
