@@ -1452,10 +1452,8 @@ function GameScreen({
     const allReady = need.every((i) => readySlots.includes(i));
     if (!allReady || mergingRef.current) return;
     setMerging(true);
-    const t = window.setTimeout(() => {
-      hostStartRound();
-    }, 900);
-    return () => window.clearTimeout(t);
+    hostStartRound();
+    return;
   }, [isHost, readySlots, state.winner, state.matchWinner, state.leftMatch, state.mode, hostStartRound]);
 
   const handleMove = useCallback((move: Move) => {
@@ -1537,6 +1535,15 @@ function GameScreen({
     prevWinnerRef.current = state.winner;
     prevMatchWinnerRef.current = state.matchWinner;
   }, [state.winner, state.matchWinner, state.endReason]);
+
+  // Auto-ready for non-anim endings (time/afk/forfeit) — no score animation
+  // plays, so trigger the next round immediately.
+  useEffect(() => {
+    if (state.winner === null || state.matchWinner !== null) return;
+    if (roundEndAnim) return;
+    const r = state.endReason;
+    if (r === "time" || r === "afk" || r === "forfeit") requestReady();
+  }, [state.winner, state.matchWinner, state.endReason, roundEndAnim, requestReady]);
 
   // ---------- Record match to Supabase (host only, once per match) ----------
   useEffect(() => {
@@ -1688,13 +1695,10 @@ function GameScreen({
               <MessageOverlay title="Disconnected" body="Connection to the room was lost." onLeave={onLeave} />
             )}
             {roundOver && !matchOver && !coinflip?.animating && roundEndAnim && (
-              <RoundEndScoreAnim state={state} nameOf={nameOf} onDone={() => setRoundEndAnim(false)} />
-            )}
-            {roundOver && !matchOver && !coinflip?.animating && !roundEndAnim && (
-              <RoundEndReady
-                state={state} you={you} nameOf={nameOf}
-                readySlots={readySlots} merging={merging}
-                onReady={requestReady} onLeave={onLeave}
+              <RoundEndScoreAnim
+                state={state}
+                nameOf={nameOf}
+                onDone={() => { setRoundEndAnim(false); requestReady(); }}
               />
             )}
             {matchOver && (
@@ -3414,6 +3418,14 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
     setReadySlots((prev) => (prev.includes(YOU) ? prev : [...prev, YOU]));
   }, []);
 
+  // Auto-ready for non-anim endings (time/afk/forfeit).
+  useEffect(() => {
+    if (state.winner === null || state.matchWinner !== null) return;
+    if (roundEndAnim) return;
+    const r = state.endReason;
+    if (r === "time" || r === "afk" || r === "forfeit") requestReady();
+  }, [state.winner, state.matchWinner, state.endReason, roundEndAnim, requestReady]);
+
   // Reset ready roster whenever a new round begins.
   const prevWinnerReadyRef = useRef<PlayerId | null>(state.winner);
   useEffect(() => {
@@ -3432,10 +3444,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
     for (const bot of BOT_SLOTS) {
       if (state.leftMatch[bot]) continue;
       if (readySlots.includes(bot)) continue;
-      const delay = 1400 + Math.random() * 2200;
-      timers.push(window.setTimeout(() => {
-        setReadySlots((prev) => (prev.includes(bot) ? prev : [...prev, bot]));
-      }, delay));
+      setReadySlots((prev) => (prev.includes(bot) ? prev : [...prev, bot]));
     }
     return () => { for (const t of timers) window.clearTimeout(t); };
   }, [state.winner, state.matchWinner, state.leftMatch, readySlots, BOT_SLOTS]);
@@ -3452,8 +3461,8 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
     const allReady = need.every((i) => readySlots.includes(i));
     if (!allReady || botMergingRef.current) return;
     setMerging(true);
-    const t = window.setTimeout(() => { nextRound(); }, 900);
-    return () => window.clearTimeout(t);
+    nextRound();
+    return;
   }, [state.winner, state.matchWinner, state.leftMatch, readySlots, nextRound, BOT_SLOTS]);
 
   const roundOver = state.winner !== null;
@@ -3479,13 +3488,10 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
               <CoinflipOverlay starter={coinflip.starter} you={YOU} mode={mode} nameOf={nameOf} />
             )}
             {roundOver && !matchOver && !coinflip?.animating && roundEndAnim && (
-              <RoundEndScoreAnim state={state} nameOf={nameOf} onDone={() => setRoundEndAnim(false)} />
-            )}
-            {roundOver && !matchOver && !coinflip?.animating && !roundEndAnim && (
-              <RoundEndReady
-                state={state} you={YOU} nameOf={nameOf}
-                readySlots={readySlots} merging={merging}
-                onReady={requestReady} onLeave={onLeave}
+              <RoundEndScoreAnim
+                state={state}
+                nameOf={nameOf}
+                onDone={() => { setRoundEndAnim(false); requestReady(); }}
               />
             )}
             {matchOver && (
