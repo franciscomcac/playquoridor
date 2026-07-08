@@ -912,10 +912,11 @@ function GameScreen({
     // Kick every match off with a friendly reminder. Host is the source of
     // truth so the message shows up once for everyone.
     const sys = { slot: -1, name: "System", text: "Be respectful 🙌 — good luck & have fun.", ts: Date.now() };
-    setChat((prev) => [
-      ...prev.slice(-99),
-      { key: `sys-${sys.ts}-${Math.random()}`, slot: null, name: sys.name, text: sys.text, ts: sys.ts },
-    ]);
+    const sysKey = `sys-greet-${sys.ts}`;
+    setChat((prev) => {
+      if (prev.some((m) => m.slot === null && m.text === sys.text)) return prev;
+      return [...prev.slice(-99), { key: sysKey, slot: null, name: sys.name, text: sys.text, ts: sys.ts }];
+    });
     roomRef.current?.send({ type: "chat", payload: sys });
   }, [hostStartRound]);
 
@@ -1052,14 +1053,19 @@ function GameScreen({
         } else if (msg.type === "chat") {
           const p = msg.payload as { slot: number; name: string; text: string; ts: number };
           const isSystem = (p.slot as number) < 0;
-          setChat((prev) => [
-            ...prev.slice(-99),
-            {
-              key: `${p.ts}-${p.slot}-${Math.random()}`,
-              slot: isSystem ? null : p.slot,
-              name: p.name, text: p.text, ts: p.ts,
-            },
-          ]);
+          setChat((prev) => {
+            // Dedupe system greetings: host already appended locally before
+            // broadcasting, and the greeting can also arrive via replay.
+            if (isSystem && prev.some((m) => m.slot === null && m.text === p.text)) return prev;
+            return [
+              ...prev.slice(-99),
+              {
+                key: `${p.ts}-${p.slot}-${Math.random()}`,
+                slot: isSystem ? null : p.slot,
+                name: p.name, text: p.text, ts: p.ts,
+              },
+            ];
+          });
           if (!isSystem) play("click");
         }
       },
