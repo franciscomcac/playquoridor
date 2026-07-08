@@ -2067,10 +2067,11 @@ function WinOverlay({ state, you, matchOver, onPrimary, primaryLabel, onLeave, n
   );
 }
 
-function EndScreen({ state, you, onPrimary, onLeave, nameOf }: {
+function EndScreen({ state, you, onPrimary, onLeave, nameOf, snapshot }: {
   state: GameState; you: PlayerId;
   onPrimary: () => void; onLeave: () => void;
   nameOf: (s: PlayerId) => string;
+  snapshot: MatchSnapshot | null;
 }) {
   const [analyzing, setAnalyzing] = useState(false);
   const winner = state.matchWinner as PlayerId;
@@ -2138,7 +2139,9 @@ function EndScreen({ state, you, onPrimary, onLeave, nameOf }: {
             {analyzing ? "Hide analysis" : "Analyze game"}
           </button>
           <ShareResultButton state={state} you={you} nameOf={nameOf} matchOver />
-          <SaveClipButton state={state} you={you} nameOf={nameOf} />
+          <SaveClipButton state={state} you={you} nameOf={nameOf} snapshot={snapshot} />
+          <DownloadGifButton snapshot={snapshot} />
+          <AnalyzeGameButton snapshot={snapshot} />
           <button onClick={onLeave} className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary">
             Leave
           </button>
