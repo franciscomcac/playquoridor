@@ -150,6 +150,32 @@
 /* Pawn glide */
 .pawn-glide { transition: left 200ms cubic-bezier(.2,.7,.3,1), top 200ms cubic-bezier(.2,.7,.3,1); }
 
+/* Global button press feedback — subtle scale on active, applied to any
+   <button> that hasn't opted out via data-no-press. Composes with existing
+   Tailwind hover transforms because :active wins over :hover. */
+button:not([data-no-press]) {
+  transition: transform 90ms ease-out, filter 120ms ease-out;
+}
+button:not([data-no-press]):active:not(:disabled) {
+  transform: scale(0.96);
+}
+@keyframes btn-ripple {
+  0%   { box-shadow: 0 0 0 0 currentColor; opacity: 0.35; }
+  100% { box-shadow: 0 0 0 10px currentColor; opacity: 0; }
+}
+
+/* Coach card entrance for analyze page */
+@keyframes coach-in {
+  0%   { opacity: 0; transform: translateY(-6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.coach-in { animation: coach-in 260ms cubic-bezier(.2,.7,.3,1) both; }
+@keyframes coach-blink {
+  0%, 60%, 100% { opacity: 1; }
+  70%, 85%      { opacity: 0.15; }
+}
+.coach-eye { animation: coach-blink 5.5s ease-in-out infinite; }
+
 /* Pawn landing bounce — plays once when the inner pawn re-mounts on move */
 @keyframes pawn-land {
   0%   { transform: scale(1); }

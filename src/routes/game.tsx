@@ -206,8 +206,8 @@ function Home() {
   }, [ident, pending]);
 
   return (
-    <main className="min-h-screen" onPointerDown={() => initSoundOnGesture()}>
-      <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-3 py-4 sm:px-6 sm:py-10">
+    <main className="min-h-screen lg:h-screen lg:overflow-hidden" onPointerDown={() => initSoundOnGesture()}>
+      <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-3 py-4 sm:px-6 sm:py-6 lg:h-full lg:min-h-0 lg:py-4">
         <Header onOpenSettings={() => setSettingsOpen(true)} ident={ident} />
 
         {!ident ? (

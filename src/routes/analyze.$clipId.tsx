@@ -88,6 +88,7 @@ function AnalyzePage() {
   const [snapshot, setSnapshot] = useState<MatchSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [flipped, setFlipped] = useState(false);
 
   useEffect(() => {
     void (async () => {
@@ -228,13 +229,17 @@ function AnalyzePage() {
 
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">Game analysis</h1>
-          <p className="mt-1.5 text-sm text-zinc-500">
+          <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">Game analysis</h1>
+          <p className="mt-1 text-xs text-zinc-500">
             {snapshot.rounds.length} round{snapshot.rounds.length === 1 ? "" : "s"} · winner:{" "}
             <b className="font-semibold" style={{ color: PLAYER_HEX[snapshot.matchWinner ?? 0] }}>{winnerName}</b>
           </p>
         </div>
-        <div className="flex gap-2.5">
+        <div className="flex flex-wrap gap-2">
+          <button onClick={() => setFlipped((f) => !f)}
+            className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-semibold uppercase tracking-widest text-zinc-100 transition hover:border-white/20 hover:bg-white/[0.07]">
+            Flip sides {flipped ? "↺" : "⇅"}
+          </button>
           <button onClick={downloadGif} disabled={busyGif}
             className="rounded-lg border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-zinc-100 transition hover:border-white/20 hover:bg-white/[0.07] disabled:opacity-60">
             {busyGif ? "Rendering GIF…" : "Download GIF"}
@@ -247,35 +252,37 @@ function AnalyzePage() {
         </div>
       </div>
 
-      <div className="mt-7 grid items-start gap-6 lg:grid-cols-[minmax(0,540px)_1fr]">
+      <div className="mt-4 grid min-h-0 flex-1 items-start gap-4 lg:grid-cols-[minmax(0,520px)_1fr] lg:overflow-hidden">
         {/* Board + transport card */}
-        <section className="rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.035] to-white/[0.015] p-4 backdrop-blur">
-          <div className="relative mx-auto aspect-square w-full max-w-[540px] overflow-hidden rounded-xl border border-white/10 bg-[#0d0d12]">
-            <canvas ref={canvasRef} width={720} height={720} className="absolute inset-0 h-full w-full" />
+        <section className="flex min-h-0 flex-col rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.035] to-white/[0.015] p-3 backdrop-blur lg:h-full lg:overflow-hidden">
+          <div className="relative mx-auto aspect-square w-full max-w-[480px] overflow-hidden rounded-xl border border-white/10 bg-[#0d0d12]">
+            <canvas ref={canvasRef} width={720} height={720}
+              className="absolute inset-0 h-full w-full transition-transform duration-500"
+              style={{ transform: flipped ? "rotate(180deg)" : undefined }} />
           </div>
 
-          <div className="mt-4 flex items-center gap-2.5">
+          <div className="mt-3 flex items-center gap-2">
             <button onClick={() => { setPlaying(false); setIdx((i) => Math.max(0, i - 1)); }} disabled={idx === 0}
               aria-label="Previous move"
-              className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] text-zinc-100 transition hover:bg-white/[0.08] disabled:opacity-40">◀</button>
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] text-zinc-100 transition hover:bg-white/[0.08] disabled:opacity-40">◀</button>
             <button onClick={() => setPlaying((p) => !p)}
-              className="flex h-10 flex-1 items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.05] font-semibold text-zinc-100 transition hover:bg-white/[0.1]">
+              className="flex h-9 flex-1 items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.05] text-sm font-semibold text-zinc-100 transition hover:bg-white/[0.1]">
               {playing ? "❚❚ Pause" : "▶ Play"}
             </button>
             <button onClick={() => { setPlaying(false); setIdx((i) => Math.min(frames.length - 1, i + 1)); }} disabled={idx >= frames.length - 1}
               aria-label="Next move"
-              className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] text-zinc-100 transition hover:bg-white/[0.08] disabled:opacity-40">▶</button>
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] text-zinc-100 transition hover:bg-white/[0.08] disabled:opacity-40">▶</button>
             <div className="ml-1 min-w-[64px] text-right font-mono text-xs text-zinc-500">
               {idx + 1} / {frames.length}
             </div>
           </div>
 
-          <div className="mt-3 flex items-center gap-3">
-            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-zinc-600">Speed</span>
+          <div className="mt-2 flex items-center gap-3">
+            <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-600">Speed</span>
             <div className="flex gap-1 rounded-lg border border-white/10 bg-white/[0.03] p-0.5">
               {(["slow", "med", "fast"] as const).map((s) => (
                 <button key={s} onClick={() => setSpeed(s)}
-                  className={"rounded-md px-3 py-1.5 text-xs font-semibold transition " +
+                  className={"rounded-md px-2.5 py-1 text-[11px] font-semibold transition " +
                     (speed === s
                       ? "text-[#1a1002]"
                       : "text-zinc-500 hover:text-zinc-200")}
@@ -288,7 +295,7 @@ function AnalyzePage() {
 
           <input type="range" min={0} max={Math.max(0, frames.length - 1)} value={idx}
             onChange={(e) => { setPlaying(false); setIdx(Number(e.target.value)); }}
-            className="analyze-scrub mt-3 w-full"
+            className="analyze-scrub mt-2 w-full"
             style={{ ["--scrub-accent" as string]: PLAYER_HEX[0] }} />
 
           {cur && curAnalysis && cur.by !== null && (
@@ -296,9 +303,15 @@ function AnalyzePage() {
           )}
         </section>
 
-        {/* Move list card */}
-        <section className="flex max-h-[calc(100vh-180px)] flex-col rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.035] to-white/[0.015] backdrop-blur">
-          <div className="overflow-y-auto px-2.5 pb-4">
+        {/* Move list card + AI coach overlay */}
+        <section className="relative flex min-h-0 flex-col rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.035] to-white/[0.015] backdrop-blur lg:h-full lg:overflow-hidden">
+          <CoachPanel
+            key={"coach-" + idx}
+            snapshot={snapshot}
+            frame={cur ?? null}
+            analysis={curAnalysis ?? null}
+          />
+          <div className="min-h-0 flex-1 overflow-y-auto px-2.5 pb-4 pt-2">
             {listRows.map((row, k) => {
               if (row.kind === "divider") {
                 return (
@@ -333,6 +346,98 @@ function AnalyzePage() {
         </section>
       </div>
     </Shell>
+  );
+}
+
+// Small persistent cache across CoachPanel remounts so scrubbing back and
+// forth through moves never re-hits the AI gateway.
+const COACH_CACHE = new Map<string, string>();
+const COACH_INFLIGHT = new Map<string, Promise<string>>();
+
+type Analysis = {
+  verdict: Verdict; actual: Move; best: Move; delta: number;
+  distMe: number; distOpp: number; distMeAfter: number; distOppAfter: number;
+};
+
+function CoachPanel({ snapshot, frame, analysis }: {
+  snapshot: MatchSnapshot;
+  frame: { state: GameState; roundIndex: number; plyIndex: number; by: PlayerId | null } | null;
+  analysis: Analysis | null;
+}) {
+  const call = useServerFn(explainMove);
+  const [note, setNote] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const key = frame && analysis && frame.by !== null
+    ? `${snapshot.mode}:${frame.roundIndex}:${frame.plyIndex}`
+    : null;
+
+  useEffect(() => {
+    // Debounce so scrubbing quickly doesn't spam the gateway. Only fetch
+    // when the user pauses on a move for ~700ms. Cache per key so re-visits
+    // are free.
+    if (!key || !frame || !analysis || frame.by === null) { setNote(null); return; }
+    const cached = COACH_CACHE.get(key);
+    if (cached) { setNote(cached); setBusy(false); return; }
+    setNote(null);
+    setBusy(true);
+    const slot = frame.by;
+    const inflight = COACH_INFLIGHT.get(key);
+    const t = window.setTimeout(async () => {
+      try {
+        const p = inflight ?? call({
+          data: {
+            fenLike: `mode=${snapshot.mode} round=${snapshot.rounds.length}`,
+            moveText: moveText(analysis.actual),
+            playerLabel: snapshot.playerNames[slot],
+            distMe: analysis.distMe, distOpp: analysis.distOpp,
+            distMeAfter: analysis.distMeAfter, distOppAfter: analysis.distOppAfter,
+            bestMoveText: moveText(analysis.best),
+            verdict: analysis.verdict,
+          },
+        }).then((r) => r.text);
+        if (!inflight) COACH_INFLIGHT.set(key, p);
+        const text = await p;
+        COACH_CACHE.set(key, text);
+        COACH_INFLIGHT.delete(key);
+        setNote(text);
+      } catch {
+        setNote("Coach is offline — try clicking Explain on the card below.");
+      } finally { setBusy(false); }
+    }, 700);
+    return () => window.clearTimeout(t);
+  }, [key, frame, analysis, snapshot, call]);
+
+  const speaker = frame && frame.by !== null ? snapshot.playerNames[frame.by] : null;
+  const verdict = analysis?.verdict;
+
+  return (
+    <div className="coach-in sticky top-0 z-[2] flex items-start gap-3 border-b border-white/10 bg-[#101014]/95 px-3 py-2.5 backdrop-blur">
+      <div aria-hidden className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/10 bg-gradient-to-br from-amber-500/25 to-amber-500/5 text-lg">
+        <span className="coach-eye">🧙</span>
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline gap-2">
+          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-amber-300">Coach</p>
+          {speaker && (
+            <span className="truncate text-[10.5px] text-zinc-500">
+              on {speaker}
+              {verdict && (
+                <span className={"ml-1.5 rounded border px-1 py-px text-[8.5px] font-bold uppercase tracking-widest " + VERDICT_CHIP[verdict]}>
+                  {verdict}
+                </span>
+              )}
+            </span>
+          )}
+        </div>
+        <p className="mt-1 text-[12px] leading-snug text-zinc-200">
+          {!frame || !analysis || frame.by === null
+            ? "Pick any move to hear my take."
+            : busy
+              ? <span className="italic text-zinc-500">Thinking…</span>
+              : note ?? <span className="italic text-zinc-500">…</span>}
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -400,10 +505,10 @@ function MoveCard({ snapshot, slot, analysis, actual }: {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#08080b] font-[Manrope,system-ui,sans-serif] text-zinc-100">
-      <div className="mx-auto max-w-[1400px] px-6 pb-12 pt-8 sm:px-12 sm:pt-10">
+    <main className="relative min-h-screen overflow-hidden bg-[#08080b] font-[Manrope,system-ui,sans-serif] text-zinc-100 lg:h-screen">
+      <div className="mx-auto flex min-h-screen max-w-[1400px] flex-col px-4 pb-6 pt-4 sm:px-8 lg:h-full lg:min-h-0">
         <Link to="/" className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500 transition hover:text-zinc-200">← Home</Link>
-        <div className="mt-3">{children}</div>
+        <div className="mt-2 flex min-h-0 flex-1 flex-col">{children}</div>
       </div>
     </main>
   );

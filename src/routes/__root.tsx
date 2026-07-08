@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { ensureAuthSession, linkAuthToPlayer } from "../lib/identity";
 import { supabase } from "../integrations/supabase/client";
+import { play, initSoundOnGesture } from "../lib/sound";
 
 function NotFoundComponent() {
   return (
@@ -142,6 +143,23 @@ function RootComponent() {
       }
     });
     return () => { sub.subscription.unsubscribe(); };
+  }, []);
+
+  // Global click SFX on any <button> (unless it opts out via data-no-sound).
+  // Silent for disabled buttons and pointer events on non-buttons.
+  useEffect(() => {
+    const onDown = (e: PointerEvent) => {
+      initSoundOnGesture();
+      const t = e.target as HTMLElement | null;
+      if (!t) return;
+      const btn = t.closest("button, [role='button']") as HTMLButtonElement | null;
+      if (!btn) return;
+      if (btn.hasAttribute("data-no-sound")) return;
+      if (btn.disabled) return;
+      play("click");
+    };
+    window.addEventListener("pointerdown", onDown, { passive: true });
+    return () => window.removeEventListener("pointerdown", onDown);
   }, []);
 
   return (

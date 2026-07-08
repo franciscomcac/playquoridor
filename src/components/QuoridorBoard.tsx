@@ -384,8 +384,9 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
       )}
     </div>
 
-    {/* Mobile wall-drag handles: press and drag onto the board to place a wall. */}
-    <div className="flex gap-2 lg:hidden" aria-hidden={!isYourTurn}>
+    {/* Wall-drag handles: press and drag onto the board to place a wall.
+        Now shown on desktop too, aligned bottom-left under the board. */}
+    <div className="mt-1 flex gap-2 self-start" aria-hidden={!isYourTurn}>
       <WallHandle
         orient="h"
         color={yourColor}
