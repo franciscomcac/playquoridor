@@ -44,6 +44,43 @@ function playSample(name: SfxName, vol = 0.85): boolean {
   return true;
 }
 
+// Play a sample on loop, back-to-back, waiting for each play to finish
+// before starting the next. Returns a stop() function.
+export function startSampleLoop(name: SfxName, vol = 0.85): () => void {
+  let stopped = false;
+  let currentSrc: AudioBufferSourceNode | null = null;
+  let waitTimer: number | null = null;
+  const tick = () => {
+    if (stopped) return;
+    const c = ensureCtx();
+    if (!c || muted || !master) {
+      // Still muted or ctx not ready — retry shortly so the loop resumes
+      // once the user unmutes or audio wakes up.
+      waitTimer = window.setTimeout(tick, 500);
+      return;
+    }
+    const buffer = sampleBuffers[name];
+    if (!buffer) {
+      loadSample(name, c);
+      waitTimer = window.setTimeout(tick, 250);
+      return;
+    }
+    const src = c.createBufferSource();
+    src.buffer = buffer;
+    const g = c.createGain(); g.gain.value = vol;
+    src.connect(g).connect(master);
+    src.onended = () => { if (!stopped) tick(); };
+    currentSrc = src;
+    src.start(c.currentTime);
+  };
+  tick();
+  return () => {
+    stopped = true;
+    if (waitTimer != null) { window.clearTimeout(waitTimer); waitTimer = null; }
+    if (currentSrc) { try { currentSrc.onended = null; currentSrc.stop(); } catch { /* already stopped */ } }
+  };
+}
+
 function loadPrefs() {
   if (typeof window === "undefined") return;
   muted = localStorage.getItem(MUTE_KEY) === "1";
