@@ -2,6 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { ensureAuthSession, getStoredIdentity } from "@/lib/identity";
 import { PLACEMENT_GAMES } from "@/components/LobbyChrome";
+import { RANKED_BOT_PLAYER_IDS } from "@/lib/bot";
 
 export type MatchResult = {
   mode: 2 | 4;
@@ -142,6 +143,7 @@ export async function fetchLeaderboard(limit = 20, rankedOnly = true): Promise<L
   let q = supabase.from("player_stats").select("*");
   // Only players who have finished placement appear on the ladder.
   if (rankedOnly) q = q.gte("ranked_matches", PLACEMENT_GAMES);
+  q = q.not("player_id", "in", `(${RANKED_BOT_PLAYER_IDS.join(",")})`);
   const { data: stats } = await q
     .order("rating", { ascending: false })
     .order("wins", { ascending: false })

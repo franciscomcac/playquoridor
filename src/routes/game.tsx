@@ -295,8 +295,7 @@ function Home() {
                     name: "bot",
                     mode: 2,
                     difficulty: bot.difficulty,
-                    // Display a fresh random gamertag each match so the ranked
-                    // bot never feels like the same recurring "Novice_Bot".
+                    // Display a fresh random gamertag each ranked fallback match.
                     // The bot's stable player_id still drives ELO.
                     opponentNames: [randomGamerName()],
                     rankedBot: bot,

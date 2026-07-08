@@ -22,13 +22,15 @@ export type RankedBot = {
 };
 
 export const RANKED_BOTS: RankedBot[] = [
-  { playerId: "b0700000-0000-4000-8000-000000000700", name: "Novice_Bot",  targetRating: 700,  difficulty: 0.42 },
-  { playerId: "b0900000-0000-4000-8000-000000000900", name: "Casual_Bot",  targetRating: 900,  difficulty: 0.58 },
-  { playerId: "b1100000-0000-4000-8000-000000001100", name: "Steady_Bot",  targetRating: 1100, difficulty: 0.72 },
-  { playerId: "b1300000-0000-4000-8000-000000001300", name: "Sharp_Bot",   targetRating: 1300, difficulty: 0.84 },
-  { playerId: "b1500000-0000-4000-8000-000000001500", name: "Expert_Bot",  targetRating: 1500, difficulty: 0.92 },
-  { playerId: "b1700000-0000-4000-8000-000000001700", name: "Master_Bot",  targetRating: 1700, difficulty: 0.98 },
+  { playerId: "b0700000-0000-4000-8000-000000000700", name: "zephyr77",     targetRating: 700,  difficulty: 0.42 },
+  { playerId: "b0900000-0000-4000-8000-000000000900", name: "voidwalker",   targetRating: 900,  difficulty: 0.58 },
+  { playerId: "b1100000-0000-4000-8000-000000001100", name: "kingslayer",   targetRating: 1100, difficulty: 0.72 },
+  { playerId: "b1300000-0000-4000-8000-000000001300", name: "neonPulse",    targetRating: 1300, difficulty: 0.84 },
+  { playerId: "b1500000-0000-4000-8000-000000001500", name: "phaseShift",   targetRating: 1500, difficulty: 0.92 },
+  { playerId: "b1700000-0000-4000-8000-000000001700", name: "wraithkin",    targetRating: 1700, difficulty: 0.98 },
 ];
+
+export const RANKED_BOT_PLAYER_IDS = RANKED_BOTS.map((bot) => bot.playerId);
 
 /** Pick the ranked bot whose target rating is closest to the player's. */
 export function rankedBotForRating(rating: number): RankedBot {
