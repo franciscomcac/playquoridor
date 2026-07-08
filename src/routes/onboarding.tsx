@@ -112,10 +112,8 @@ function OnboardingPage() {
   return (
     <main className="min-h-screen bg-background px-4 py-10 text-foreground">
       <div className="mx-auto max-w-lg">
-        <Link to="/" className="text-xs uppercase tracking-widest text-muted-foreground hover:text-foreground">
-          ← Skip for now
-        </Link>
-        <h1 className="mt-4 text-3xl font-semibold tracking-tight">Welcome — let's set you up</h1>
+        <p className="text-xs uppercase tracking-widest text-muted-foreground">Step 1 of 1 · Required</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight">Welcome — let's set you up</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Pick a username other players will see, and the flag you want to represent.
         </p>
@@ -191,22 +189,13 @@ function OnboardingPage() {
 
           {error && <p className="text-xs text-destructive">{error}</p>}
 
-          <div className="flex items-center gap-3">
-            <button
-              type="submit"
-              disabled={!canSubmit}
-              className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
-            >
-              {busy ? "Saving…" : "Finish setup"}
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate({ to: "/" })}
-              className="rounded-lg border border-border bg-secondary/40 px-4 py-2.5 text-sm hover:bg-secondary"
-            >
-              Later
-            </button>
-          </div>
+          <button
+            type="submit"
+            disabled={!canSubmit}
+            className="rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+          >
+            {busy ? "Saving…" : "Finish setup"}
+          </button>
         </form>
       </div>
     </main>
