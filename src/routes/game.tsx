@@ -2063,7 +2063,7 @@ function CoinflipOverlay({ starter, you, mode, nameOf }: {
       />
       <p
         className="absolute left-1/2 top-6 -translate-x-1/2 text-[11px] font-semibold uppercase tracking-[0.28em] text-muted-foreground"
-        style={{ opacity: phase >= 1 ? 1 : 0, transition: "opacity .5s ease" }}
+        style={{ opacity: phase >= 1 && !exiting ? 1 : 0, transition: "opacity .5s ease" }}
       >
         Round start
       </p>
@@ -2129,6 +2129,20 @@ function CoinflipOverlay({ starter, you, mode, nameOf }: {
       >
         {youStart ? "You " : `${nameOf(starter)} `}
         <span style={{ color: winnerColor }}>{youStart ? "go first" : "goes first"}</span>
+      </p>
+
+      {/* Game starting… flash during the exit */}
+      <p
+        className="absolute left-1/2 top-1/2 whitespace-nowrap text-center text-sm font-extrabold uppercase tracking-[0.24em]"
+        style={{
+          color: "oklch(0.75 0.18 155)",
+          opacity: exiting ? 1 : 0,
+          transform: exiting ? "translate(-50%, -50%) scale(1)" : "translate(-50%, -50%) scale(.9)",
+          transition: "opacity .4s ease, transform .4s ease",
+          zIndex: 6,
+        }}
+      >
+        Game starting…
       </p>
 
       <style>{`@keyframes rs-shake{0%{transform:translate(0,0)}15%{transform:translate(-8px,3px)}30%{transform:translate(7px,-4px)}45%{transform:translate(-6px,2px)}60%{transform:translate(5px,-3px)}75%{transform:translate(-3px,2px)}100%{transform:translate(0,0)}}`}</style>
