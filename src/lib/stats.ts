@@ -99,9 +99,10 @@ export async function fetchMyStats(playerId: string) {
   return data;
 }
 
-export async function fetchLeaderboard(limit = 20): Promise<LeaderRow[]> {
-  const { data: stats } = await supabase
-    .from("player_stats").select("*")
+export async function fetchLeaderboard(limit = 20, rankedOnly = true): Promise<LeaderRow[]> {
+  let q = supabase.from("player_stats").select("*");
+  if (rankedOnly) q = q.gt("ranked_matches", 0);
+  const { data: stats } = await q
     .order("rating", { ascending: false })
     .order("wins", { ascending: false })
     .limit(limit);
