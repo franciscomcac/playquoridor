@@ -2309,13 +2309,12 @@ function EndScreen({ state, you, onRematch, onNewMatch, onRequeue, onLeave, name
   nameOf: (s: PlayerId) => string;
   snapshot: MatchSnapshot | null;
 }) {
-  const [analyzing, setAnalyzing] = useState(false);
   const winner = state.matchWinner as PlayerId;
   const youWon = winner === you;
   const winnerColor = PLAYER_COLORS[winner];
   const pieces = useMemo(() => Array.from({ length: youWon ? 100 : 20 }, (_, i) => i), [youWon]);
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overflow-x-hidden bg-background/85 px-3 py-6 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[80] flex items-center justify-center overflow-hidden bg-background/85 px-3 py-6 backdrop-blur-sm">
       {pieces.map((i) => {
         const left = Math.random() * 100;
         const dx = (Math.random() - 0.5) * 40;
@@ -2332,7 +2331,7 @@ function EndScreen({ state, you, onRematch, onNewMatch, onRequeue, onLeave, name
             } as React.CSSProperties} />
         );
       })}
-      <div className={"results-in relative my-auto flex max-h-full w-[min(92vw,520px)] flex-col items-center gap-3 overflow-y-auto rounded-2xl border border-border bg-card px-4 py-6 text-center shadow-2xl sm:px-6"}>
+      <div className={"results-in relative my-auto flex max-h-[calc(100dvh-3rem)] w-[min(92vw,520px)] flex-col items-center gap-3 overflow-hidden rounded-2xl border border-border bg-card px-4 py-6 text-center shadow-2xl sm:px-6"}>
         <span className="grid h-14 w-14 place-items-center rounded-full text-xl font-semibold"
           style={{ background: winnerColor, color: "oklch(0.15 0.02 55)", boxShadow: `0 0 26px color-mix(in oklab, ${winnerColor} 60%, transparent)` }}>
           {winner + 1}
@@ -2380,7 +2379,6 @@ function EndScreen({ state, you, onRematch, onNewMatch, onRequeue, onLeave, name
             Leave
           </button>
         </div>
-        <MoveHistoryPanel key={analyzing ? "open" : "closed"} state={state} nameOf={nameOf} defaultOpen={analyzing} />
         <SignUpNudge />
       </div>
     </div>
