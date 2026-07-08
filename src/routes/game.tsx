@@ -589,7 +589,6 @@ function QuickMatch({ mode, ranked, ident, onBack, onJoin, onHost }: {
 }) {
   const [status, setStatus] = useState("Searching…");
   const [expired, setExpired] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
   const cancelled = useRef(false);
   const hostedCodeRef = useRef<string | null>(null);
   useEffect(() => {
@@ -611,49 +610,122 @@ function QuickMatch({ mode, ranked, ident, onBack, onJoin, onHost }: {
   // Ranked queue: 2-minute cap. No bot fallback — surface a clear timeout.
   useEffect(() => {
     if (!ranked) return;
-    const start = Date.now();
-    const iv = window.setInterval(() => {
-      const s = Math.floor((Date.now() - start) / 1000);
-      setElapsed(s);
-      if (s >= 120) {
-        window.clearInterval(iv);
-        cancelled.current = true;
-        const code = hostedCodeRef.current;
-        if (code) { void removeOpenRoom(code); hostedCodeRef.current = null; }
-        setExpired(true);
-      }
-    }, 1000);
-    return () => window.clearInterval(iv);
+    const t = window.setTimeout(() => {
+      cancelled.current = true;
+      const code = hostedCodeRef.current;
+      if (code) { void removeOpenRoom(code); hostedCodeRef.current = null; }
+      setExpired(true);
+    }, 120_000);
+    return () => window.clearTimeout(t);
   }, [ranked]);
 
   if (expired) {
     return (
-      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 text-center shadow-2xl">
-        <p className="text-lg font-semibold">Search time exceeded</p>
-        <p className="mt-2 text-sm text-muted-foreground">Please try again.</p>
-        <div className="mt-6 flex justify-center gap-3">
-          <button onClick={onBack} className="rounded-lg border border-border bg-secondary/40 px-4 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary">
-            Back
-          </button>
-        </div>
-      </div>
+      <SearchExpired onBack={onBack} />
     );
   }
 
-  const remaining = ranked ? Math.max(0, 120 - elapsed) : null;
-  const mm = remaining !== null ? String(Math.floor(remaining / 60)).padStart(1, "0") : null;
-  const ss = remaining !== null ? String(remaining % 60).padStart(2, "0") : null;
-
   return (
-    <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-2xl text-center">
-      <div className="spinner mx-auto h-12 w-12 rounded-full border-2 border-primary border-t-transparent" />
-      <p className="mt-4 text-sm uppercase tracking-[0.25em]">{status}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{ranked ? "Ranked · " : ""}{mode} players</p>
-      {ranked && (
-        <p className="mt-3 font-mono text-2xl tabular-nums text-foreground">{mm}:{ss}</p>
-      )}
-      <button onClick={onBack} className="mt-6 rounded-lg border border-border bg-secondary/40 px-4 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary">
+    <SearchingAnimation status={status} ranked={!!ranked} mode={mode} onBack={onBack} />
+  );
+}
+
+function SearchingAnimation({ status, ranked, mode, onBack }: {
+  status: string; ranked: boolean; mode: Mode; onBack: () => void;
+}) {
+  return (
+    <div className="w-full max-w-lg overflow-hidden rounded-3xl border border-emerald-500/20 bg-gradient-to-br from-zinc-950 via-zinc-950 to-emerald-950/30 p-10 text-center shadow-[0_30px_80px_-20px_rgba(16,185,129,0.35)]">
+      {/* Radar */}
+      <div className="relative mx-auto grid h-56 w-56 place-items-center">
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            className="absolute inset-0 rounded-full border border-emerald-400/40"
+            style={{
+              animation: `qm-ping 2.4s cubic-bezier(0,0,0.2,1) ${i * 0.8}s infinite`,
+            }}
+          />
+        ))}
+        {/* Sweeping conic beam */}
+        <span
+          className="absolute inset-0 rounded-full opacity-70"
+          style={{
+            background:
+              "conic-gradient(from 0deg, transparent 0deg, rgba(16,185,129,0) 250deg, rgba(52,211,153,0.55) 330deg, rgba(16,185,129,0) 360deg)",
+            animation: "qm-sweep 2.2s linear infinite",
+            maskImage: "radial-gradient(circle, black 40%, transparent 72%)",
+            WebkitMaskImage: "radial-gradient(circle, black 40%, transparent 72%)",
+          }}
+        />
+        {/* Core */}
+        <span className="relative z-10 h-6 w-6 rounded-full bg-emerald-400 shadow-[0_0_30px_8px_rgba(16,185,129,0.55)]" />
+        <span className="absolute inset-0 rounded-full ring-1 ring-inset ring-emerald-400/15" />
+      </div>
+
+      <p className="mt-8 text-xs font-semibold uppercase tracking-[0.4em] text-emerald-400">
+        {ranked ? "Ranked queue" : "Quick match"}
+      </p>
+      <p className="mt-2 text-2xl font-semibold tracking-tight text-zinc-50">
+        <span className="qm-dots">{status.replace(/…$/, "")}</span>
+      </p>
+      <p className="mt-1 text-xs text-zinc-500">Looking for {mode} players nearby</p>
+
+      <button
+        onClick={onBack}
+        className="mt-8 rounded-xl border border-zinc-800 bg-zinc-900/60 px-6 py-2.5 text-xs font-semibold uppercase tracking-widest text-zinc-300 transition-colors hover:bg-zinc-800"
+      >
         Cancel
+      </button>
+
+      <style>{`
+        @keyframes qm-ping {
+          0%   { transform: scale(0.35); opacity: 0.9; }
+          80%  { opacity: 0; }
+          100% { transform: scale(1);    opacity: 0; }
+        }
+        @keyframes qm-sweep {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
+        @keyframes qm-dot {
+          0%, 20%  { opacity: 0; }
+          40%      { opacity: 1; }
+          100%     { opacity: 0; }
+        }
+        .qm-dots::after {
+          content: '';
+          display: inline-block;
+          width: 1.2em;
+          text-align: left;
+          animation: none;
+        }
+        .qm-dots::after {
+          content: '.';
+          animation: qm-dot 1.4s steps(3, end) infinite;
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function SearchExpired({ onBack }: { onBack: () => void }) {
+  return (
+    <div className="w-full max-w-lg overflow-hidden rounded-3xl border border-rose-500/20 bg-gradient-to-br from-zinc-950 via-zinc-950 to-rose-950/30 p-10 text-center shadow-[0_30px_80px_-20px_rgba(244,63,94,0.35)]">
+      <div className="relative mx-auto grid h-32 w-32 place-items-center">
+        <span className="absolute inset-0 rounded-full border border-rose-500/40 animate-[qm-ping_2s_ease-out_infinite]" />
+        <svg viewBox="0 0 48 48" className="h-16 w-16 text-rose-400" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="24" cy="24" r="20" opacity="0.4" />
+          <path d="M24 12v12l8 4" />
+        </svg>
+      </div>
+      <p className="mt-6 text-xs font-semibold uppercase tracking-[0.4em] text-rose-400">Timed out</p>
+      <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-50">Search time exceeded</h2>
+      <p className="mt-2 text-sm text-zinc-400">No opponents found. Please try again.</p>
+      <button
+        onClick={onBack}
+        className="mt-8 rounded-xl bg-emerald-500 px-6 py-3 text-xs font-semibold uppercase tracking-widest text-emerald-950 shadow-[0_15px_40px_-15px_rgba(16,185,129,0.7)] transition-transform hover:-translate-y-0.5"
+      >
+        ← Back to lobby
       </button>
     </div>
   );
