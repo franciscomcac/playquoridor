@@ -1021,6 +1021,16 @@ function GameScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code, isHost, initialMode]);
 
+  // Release the queue slot if the tab closes while we're still waiting for
+  // an opponent. Once the match has actually started we leave the row
+  // alone (it was already removed on `onFull`).
+  useEffect(() => {
+    if (!isHost) return;
+    const onUnload = () => { void removeOpenRoom(code); };
+    window.addEventListener("beforeunload", onUnload);
+    return () => window.removeEventListener("beforeunload", onUnload);
+  }, [isHost, code]);
+
   const you = slot;
 
   useEffect(() => {
