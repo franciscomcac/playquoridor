@@ -200,12 +200,17 @@ function AuthPage() {
               </button>
             )}
 
+            <div className="mt-2 flex items-center gap-3 text-[10px] uppercase tracking-widest text-muted-foreground">
+              <span className="h-px flex-1 bg-border" />
+              {mode === "signup" ? "already a member?" : "no account yet?"}
+              <span className="h-px flex-1 bg-border" />
+            </div>
             <button
               type="button"
               onClick={() => { setMode(mode === "signup" ? "signin" : "signup"); setError(null); setResetMsg(null); }}
-              className="text-xs text-muted-foreground hover:text-foreground"
+              className="rounded-lg border border-border bg-secondary/30 px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-secondary/60"
             >
-              {mode === "signup" ? "Have an account? Sign in" : "New here? Create an account"}
+              {mode === "signup" ? "Sign in instead" : "Don't have an account? Sign up"}
             </button>
           </div>
         )}
