@@ -204,7 +204,12 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
       <div className="wood-frame aspect-square w-full min-w-0">
       <div ref={boardRef} onPointerMove={handlePointerMove} onPointerLeave={() => setHover(null)} onClick={handleClick}
         className="relative h-full w-full select-none overflow-hidden rounded-md"
-        style={{ cursor, background: "var(--board-bg)" }}>
+        style={{
+          cursor,
+          background: "var(--board-bg)",
+          transform: rotation ? `rotate(${rotation}deg)` : undefined,
+          transition: "transform 240ms ease",
+        }}>
         <div className="grid h-full w-full"
           style={{ gridTemplateColumns: `repeat(${BOARD}, 1fr)`, gridTemplateRows: `repeat(${BOARD}, 1fr)` }}>
           {cells}
