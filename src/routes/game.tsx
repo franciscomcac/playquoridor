@@ -317,7 +317,6 @@ function Footer() {
 
 function NamePrompt({ onSubmit, initial = "" }: { onSubmit: (n: string) => void; initial?: string }) {
   const [name, setName] = useState(initial);
-  // (ForfeitButton is defined below.)
   const clean = sanitizeName(name);
   const ok = isValidName(name);
   return (
