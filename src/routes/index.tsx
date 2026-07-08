@@ -1,6 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { fetchLeaderboard, type LeaderRow } from "@/lib/stats";
+import { supabase } from "@/integrations/supabase/client";
+import { COUNTRY_BY_ISO } from "@/lib/countries";
+import { AnimatePresence, motion } from "framer-motion";
 
 const SITE_URL = "https://playquoridor.online";
 const TITLE = "Quoridor Online — Play now, free";
@@ -181,7 +184,7 @@ function LobbyInner() {
             <div className="mt-4 text-[10px] font-bold uppercase tracking-widest text-zinc-300">Find Match</div>
             <div className="mt-3 grid grid-cols-3 gap-3">
               <ModeButton label="2 Players" sub="Casual" onClick={() => goPlay("quick2")} />
-              <ModeButton label="4 Players" sub="Free-for-all" onClick={() => goPlay("quick4")} />
+              <ModeButton label="4 Players" sub="Free-for-all" onClick={() => goPlay("quick4")} badge="CHAOS" />
               <ModeButton label="Ranked" sub="ELO 1v1" tone="primary" onClick={() => goPlay("ranked2")} />
             </div>
 
@@ -257,6 +260,43 @@ function LobbyInner() {
 }
 
 function TopBar() {
+  const [session, setSession] = useState<{
+    signedIn: boolean;
+    username?: string;
+    country?: string | null;
+    onboarded: boolean;
+    email?: string | null;
+  } | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      const u = userData.user;
+      const anon = !u || u.is_anonymous === true || (u.app_metadata?.provider ?? "") === "anonymous";
+      if (!u || anon) { if (alive) setSession({ signedIn: false, onboarded: false }); return; }
+      const { data: p } = await supabase
+        .from("players")
+        .select("name,country,onboarded_at")
+        .eq("auth_user_id", u.id)
+        .not("onboarded_at", "is", null)
+        .order("onboarded_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!alive) return;
+      setSession({
+        signedIn: true,
+        onboarded: !!p?.onboarded_at,
+        username: p?.name ?? u.email?.split("@")[0] ?? "player",
+        country: p?.country ?? null,
+        email: u.email,
+      });
+    };
+    void load();
+    const { data: sub } = supabase.auth.onAuthStateChange(() => { void load(); });
+    return () => { alive = false; sub.subscription.unsubscribe(); };
+  }, []);
+
   return (
     <nav className="flex items-center justify-between">
       <Link to="/" className="flex items-center gap-2.5">
@@ -270,27 +310,113 @@ function TopBar() {
         <span className="text-sm font-semibold tracking-tight text-zinc-100">playquoridor.online</span>
       </Link>
       <div className="flex items-center gap-2">
-        <Link
-          to="/auth"
-          className="rounded-lg border border-zinc-800 bg-zinc-900/60 px-5 py-2.5 text-xs font-semibold uppercase tracking-widest text-zinc-200 transition-colors hover:border-zinc-600 hover:bg-zinc-800 hover:text-white"
-        >
-          Sign in
-        </Link>
-        <Link
-          to="/auth"
-          search={{ mode: "signup" }}
-          className="rounded-lg border border-emerald-500/60 bg-gradient-to-b from-emerald-500/20 to-emerald-600/10 px-5 py-2.5 text-xs font-semibold uppercase tracking-widest text-emerald-100 shadow-lg shadow-emerald-900/30 transition-colors hover:border-emerald-400 hover:from-emerald-500/30 hover:to-emerald-600/20 hover:text-white"
-        >
-          Sign up
-        </Link>
+        {session === null ? (
+          <div className="h-9 w-40 animate-pulse rounded-lg bg-zinc-900" />
+        ) : session.signedIn && session.onboarded ? (
+          <AccountMenu username={session.username!} country={session.country ?? null} />
+        ) : session.signedIn && !session.onboarded ? (
+          <Link
+            to="/onboarding"
+            className="rounded-lg border border-amber-500/60 bg-amber-500/10 px-5 py-2.5 text-xs font-semibold uppercase tracking-widest text-amber-200 hover:bg-amber-500/20"
+          >
+            Finish signup →
+          </Link>
+        ) : (
+          <>
+            <Link
+              to="/auth"
+              className="rounded-lg border border-zinc-800 bg-zinc-900/60 px-5 py-2.5 text-xs font-semibold uppercase tracking-widest text-zinc-200 transition-colors hover:border-zinc-600 hover:bg-zinc-800 hover:text-white"
+            >
+              Sign in
+            </Link>
+            <Link
+              to="/auth"
+              search={{ mode: "signup" }}
+              className="rounded-lg border border-emerald-500/60 bg-gradient-to-b from-emerald-500/20 to-emerald-600/10 px-5 py-2.5 text-xs font-semibold uppercase tracking-widest text-emerald-100 shadow-lg shadow-emerald-900/30 transition-colors hover:border-emerald-400 hover:from-emerald-500/30 hover:to-emerald-600/20 hover:text-white"
+            >
+              Sign up
+            </Link>
+          </>
+        )}
       </div>
     </nav>
   );
 }
 
+function AccountMenu({ username, country }: { username: string; country: string | null }) {
+  const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
+  const flag = country ? (COUNTRY_BY_ISO[country]?.flag ?? "🌐") : "🌐";
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => {
+      const t = e.target as HTMLElement;
+      if (!t.closest?.("[data-account-menu]")) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+  async function signOut() {
+    await supabase.auth.signOut();
+    await supabase.auth.signInAnonymously();
+    void navigate({ to: "/" });
+  }
+  return (
+    <div className="relative" data-account-menu>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-xs font-semibold text-zinc-100 hover:border-zinc-600 hover:bg-zinc-800"
+      >
+        <span className="text-base leading-none">{flag}</span>
+        <span className="max-w-[120px] truncate">{username}</span>
+        <svg className={"h-3 w-3 text-zinc-500 transition-transform " + (open ? "rotate-180" : "")} viewBox="0 0 12 12" fill="currentColor" aria-hidden><path d="M2 4l4 4 4-4z" /></svg>
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -6, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.98 }}
+            transition={{ duration: 0.14, ease: "easeOut" }}
+            className="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950/95 shadow-2xl backdrop-blur"
+          >
+            <div className="border-b border-zinc-800 px-4 py-3">
+              <p className="text-[10px] uppercase tracking-widest text-zinc-500">Signed in as</p>
+              <p className="mt-0.5 text-sm font-semibold text-zinc-100">
+                <span className="mr-1">{flag}</span>@{username}
+              </p>
+            </div>
+            <ul className="py-1 text-sm">
+              <MenuItem to="/friends" label="Friends" icon="👥" />
+              <MenuItem to="/history" label="Match history" icon="📜" />
+              <MenuItem to="/clips" label="Saved clips" icon="🎞️" />
+              <MenuItem to="/stats" label="Leaderboard" icon="🏆" />
+              <li className="my-1 border-t border-zinc-800" />
+              <li>
+                <button onClick={signOut} className="flex w-full items-center gap-3 px-4 py-2 text-left text-rose-400 hover:bg-zinc-900">
+                  <span>↩</span><span>Sign out</span>
+                </button>
+              </li>
+            </ul>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function MenuItem({ to, label, icon }: { to: string; label: string; icon: string }) {
+  return (
+    <li>
+      <Link to={to} className="flex items-center gap-3 px-4 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white">
+        <span>{icon}</span><span>{label}</span>
+      </Link>
+    </li>
+  );
+}
+
 function ModeButton({
-  label, sub, tone = "ghost", onClick,
-}: { label: string; sub?: string; tone?: "primary" | "ghost"; onClick: () => void }) {
+  label, sub, tone = "ghost", onClick, badge,
+}: { label: string; sub?: string; tone?: "primary" | "ghost"; onClick: () => void; badge?: string }) {
   const styles =
     tone === "primary"
       ? "border-amber-500/50 bg-gradient-to-b from-amber-500/20 to-amber-500/5 shadow-lg shadow-amber-900/20 hover:border-amber-400 hover:from-amber-500/30 hover:to-amber-500/10"
@@ -298,8 +424,13 @@ function ModeButton({
   return (
     <button
       onClick={onClick}
-      className={`group flex flex-col items-start gap-1 rounded-xl border px-4 py-4 text-left transition-all hover:-translate-y-1 ${styles}`}
+      className={`group relative flex flex-col items-start gap-1 rounded-xl border px-4 py-4 text-left transition-all hover:-translate-y-1 ${styles}`}
     >
+      {badge && (
+        <span className="absolute -right-2 -top-2 rounded-md bg-gradient-to-r from-fuchsia-500 to-rose-500 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-white shadow-[0_0_15px_rgba(244,63,94,0.6)] animate-pulse">
+          ⚡ {badge}
+        </span>
+      )}
       <span className={`text-base font-bold tracking-tight ${tone === "primary" ? "text-amber-300" : "text-zinc-100"}`}>
         {label}
       </span>
