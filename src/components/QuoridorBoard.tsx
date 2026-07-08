@@ -211,7 +211,7 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
       const isOpp = !!oppRowRange && r >= oppRowRange[0] && r <= oppRowRange[1];
       const baseCell = alt ? "var(--board-cell)" : "var(--board-cell-alt)";
       const bg = isOpp
-        ? `color-mix(in oklab, ${baseCell} 84%, oklch(0.35 0.05 55))`
+        ? `color-mix(in oklab, ${baseCell} 95%, oklch(0.35 0.05 55))`
         : baseCell;
       cells.push(
         <div key={`${r}-${c}`} style={{
