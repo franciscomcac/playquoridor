@@ -73,6 +73,7 @@ export type Database = {
           ended_at: string
           id: string
           mode: number
+          ranked: boolean
           rounds: number
           winner_player_id: string | null
         }
@@ -80,6 +81,7 @@ export type Database = {
           ended_at?: string
           id?: string
           mode: number
+          ranked?: boolean
           rounds: number
           winner_player_id?: string | null
         }
@@ -87,6 +89,7 @@ export type Database = {
           ended_at?: string
           id?: string
           mode?: number
+          ranked?: boolean
           rounds?: number
           winner_player_id?: string | null
         }
@@ -107,6 +110,7 @@ export type Database = {
           created_at: string
           host_name: string
           mode: number
+          ranked: boolean
           seats_taken: number
           seats_total: number
           updated_at: string
@@ -117,6 +121,7 @@ export type Database = {
           created_at?: string
           host_name: string
           mode: number
+          ranked?: boolean
           seats_taken?: number
           seats_total: number
           updated_at?: string
@@ -127,6 +132,7 @@ export type Database = {
           created_at?: string
           host_name?: string
           mode?: number
+          ranked?: boolean
           seats_taken?: number
           seats_total?: number
           updated_at?: string
@@ -141,6 +147,10 @@ export type Database = {
           matches: number
           pawns_eliminated: number
           player_id: string
+          ranked_losses: number
+          ranked_matches: number
+          ranked_wins: number
+          rating: number
           updated_at: string
           walls_placed: number
           wins: number
@@ -152,6 +162,10 @@ export type Database = {
           matches?: number
           pawns_eliminated?: number
           player_id: string
+          ranked_losses?: number
+          ranked_matches?: number
+          ranked_wins?: number
+          rating?: number
           updated_at?: string
           walls_placed?: number
           wins?: number
@@ -163,6 +177,10 @@ export type Database = {
           matches?: number
           pawns_eliminated?: number
           player_id?: string
+          ranked_losses?: number
+          ranked_matches?: number
+          ranked_wins?: number
+          rating?: number
           updated_at?: string
           walls_placed?: number
           wins?: number
@@ -248,6 +266,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_elo_1v1: {
+        Args: {
+          _loser_name: string
+          _loser_player_id: string
+          _winner_name: string
+          _winner_player_id: string
+        }
+        Returns: undefined
+      }
       complete_onboarding: {
         Args: { _country: string; _name: string; _player_id: string }
         Returns: undefined

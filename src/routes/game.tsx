@@ -30,7 +30,7 @@ import {
 } from "@/lib/identity";
 import {
   bumpMyStats, fetchMyStats, findOpenRoom, recordMatch,
-  registerOpenRoom, removeOpenRoom, updateOpenRoomSeats,
+  registerOpenRoom, removeOpenRoom, updateOpenRoomSeats, applyElo1v1,
 } from "@/lib/stats";
 import {
   getVolume, initSoundOnGesture, isMuted, play, setMuted, setVolume,
@@ -74,8 +74,8 @@ type View =
   | { name: "menu" }
   | { name: "create"; mode: Mode; walls: number; rounds: number }
   | { name: "join" }
-  | { name: "quick"; mode: Mode }
-  | { name: "game"; isHost: boolean; code: string; mode: Mode; walls: number; rounds: number; quickMatch?: boolean }
+  | { name: "quick"; mode: Mode; ranked?: boolean }
+  | { name: "game"; isHost: boolean; code: string; mode: Mode; walls: number; rounds: number; quickMatch?: boolean; ranked?: boolean }
   | { name: "bot"; difficulty: number; opponentName: string }
   | { name: "spectate" }
   | { name: "spectating"; code: string };
@@ -100,6 +100,7 @@ function Home() {
     if (!ident || !pending) return;
     if (pending === "quick2") setView({ name: "quick", mode: 2 });
     else if (pending === "quick4") setView({ name: "quick", mode: 4 });
+    else if (pending === "ranked2") setView({ name: "quick", mode: 2, ranked: true });
     else if (pending === "create") setView({ name: "create", mode: 2, walls: defaultWallsFor(2), rounds: 5 });
     else if (pending.startsWith("join:")) {
       const code = pending.slice(5).toUpperCase();
@@ -160,10 +161,11 @@ function Home() {
             {view.name === "quick" && (
               <QuickMatch
                 mode={view.mode}
+                ranked={!!view.ranked}
                 ident={ident}
                 onBack={() => setView({ name: "menu" })}
-                onJoin={(code) => setView({ name: "game", isHost: false, code, mode: view.mode, walls: defaultWallsFor(view.mode), rounds: 5 })}
-                onHost={(code) => setView({ name: "game", isHost: true, code, mode: view.mode, walls: defaultWallsFor(view.mode), rounds: 5, quickMatch: true })}
+                onJoin={(code) => setView({ name: "game", isHost: false, code, mode: view.mode, walls: defaultWallsFor(view.mode), rounds: 5, ranked: !!view.ranked })}
+                onHost={(code) => setView({ name: "game", isHost: true, code, mode: view.mode, walls: defaultWallsFor(view.mode), rounds: 5, quickMatch: true, ranked: !!view.ranked })}
               />
             )}
             {view.name === "game" && (
@@ -176,6 +178,7 @@ function Home() {
                 initialWalls={view.walls}
                 initialRounds={view.rounds}
                 quickMatch={view.quickMatch}
+                ranked={view.ranked}
                 onBotFallback={() => setView({
                   name: "bot",
                   difficulty: randomDifficulty().value,
@@ -435,8 +438,8 @@ function JoinRoom({ onBack, onJoin }: { onBack: () => void; onJoin: (code: strin
   );
 }
 
-function QuickMatch({ mode, ident, onBack, onJoin, onHost }: {
-  mode: Mode; ident: Identity;
+function QuickMatch({ mode, ranked, ident, onBack, onJoin, onHost }: {
+  mode: Mode; ranked?: boolean; ident: Identity;
   onBack: () => void; onJoin: (code: string) => void; onHost: (code: string) => void;
 }) {
   const [status, setStatus] = useState("Searching…");
@@ -444,22 +447,22 @@ function QuickMatch({ mode, ident, onBack, onJoin, onHost }: {
   useEffect(() => {
     cancelled.current = false;
     (async () => {
-      const existing = await findOpenRoom(mode);
+      const existing = await findOpenRoom(mode, !!ranked);
       if (cancelled.current) return;
       if (existing) { setStatus("Joining room…"); onJoin(existing); return; }
       const code = makeRoomCode();
       setStatus("No matches — hosting a new room…");
-      await registerOpenRoom(code, mode, ident.name);
+      await registerOpenRoom(code, mode, ident.name, !!ranked);
       if (cancelled.current) { await removeOpenRoom(code); return; }
       onHost(code);
     })();
     return () => { cancelled.current = true; };
-  }, [mode, ident.name, onJoin, onHost]);
+  }, [mode, ranked, ident.name, onJoin, onHost]);
   return (
     <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-2xl text-center">
       <div className="spinner mx-auto h-12 w-12 rounded-full border-2 border-primary border-t-transparent" />
       <p className="mt-4 text-sm uppercase tracking-[0.25em]">{status}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{mode} players</p>
+      <p className="mt-1 text-xs text-muted-foreground">{ranked ? "Ranked · " : ""}{mode} players</p>
       <button onClick={onBack} className="mt-6 rounded-lg border border-border bg-secondary/40 px-4 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary">
         Cancel
       </button>
@@ -482,11 +485,11 @@ const AFK_COUNTDOWN_MS = 15_000;
 
 function GameScreen({
   ident, code, isHost, mode: initialMode, initialWalls, initialRounds, onLeave,
-  quickMatch, onBotFallback,
+  quickMatch, ranked, onBotFallback,
 }: {
   ident: Identity; code: string; isHost: boolean; mode: Mode;
   initialWalls: number; initialRounds: number; onLeave: () => void;
-  quickMatch?: boolean; onBotFallback?: () => void;
+  quickMatch?: boolean; ranked?: boolean; onBotFallback?: () => void;
 }) {
   const [status, setStatus] = useState<Status>("connecting");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -711,7 +714,7 @@ function GameScreen({
           : await createGuestRoom(code, { name: ident.name, playerId: ident.id }, handlers);
         if (cancelled) { room.close(); return; }
         roomRef.current = room;
-        if (isHost) void registerOpenRoom(code, initialMode, ident.name);
+        if (isHost) void registerOpenRoom(code, initialMode, ident.name, !!ranked);
       } catch (err) { handlers.onError(err as Error); }
     };
     boot();
@@ -928,6 +931,7 @@ function GameScreen({
     void recordMatch({
       mode: state.mode as 2 | 4,
       rounds: state.totalRounds,
+      ranked: !!ranked,
       winnerId: winnerEntry?.playerId ?? null,
       players: Array.from({ length: state.mode }, (_, i) => {
         const entry = r.find((e) => e.slot === i);
@@ -942,6 +946,15 @@ function GameScreen({
         };
       }),
     });
+
+    // Ranked 1v1 → apply ELO once (host only) using both players' identities.
+    if (ranked && state.mode === 2) {
+      const winner = r.find((e) => e.slot === state.matchWinner);
+      const loser = r.find((e) => e.slot !== state.matchWinner);
+      if (winner?.playerId && loser?.playerId && winner.playerId !== loser.playerId) {
+        void applyElo1v1(winner.playerId, winner.name, loser.playerId, loser.name);
+      }
+    }
   }, [isHost, state]);
 
   // ---------- Bump my personal stats (every client) ----------
