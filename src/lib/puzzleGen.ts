@@ -6,7 +6,6 @@ import {
   BOARD,
   defaultWallsFor,
   goalsFor,
-  hasPathToGoal as _hasPath, // not exported; see below
   isBlocked,
   reachedGoal,
   shortestPathToGoal,
@@ -17,7 +16,7 @@ import {
   type WallSpec,
 } from "@/lib/quoridor";
 
-// hasPathToGoal is not exported from quoridor.ts, so inline a copy that
+// hasPathToGoal isn't exported from quoridor.ts, so inline a copy that
 // uses the public isBlocked helper. Keeps generator dep-free.
 function hasPathToGoal(from: Pos, goal: { kind: "row" | "col"; value: number }, walls: Wall[]): boolean {
   if (reachedGoal(from, goal)) return true;
@@ -40,8 +39,6 @@ function hasPathToGoal(from: Pos, goal: { kind: "row" | "col"; value: number }, 
   }
   return false;
 }
-// Silence unused-import warning; the private import is intentional above.
-void _hasPath;
 
 export type GeneratedPuzzle = {
   id: string;
