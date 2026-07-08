@@ -1613,8 +1613,8 @@ function GameScreen({
     if (!usesRadar || radarRevealed) return;
     const start = Date.now();
     const id = window.setInterval(() => setWaitElapsed(Math.floor((Date.now() - start) / 1000)), 500);
-    const ping = window.setInterval(() => play("searchPing"), 2200);
-    return () => { window.clearInterval(id); window.clearInterval(ping); };
+    const stopLoop = startSampleLoop("searchPing", 0.85);
+    return () => { window.clearInterval(id); stopLoop(); };
   }, [usesRadar, radarRevealed]);
 
   if (usesRadar && !radarRevealed) {
