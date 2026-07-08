@@ -1767,6 +1767,14 @@ function GameScreen({
           onLeave={onLeave} />
       )}
 
+      {rankUp && (
+        <RankUpOverlay
+          oldRating={rankUp.oldRating}
+          newRating={rankUp.newRating}
+          onDone={() => setRankUp(null)}
+        />
+      )}
+
       <MobileAsideSheet
         chat={<ChatPanel entries={chat} onSend={sendChat} disabled={status !== "connected" || matchMuted || !!chatBan} you={you} />}
       >
