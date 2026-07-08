@@ -29,7 +29,7 @@ import {
   getStoredIdentity, isValidName, sanitizeName, setStoredIdentity, type Identity,
 } from "@/lib/identity";
 import {
-  bumpMyStats, fetchMyStats, findOpenRoom, recordMatch,
+  bumpMyStats, fetchMyStats, fetchMyWinStreak, findOpenRoom, recordMatch,
   registerOpenRoom, removeOpenRoom, updateOpenRoomSeats, applyElo1v1,
 } from "@/lib/stats";
 import {
