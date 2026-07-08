@@ -244,23 +244,23 @@ function TopBar() {
 }
 
 function ModeButton({
-  label, tone, badge, onClick,
-}: { label: string; tone: "primary" | "ghost"; badge?: string; onClick: () => void }) {
-  const base =
-    "group relative inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold tracking-tight transition-all hover:-translate-y-0.5";
+  label, sub, tone = "ghost", onClick,
+}: { label: string; sub?: string; tone?: "primary" | "ghost"; onClick: () => void }) {
   const styles =
     tone === "primary"
-      ? "bg-amber-500 text-zinc-950 shadow-lg shadow-amber-500/10 hover:bg-amber-400"
-      : "border border-zinc-800 bg-zinc-900/60 text-zinc-100 hover:border-zinc-600";
+      ? "border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20"
+      : "border-zinc-800 bg-zinc-950/60 hover:border-zinc-600 hover:bg-zinc-900";
   return (
-    <button onClick={onClick} className={`${base} ${styles}`}>
-      {label}
-      {badge && (
-        <span className="rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.2em] text-amber-400">
-          {badge}
-        </span>
+    <button
+      onClick={onClick}
+      className={`group flex flex-col items-start gap-0.5 rounded-xl border px-3 py-2.5 text-left transition-all hover:-translate-y-0.5 ${styles}`}
+    >
+      <span className={`text-sm font-bold tracking-tight ${tone === "primary" ? "text-amber-400" : "text-zinc-100"}`}>
+        {label}
+      </span>
+      {sub && (
+        <span className="text-[10px] font-semibold uppercase tracking-widest text-zinc-500">{sub}</span>
       )}
-      <svg className="h-3.5 w-3.5 opacity-70 transition-transform group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M8 5v14l11-7z" /></svg>
     </button>
   );
 }
