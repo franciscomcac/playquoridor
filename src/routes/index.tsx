@@ -743,6 +743,7 @@ function GameScreen({
           const p = msg.payload as { from: PlayerId; move: Move };
           const next = applyMove(stateRef.current, p.from, p.move);
           if (next) {
+            markActivity(p.from);
             if (stateRef.current.clocks) {
               next.clocks = endTurn(stateRef.current.clocks, p.from, Date.now());
             }
