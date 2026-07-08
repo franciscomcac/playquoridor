@@ -1551,6 +1551,7 @@ function WinOverlay({ state, you, matchOver, onPrimary, primaryLabel, onLeave, n
   onPrimary: () => void; primaryLabel: string; onLeave: () => void;
   nameOf: (s: PlayerId) => string;
 }) {
+  const [analyzing, setAnalyzing] = useState(false);
   const winner = (matchOver ? state.matchWinner : state.winner) as PlayerId;
   const youWon = winner === you;
   const winnerColor = PLAYER_COLORS[winner];
@@ -1611,12 +1612,17 @@ function WinOverlay({ state, you, matchOver, onPrimary, primaryLabel, onLeave, n
           <button onClick={onPrimary} className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5">
             {primaryLabel}
           </button>
+          <button onClick={() => setAnalyzing((v) => !v)}
+            className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary">
+            {analyzing ? "Hide analysis" : "Analyze game"}
+          </button>
           <ShareResultButton state={state} you={you} nameOf={nameOf} matchOver={matchOver} />
           <button onClick={onLeave} className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary">
             Leave
           </button>
         </div>
-        <MoveHistory state={state} nameOf={nameOf} />
+        <MoveHistoryPanel key={analyzing ? "open" : "closed"} state={state} nameOf={nameOf} defaultOpen={analyzing} />
+        <SignUpNudge />
       </div>
     </div>
   );
@@ -1627,6 +1633,7 @@ function EndScreen({ state, you, onPrimary, onLeave, nameOf }: {
   onPrimary: () => void; onLeave: () => void;
   nameOf: (s: PlayerId) => string;
 }) {
+  const [analyzing, setAnalyzing] = useState(false);
   const winner = state.matchWinner as PlayerId;
   const youWon = winner === you;
   const winnerColor = PLAYER_COLORS[winner];
@@ -1687,12 +1694,17 @@ function EndScreen({ state, you, onPrimary, onLeave, nameOf }: {
           <button onClick={onPrimary} className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5">
             New match
           </button>
+          <button onClick={() => setAnalyzing((v) => !v)}
+            className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary">
+            {analyzing ? "Hide analysis" : "Analyze game"}
+          </button>
           <ShareResultButton state={state} you={you} nameOf={nameOf} matchOver />
           <button onClick={onLeave} className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary">
             Leave
           </button>
         </div>
-        <MoveHistory state={state} nameOf={nameOf} />
+        <MoveHistoryPanel key={analyzing ? "open" : "closed"} state={state} nameOf={nameOf} defaultOpen={analyzing} />
+        <SignUpNudge />
       </div>
     </div>
   );
