@@ -172,6 +172,8 @@ function Home() {
     setIdent(stored);
     try {
       const saved = loadInterruptedGame();
+      // eslint-disable-next-line no-console
+      console.log("[boot] loadInterruptedGame ->", saved, "raw=", typeof window !== "undefined" ? localStorage.getItem("quoridor:activeGame") : null);
       if (saved) { setView({ name: "resume", game: saved }); return; }
       const j = sessionStorage.getItem("quoridor:pendingJoin");
       const a = sessionStorage.getItem("quoridor:pendingAction");
