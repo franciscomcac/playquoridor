@@ -291,6 +291,10 @@ function Home() {
                   opponentNames: Array.from({ length: view.mode - 1 }, () => randomGamerName()),
                 })}
                 onRankedTimeout={view.ranked ? () => { void navigate({ to: "/" }); } : undefined}
+                onRequeue={view.quickMatch ? () => {
+                  clearInterruptedGame();
+                  setView({ name: "quick", mode: view.mode, ranked: view.ranked });
+                } : undefined}
                 onLeave={() => { clearInterruptedGame(); goHome(); }}
               />
             )}
@@ -832,12 +836,13 @@ const AFK_COUNTDOWN_MS = 15_000;
 
 function GameScreen({
   ident, code, isHost, mode: initialMode, initialWalls, initialRounds, onLeave,
-  quickMatch, ranked, onBotFallback, onRankedTimeout,
+  quickMatch, ranked, onBotFallback, onRankedTimeout, onRequeue,
 }: {
   ident: Identity; code: string; isHost: boolean; mode: Mode;
   initialWalls: number; initialRounds: number; onLeave: () => void;
   quickMatch?: boolean; ranked?: boolean; onBotFallback?: () => void;
   onRankedTimeout?: () => void;
+  onRequeue?: () => void;
 }) {
   const [status, setStatus] = useState<Status>("connecting");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -1456,6 +1461,25 @@ function GameScreen({
     else roomRef.current?.send({ type: "newMatch", payload: {} });
   }, [isHost, hostStartMatch]);
 
+  // Rematch = play again with the same opponents. Also fires a lightweight
+  // chat notification so the other side sees "@name wants a rematch".
+  const rematchAction = useCallback(() => {
+    const name = rosterRef.current.find((e) => e.slot === slotRef.current)?.name
+      ?? `Player ${slotRef.current + 1}`;
+    const text = `${name} wants a rematch 🔁`;
+    const ts = Date.now();
+    const sys = { slot: -1, name: "System", text, ts };
+    setChat((prev) => {
+      if (prev.some((m) => m.slot === null && m.text === text)) return prev;
+      return [
+        ...prev.slice(-99),
+        { key: `sys-rematch-${ts}`, slot: null, name: "System", text, ts },
+      ];
+    });
+    roomRef.current?.send({ type: "chat", payload: sys });
+    newMatchAction();
+  }, [newMatchAction]);
+
   const forfeit = useCallback(() => {
     if (status !== "connected") return;
     if (state.winner !== null || state.matchWinner !== null) return;
@@ -1644,7 +1668,10 @@ function GameScreen({
       {matchOver && (
         <EndScreen state={state} you={you} nameOf={nameOf}
           snapshot={matchHistory.getSnapshot()}
-          onPrimary={newMatchAction} onLeave={onLeave} />
+          onRematch={rematchAction}
+          onRequeue={onRequeue}
+          onNewMatch={onRequeue ?? newMatchAction}
+          onLeave={onLeave} />
       )}
 
       <MobileAsideSheet
@@ -1673,14 +1700,20 @@ function GameScreen({
             disabled={status !== "connected" || state.winner !== null || state.matchWinner !== null || !state.active[you]}
           />
           <div className="flex gap-2">
-            <button onClick={newMatchAction} disabled={status !== "connected" || !!coinflip?.animating}
+            <button onClick={rematchAction} disabled={status !== "connected" || !!coinflip?.animating}
               className="flex-1 rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary disabled:opacity-40">
-              New match
+              Rematch
             </button>
             <button onClick={handleLeave} className="flex-1 rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary">
               Leave
             </button>
           </div>
+          {onRequeue && (
+            <button onClick={onRequeue}
+              className="rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-primary hover:bg-primary/20">
+              Find new match
+            </button>
+          )}
         </div>
       </MobileAsideSheet>
     </div>
@@ -1740,6 +1773,21 @@ function AfkBanner({ deadline, name }: { slot: PlayerId; deadline: number; name:
 
 function ScoreCard({ state, you, nameOf }: { state: GameState; you: PlayerId; nameOf: (s: PlayerId) => string }) {
   const target = winsNeeded(state.totalRounds);
+  const prevScoreRef = useRef<number[]>(state.score);
+  const [bumped, setBumped] = useState<number | null>(null);
+  useEffect(() => {
+    const prev = prevScoreRef.current;
+    for (let i = 0; i < state.score.length; i++) {
+      if ((prev[i] ?? 0) < (state.score[i] ?? 0)) {
+        setBumped(i);
+        play("roundWin");
+        const id = window.setTimeout(() => setBumped(null), 900);
+        prevScoreRef.current = [...state.score];
+        return () => window.clearTimeout(id);
+      }
+    }
+    prevScoreRef.current = [...state.score];
+  }, [state.score]);
   return (
     <div className="rounded-xl border border-border bg-card p-4">
       <div className="flex items-baseline justify-between">
@@ -1753,7 +1801,12 @@ function ScoreCard({ state, you, nameOf }: { state: GameState; you: PlayerId; na
               style={{ color: state.matchWinner === i ? PLAYER_COLORS[i] : "var(--muted-foreground)" }}>
               {i === you ? "You" : nameOf(i as PlayerId)}
             </span>
-            <span className="grid h-9 w-9 place-items-center rounded-full text-base font-semibold"
+            <span
+              key={`${i}-${state.score[i]}`}
+              className={
+                "grid h-9 w-9 place-items-center rounded-full text-base font-semibold " +
+                (bumped === i ? "score-pop" : "")
+              }
               style={{
                 background: PLAYER_COLORS[i], color: "oklch(0.15 0.02 55)",
                 boxShadow: state.matchWinner === i ? `0 0 0 3px color-mix(in oklab, ${PLAYER_COLORS[i]} 45%, transparent)` : "0 1px 3px rgba(0,0,0,0.4)",
@@ -2249,9 +2302,10 @@ function WinOverlay({ state, you, matchOver, onPrimary, primaryLabel, onLeave, n
   );
 }
 
-function EndScreen({ state, you, onPrimary, onLeave, nameOf, snapshot }: {
+function EndScreen({ state, you, onRematch, onNewMatch, onRequeue, onLeave, nameOf, snapshot }: {
   state: GameState; you: PlayerId;
-  onPrimary: () => void; onLeave: () => void;
+  onRematch: () => void; onNewMatch: () => void; onRequeue?: () => void;
+  onLeave: () => void;
   nameOf: (s: PlayerId) => string;
   snapshot: MatchSnapshot | null;
 }) {
@@ -2313,8 +2367,11 @@ function EndScreen({ state, you, onPrimary, onLeave, nameOf, snapshot }: {
         </div>
 
         <div className="mt-3 flex flex-wrap justify-center gap-2">
-          <button onClick={onPrimary} className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5">
-            New match
+          <button onClick={onNewMatch} className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5">
+            {onRequeue ? "Find new match" : "New match"}
+          </button>
+          <button onClick={onRematch} className="rounded-lg border border-primary/50 bg-primary/10 px-5 py-2 text-sm font-semibold text-primary transition-transform hover:-translate-y-0.5 hover:bg-primary/20">
+            Rematch 🔁
           </button>
           <ShareResultButton state={state} you={you} nameOf={nameOf} matchOver />
           <DownloadGifButton snapshot={snapshot} />
@@ -2757,7 +2814,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
       {matchOver && (
         <EndScreen state={state} you={YOU} nameOf={nameOf}
           snapshot={botMatchHistory.getSnapshot()}
-          onPrimary={startMatch} onLeave={onLeave} />
+          onRematch={startMatch} onNewMatch={startMatch} onLeave={onLeave} />
       )}
 
       <MobileAsideSheet chat={<ChatPanel entries={chat} onSend={sendChat} you={YOU} />}>
