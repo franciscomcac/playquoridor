@@ -40,7 +40,7 @@ import {
   registerOpenRoom, removeOpenRoom, updateOpenRoomSeats, applyElo1v1,
 } from "@/lib/stats";
 import {
-  getVolume, initSoundOnGesture, isMuted, play, setMuted, setVolume,
+  getVolume, initSoundOnGesture, isMuted, play, setMuted, setVolume, startSampleLoop,
 } from "@/lib/sound";
 import { humanThinkTimeMs, pickBotMove, randomDifficulty } from "@/lib/bot";
 import { randomGamerName } from "@/lib/names";
@@ -647,15 +647,10 @@ function QuickMatch({ mode, ranked, ident, onBack, onJoin, onHost }: {
   // Play a soft radar loop while queued; stop as soon as we transition.
   useEffect(() => {
     play("searchStart");
-    // Fire the first ping quickly so users get audible feedback even when
-    // the match resolves in under 1.6s.
-    const firstPing = window.setTimeout(() => {
-      if (!cancelled.current && !transitioned.current) play("searchPing");
-    }, 600);
-    const ping = window.setInterval(() => {
-      if (!cancelled.current && !transitioned.current) play("searchPing");
-    }, 1600);
-    return () => { window.clearTimeout(firstPing); window.clearInterval(ping); };
+    // Radar ping loops back-to-back: each play waits for the sample to
+    // finish before starting again (no chopping mid-ping).
+    const stopLoop = startSampleLoop("searchPing", 0.85);
+    return () => { stopLoop(); };
   }, []);
 
   useEffect(() => {
@@ -1618,8 +1613,8 @@ function GameScreen({
     if (!usesRadar || radarRevealed) return;
     const start = Date.now();
     const id = window.setInterval(() => setWaitElapsed(Math.floor((Date.now() - start) / 1000)), 500);
-    const ping = window.setInterval(() => play("searchPing"), 2200);
-    return () => { window.clearInterval(id); window.clearInterval(ping); };
+    const stopLoop = startSampleLoop("searchPing", 0.85);
+    return () => { window.clearInterval(id); stopLoop(); };
   }, [usesRadar, radarRevealed]);
 
   if (usesRadar && !radarRevealed) {
