@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { getStoredIdentity, setStoredIdentity, ensureAuthSession } from "@/lib/identity";
-import { COUNTRIES, COUNTRY_BY_ISO, type Country } from "@/lib/countries";
+import { COUNTRIES, type Country } from "@/lib/countries";
 import { WORLD_VIEWBOX, WORLD_SILHOUETTE, COUNTRY_PATHS, projectLatLng } from "@/lib/world-map";
 
 export const Route = createFileRoute("/onboarding")({
