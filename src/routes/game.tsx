@@ -291,6 +291,10 @@ function Home() {
                   opponentNames: Array.from({ length: view.mode - 1 }, () => randomGamerName()),
                 })}
                 onRankedTimeout={view.ranked ? () => { void navigate({ to: "/" }); } : undefined}
+                onRequeue={view.quickMatch ? () => {
+                  clearInterruptedGame();
+                  setView({ name: "quick", mode: view.mode, ranked: view.ranked });
+                } : undefined}
                 onLeave={() => { clearInterruptedGame(); goHome(); }}
               />
             )}
