@@ -388,14 +388,6 @@ function Lobby() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-[1240px] px-8">
-        <Eyebrow>New here? Quoridor in three moves</Eyebrow>
-        <div className="grid gap-4 py-6 md:grid-cols-3">
-          <Step n="01" title="Move your pawn" desc="One square per turn — forward, back, or sideways across the 9×9 board." />
-          <Step n="02" title="Or place a wall" desc="Drop one of your 10 walls to slow your opponent. You can never fully block them." />
-          <Step n="03" title="Reach the far side" desc="First pawn to touch the opposite edge wins the game." />
-        </div>
-      </div>
     </LobbyChrome>
   );
 }
