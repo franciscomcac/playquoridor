@@ -2019,6 +2019,7 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
       <aside className="order-2 flex min-w-0 flex-col gap-3">
         <ScoreCard state={state} you={YOU} nameOf={nameOf} />
         <PlayersCard state={state} you={YOU} nameOf={nameOf} />
+        <MoveHistoryPanel state={state} nameOf={nameOf} compact defaultOpen />
 
         {toast && (
           <div className="toast-in rounded-xl border border-border bg-card p-3 text-xs uppercase tracking-widest text-primary">
