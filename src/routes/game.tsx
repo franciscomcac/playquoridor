@@ -30,7 +30,7 @@ import {
 } from "@/lib/identity";
 import {
   bumpMyStats, fetchMyStats, findOpenRoom, recordMatch,
-  registerOpenRoom, removeOpenRoom, updateOpenRoomSeats,
+  registerOpenRoom, removeOpenRoom, updateOpenRoomSeats, applyElo1v1,
 } from "@/lib/stats";
 import {
   getVolume, initSoundOnGesture, isMuted, play, setMuted, setVolume,
@@ -74,8 +74,8 @@ type View =
   | { name: "menu" }
   | { name: "create"; mode: Mode; walls: number; rounds: number }
   | { name: "join" }
-  | { name: "quick"; mode: Mode }
-  | { name: "game"; isHost: boolean; code: string; mode: Mode; walls: number; rounds: number; quickMatch?: boolean }
+  | { name: "quick"; mode: Mode; ranked?: boolean }
+  | { name: "game"; isHost: boolean; code: string; mode: Mode; walls: number; rounds: number; quickMatch?: boolean; ranked?: boolean }
   | { name: "bot"; difficulty: number; opponentName: string }
   | { name: "spectate" }
   | { name: "spectating"; code: string };
@@ -100,6 +100,7 @@ function Home() {
     if (!ident || !pending) return;
     if (pending === "quick2") setView({ name: "quick", mode: 2 });
     else if (pending === "quick4") setView({ name: "quick", mode: 4 });
+    else if (pending === "ranked2") setView({ name: "quick", mode: 2, ranked: true });
     else if (pending === "create") setView({ name: "create", mode: 2, walls: defaultWallsFor(2), rounds: 5 });
     else if (pending.startsWith("join:")) {
       const code = pending.slice(5).toUpperCase();
@@ -160,10 +161,11 @@ function Home() {
             {view.name === "quick" && (
               <QuickMatch
                 mode={view.mode}
+                ranked={!!view.ranked}
                 ident={ident}
                 onBack={() => setView({ name: "menu" })}
-                onJoin={(code) => setView({ name: "game", isHost: false, code, mode: view.mode, walls: defaultWallsFor(view.mode), rounds: 5 })}
-                onHost={(code) => setView({ name: "game", isHost: true, code, mode: view.mode, walls: defaultWallsFor(view.mode), rounds: 5, quickMatch: true })}
+                onJoin={(code) => setView({ name: "game", isHost: false, code, mode: view.mode, walls: defaultWallsFor(view.mode), rounds: 5, ranked: !!view.ranked })}
+                onHost={(code) => setView({ name: "game", isHost: true, code, mode: view.mode, walls: defaultWallsFor(view.mode), rounds: 5, quickMatch: true, ranked: !!view.ranked })}
               />
             )}
             {view.name === "game" && (
@@ -176,6 +178,7 @@ function Home() {
                 initialWalls={view.walls}
                 initialRounds={view.rounds}
                 quickMatch={view.quickMatch}
+                ranked={view.ranked}
                 onBotFallback={() => setView({
                   name: "bot",
                   difficulty: randomDifficulty().value,
