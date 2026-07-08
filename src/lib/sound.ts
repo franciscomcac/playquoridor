@@ -47,6 +47,7 @@ export function initSoundOnGesture() {
   if (initialized) return;
   const c = ensureCtx();
   if (c && c.state === "suspended") void c.resume();
+  if (c) loadRadarPing(c);
   initialized = true;
 }
 export function setMuted(m: boolean) {
