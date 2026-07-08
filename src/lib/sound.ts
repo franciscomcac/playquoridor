@@ -209,6 +209,62 @@ const MIN_GAP_MS: Partial<Record<SfxName, number>> = {
   clash: 200, coinToss: 200,
 };
 const lastPlayed: Partial<Record<SfxName, number>> = {};
+
+// Spinning-wheel sound: decelerating tick-tick-tick synced to the caller's
+// spin duration, then a landing "ding". Used by the 4-player round start.
+// steps: number of ticks matching the visual spin cycle count.
+// durationMs: total spin length in ms (ticks are distributed with the same
+// quadratic decel curve as the visual, so audio and visual land together).
+export function playWheelSpin(steps: number, durationMs: number) {
+  const c = ensureCtx();
+  if (!c || muted || !master) return;
+  // Distribute step delays with quadratic ease-out, then normalise so the
+  // sum equals durationMs — audio always lands exactly with the visual.
+  const weights: number[] = [];
+  for (let i = 0; i < steps; i++) weights.push(1 + i * i * 0.06);
+  const wsum = weights.reduce((a, b) => a + b, 0);
+  const t0 = c.currentTime;
+  let acc = 0;
+  for (let i = 0; i < steps; i++) {
+    acc += (weights[i] / wsum) * (durationMs / 1000);
+    const when = t0 + acc;
+    // Ratchet-style click: short pitched blip + tiny noise transient. Pitch
+    // rises slightly across the spin so the deceleration is audible.
+    const pitch = 1400 + (i / Math.max(1, steps - 1)) * 500;
+    const osc = c.createOscillator();
+    const g = c.createGain();
+    osc.type = "square";
+    osc.frequency.setValueAtTime(pitch, when);
+    g.gain.setValueAtTime(0.0001, when);
+    g.gain.exponentialRampToValueAtTime(0.22, when + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, when + 0.05);
+    osc.connect(g).connect(master);
+    osc.start(when); osc.stop(when + 0.07);
+    // Tiny noise transient for the mechanical clack.
+    const nlen = Math.max(1, Math.floor(c.sampleRate * 0.015));
+    const nbuf = c.createBuffer(1, nlen, c.sampleRate);
+    const nd = nbuf.getChannelData(0);
+    for (let k = 0; k < nlen; k++) nd[k] = (Math.random() * 2 - 1) * (1 - k / nlen);
+    const nsrc = c.createBufferSource(); nsrc.buffer = nbuf;
+    const ng = c.createGain(); ng.gain.value = 0.12;
+    const nf = c.createBiquadFilter(); nf.type = "highpass"; nf.frequency.value = 2200;
+    nsrc.connect(nf).connect(ng).connect(master);
+    nsrc.start(when);
+  }
+  // Landing "ding" right when the wheel stops.
+  const dingAt = t0 + durationMs / 1000 + 0.02;
+  [988, 1319, 1760].forEach((f, i) => {
+    const osc = c.createOscillator();
+    const g = c.createGain();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(f, dingAt);
+    g.gain.setValueAtTime(0.0001, dingAt);
+    g.gain.exponentialRampToValueAtTime(0.32 - i * 0.06, dingAt + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, dingAt + 0.45);
+    osc.connect(g).connect(master!);
+    osc.start(dingAt); osc.stop(dingAt + 0.5);
+  });
+}
 export function play(name: SfxName) {
   ensureCtx();
   if (!ctx || muted) return;
