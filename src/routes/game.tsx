@@ -1232,6 +1232,36 @@ function GameScreen({
     : state;
   const boardInteractive = status === "connected" && state.winner === null && !coinflip?.animating && !review;
 
+  // Quick / ranked matchmaking: keep the radar visible from the start of
+  // the game view until both players are connected AND one full radar
+  // cycle has completed, then reveal the board. Private code rooms keep
+  // the existing WaitingOverlay because the host still needs to see the
+  // room code to share it.
+  const usesRadar = !!(quickMatch || ranked);
+  const [radarRevealed, setRadarRevealed] = useState(!usesRadar);
+  useEffect(() => {
+    if (!usesRadar) return;
+    if (status !== "connected") return;
+    if (presence.count < presence.expected) return;
+    const t = window.setTimeout(() => setRadarRevealed(true), 1400);
+    return () => window.clearTimeout(t);
+  }, [usesRadar, status, presence.count, presence.expected]);
+
+  if (usesRadar && !radarRevealed) {
+    const label =
+      status === "error" ? "Connection error" :
+      status === "disconnected" ? "Disconnected" :
+      status === "connected" && presence.count >= presence.expected ? "Match found" :
+      status === "connected" ? `Waiting for players ${presence.count}/${presence.expected}` :
+      status === "waiting" ? `Waiting for players ${presence.count}/${presence.expected}` :
+      "Connecting";
+    return (
+      <div className="flex w-full justify-center">
+        <SearchingAnimation status={label} ranked={!!ranked} mode={state.mode as Mode} onBack={handleLeave} />
+      </div>
+    );
+  }
+
   return (
     <div className="grid w-full max-w-6xl gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div className="order-1 flex min-w-0 flex-col gap-3">
@@ -1244,7 +1274,7 @@ function GameScreen({
           <div className="relative min-w-0 flex-1">
             <QuoridorBoard state={displayState} you={you} onMove={handleMove} interactive={boardInteractive} onActivity={() => markActivity(you)} />
             {coinflip?.animating && <CoinflipOverlay starter={coinflip.starter} you={you} mode={state.mode as Mode} name={nameOf(coinflip.starter)} />}
-            {status === "waiting" && presence.count < presence.expected && (
+            {!usesRadar && status === "waiting" && presence.count < presence.expected && (
               <WaitingOverlay count={presence.count} expected={presence.expected} isHost={isHost} onStart={hostStartMatch} />
             )}
             {status === "error" && <ErrorOverlay msg={errorMsg} onLeave={onLeave} />}
