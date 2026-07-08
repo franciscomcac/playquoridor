@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { AVATAR_SWATCHES, Avatar, LobbyChrome, tierFromRating } from "@/components/LobbyChrome";
+import { AVATAR_SWATCHES, Avatar, LobbyChrome, PLACEMENT_GAMES, UNRANKED_COLOR, isPlacement, placementRemaining, tierFromRating } from "@/components/LobbyChrome";
 import { requireRealUser } from "@/lib/auth-gate";
 import { fetchProfile, fetchMyWinStreak, updateMyProfile, renameMyPlayer } from "@/lib/stats";
 import { saveBio, saveAvatar, moderateUsername } from "@/lib/moderation.functions";
@@ -73,13 +73,16 @@ function ProfilePage() {
   const nameLocked = !!nameLockedUntil;
 
   const stats = profile?.stats as
-    | { rating?: number; matches?: number; wins?: number; losses?: number }
+    | { rating?: number; matches?: number; wins?: number; losses?: number; ranked_matches?: number }
     | null | undefined;
   const rating = stats?.rating ?? 1000;
   const matches = stats?.matches ?? 0;
   const wins = stats?.wins ?? 0;
   const winRate = matches > 0 ? Math.round((wins / matches) * 100) : 0;
+  const rankedMatches = stats?.ranked_matches ?? 0;
+  const unranked = isPlacement(rankedMatches);
   const tier = tierFromRating(rating);
+  const placementLeft = placementRemaining(rankedMatches);
   const progress = useMemo(() => {
     if (tier.nextMin == null) return 100;
     const span = tier.nextMin - tier.min;
