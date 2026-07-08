@@ -258,6 +258,22 @@ function AbortedOverlay() {
   );
 }
 
+function ChaosBanner() {
+  return (
+    <div className="relative overflow-hidden rounded-xl border border-fuchsia-500/40 bg-gradient-to-r from-fuchsia-600/25 via-rose-600/20 to-amber-500/20 px-4 py-2.5 shadow-lg shadow-fuchsia-900/30">
+      <div className="pointer-events-none absolute inset-0 animate-pulse bg-gradient-to-r from-transparent via-fuchsia-500/10 to-transparent" />
+      <div className="relative flex items-center gap-3">
+        <span className="text-lg">⚡</span>
+        <div className="flex-1">
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-fuchsia-300">Chaos Mode</p>
+          <p className="text-xs font-semibold text-white">4 players. One board. All bets are off.</p>
+        </div>
+        <span className="rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-white">FFA</span>
+      </div>
+    </div>
+  );
+}
+
 function Header({ ident, onOpenSettings }: { ident: Identity | null; onOpenSettings: () => void }) {
   return (
     <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
