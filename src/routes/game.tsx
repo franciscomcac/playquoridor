@@ -88,6 +88,7 @@ function Home() {
   const navigate = useNavigate();
   const bootRan = useRef(false);
   const [aborting, setAborting] = useState(false);
+  const [rankedTimedOut, setRankedTimedOut] = useState(false);
   const goHome = () => {
     // Only show the aborted animation if we're leaving mid-game.
     if (view.name === "game" || view.name === "bot" || view.name === "spectating") {
@@ -215,6 +216,7 @@ function Home() {
                   difficulty: randomDifficulty().value,
                   opponentName: randomGamerName(),
                 })}
+                onRankedTimeout={view.ranked ? () => { setView({ name: "menu" }); setRankedTimedOut(true); } : undefined}
                 onLeave={goHome}
               />
             )}
