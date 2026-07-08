@@ -907,16 +907,76 @@ function GameScreen({
 
   const you = slot;
 
+  const [matchMuted, setMatchMuted] = useState(false);
+  const [chatBan, setChatBan] = useState<null | { until: string | null; reason: string | null }>(null);
+  const callModerate = useServerFn(moderateChatMessage);
+  const callMyBan = useServerFn(myChatBan);
+
+  useEffect(() => {
+    let alive = true;
+    void callMyBan({}).then((r) => {
+      if (!alive) return;
+      if (r.active) setChatBan({ until: r.until, reason: r.reason });
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, [callMyBan]);
+
+  const pushLocalSystem = useCallback((text: string) => {
+    setChat((prev) => [
+      ...prev.slice(-99),
+      { key: `sys-${Date.now()}-${Math.random()}`, slot: null, name: "System", text, ts: Date.now() },
+    ]);
+  }, []);
+
   const sendChat = useCallback((text: string) => {
     const s = slotRef.current;
     const name = rosterRef.current.find((e) => e.slot === s)?.name ?? `Player ${s + 1}`;
-    const entry = { slot: s as number, name, text, ts: Date.now() };
+
+    if (chatBan) {
+      pushLocalSystem(`You're chat-banned${chatBan.until ? ` until ${new Date(chatBan.until).toLocaleString()}` : ""}. Message not sent.`);
+      return;
+    }
+    if (matchMuted) {
+      pushLocalSystem("You're muted for this match. Message not sent.");
+      return;
+    }
+
+    // Optimistic append for the sender only.
+    const ts = Date.now();
+    const optimisticKey = `${ts}-${s}-me-${Math.random()}`;
     setChat((prev) => [
       ...prev.slice(-99),
-      { key: `${entry.ts}-${s}-me-${Math.random()}`, ...entry },
+      { key: optimisticKey, slot: s as number, name, text, ts },
     ]);
-    roomRef.current?.send({ type: "chat", payload: entry });
-  }, []);
+
+    void (async () => {
+      try {
+        const res = await callModerate({ data: { playerId: ident.id, matchId: code, text } });
+        if (res.allow) {
+          roomRef.current?.send({ type: "chat", payload: { slot: s as number, name, text, ts } });
+          return;
+        }
+        // Rejected: strip the optimistic message and show a private system note.
+        setChat((prev) => prev.filter((m) => m.key !== optimisticKey));
+        pushLocalSystem(res.senderMessage);
+        if (res.penalty === "match_mute") setMatchMuted(true);
+        if (res.penalty === "chat_ban_24h" || res.penalty === "chat_ban_7d" || res.penalty === "perm") {
+          setChatBan({ until: null, reason: res.reason });
+        }
+        if (res.lobbyMessage) {
+          const sys = { slot: -1, name: "System", text: res.lobbyMessage, ts: Date.now() };
+          setChat((prev) => [
+            ...prev.slice(-99),
+            { key: `sys-${sys.ts}-${Math.random()}`, slot: null, name: sys.name, text: sys.text, ts: sys.ts },
+          ]);
+          roomRef.current?.send({ type: "chat", payload: sys });
+        }
+      } catch (e: unknown) {
+        setChat((prev) => prev.filter((m) => m.key !== optimisticKey));
+        pushLocalSystem(`Message couldn't be sent (moderation error).`);
+      }
+    })();
+  }, [callModerate, chatBan, code, ident.id, matchMuted, pushLocalSystem]);
 
   // ---------- Activity + AFK (host authoritative) ----------
   const lastInputRef = useRef<number[]>(Array.from({ length: initialMode }, () => Date.now()));
