@@ -1,14 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { fetchLeaderboard, type LeaderRow } from "@/lib/stats";
 
 const SITE_URL = "https://playquoridor.online";
 const TITLE = "Quoridor Online — Play now, free";
 const DESC =
   "Play Quoridor free in your browser. Quick match, private rooms, 4-player free-for-alls, bot practice. No download, no signup.";
-
-type OpenRoom = { code: string; host_name: string; mode: 2 | 4; seats_taken: number; seats_total: number };
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -45,41 +42,22 @@ export const Route = createFileRoute("/")({
 });
 
 /* ============================================================
-   Play-first lobby. Ready to play, minimal, cleaner than
-   barricade.gg. Dark surface, gold accent, live data.
+   Play-first lobby. Three big Find-Match cards, ELO leaderboard,
+   private room code join. No open-rooms list — matchmaking is
+   handled server-side by /game.
    ============================================================ */
 
 function Lobby() {
   const navigate = useNavigate();
-  const [rooms, setRooms] = useState<OpenRoom[] | null>(null);
   const [board, setBoard] = useState<LeaderRow[] | null>(null);
   const [code, setCode] = useState("");
-  const [quickMode, setQuickMode] = useState<2 | 4>(2);
 
   useEffect(() => {
     let alive = true;
-    const load = async () => {
-      const cutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString();
-      const { data } = await supabase
-        .from("open_rooms")
-        .select("code, host_name, mode, seats_taken, seats_total, updated_at")
-        .gte("updated_at", cutoff)
-        .order("updated_at", { ascending: false })
-        .limit(20);
-      if (!alive) return;
-      const list = (data ?? [])
-        .filter((r) => r.seats_taken < r.seats_total)
-        .map((r) => ({
-          code: r.code, host_name: r.host_name,
-          mode: r.mode as 2 | 4,
-          seats_taken: r.seats_taken, seats_total: r.seats_total,
-        })) as OpenRoom[];
-      setRooms(list);
-    };
-    void load();
-    void fetchLeaderboard(5).then((r) => alive && setBoard(r)).catch(() => alive && setBoard([]));
-    const iv = window.setInterval(() => void load(), 15000);
-    return () => { alive = false; window.clearInterval(iv); };
+    void fetchLeaderboard(8)
+      .then((r) => alive && setBoard(r))
+      .catch(() => alive && setBoard([]));
+    return () => { alive = false; };
   }, []);
 
   const cleanCode = useMemo(
@@ -87,7 +65,7 @@ function Lobby() {
     [code],
   );
 
-  function goPlay(action: "quick2" | "quick4" | "create") {
+  function goPlay(action: "quick2" | "quick4" | "ranked2" | "create") {
     try { sessionStorage.setItem("quoridor:pendingAction", action); } catch {}
     void navigate({ to: "/game" });
   }
@@ -97,76 +75,71 @@ function Lobby() {
     void navigate({ to: "/game" });
   }
 
-  const online = (rooms?.length ?? 0) * 2 + (board?.length ?? 0);
-
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100 antialiased">
       <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-4 py-5 sm:px-6 sm:py-8">
         <TopBar />
 
         {/* Hero */}
-        <section className="mt-6 flex flex-col items-center text-center sm:mt-10">
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+        <section className="mt-8 flex flex-col items-center text-center sm:mt-12">
+          <span className="mb-3 inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-zinc-500">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            </span>
+            Matchmaking live
+          </span>
+          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
             Play <span className="text-amber-500">Quoridor</span>
           </h1>
-
-          <button
-            onClick={() => goPlay(quickMode === 4 ? "quick4" : "quick2")}
-            className="group relative mt-6 inline-flex items-center gap-3 rounded-xl bg-emerald-600 px-10 py-4 text-lg font-semibold text-white shadow-lg shadow-emerald-900/40 transition-all hover:-translate-y-0.5 hover:bg-emerald-500 active:translate-y-0"
-          >
-            <svg className="h-5 w-5 fill-current" viewBox="0 0 24 24" aria-hidden><path d="M8 5v14l11-7z" /></svg>
-            Play Now
-            <span aria-hidden className="pointer-events-none absolute inset-0 rounded-xl bg-emerald-400 opacity-0 blur-xl transition-opacity group-hover:opacity-20" />
-          </button>
-
-          <div className="mt-5 flex items-center gap-4 text-[11px] font-medium uppercase tracking-[0.25em] text-zinc-500">
-            <span className="flex items-center gap-1.5">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              </span>
-              {online} online
-            </span>
-            <span className="h-1 w-1 rounded-full bg-zinc-800" />
-            <span>{rooms?.length ?? 0} open rooms</span>
-          </div>
-
-          {/* Mode pills */}
-          <div className="mt-6 inline-flex items-center gap-1 rounded-full border border-zinc-800 bg-zinc-900/60 p-1 text-xs">
-            {([2, 4] as const).map((m) => (
-              <button
-                key={m}
-                onClick={() => setQuickMode(m)}
-                className={
-                  "rounded-full px-4 py-1.5 font-semibold uppercase tracking-widest transition-colors " +
-                  (quickMode === m
-                    ? "bg-zinc-800 text-amber-500"
-                    : "text-zinc-500 hover:text-zinc-300")
-                }
-              >
-                {m}P
-              </button>
-            ))}
-          </div>
+          <p className="mt-3 max-w-md text-sm text-zinc-500">
+            Pick a mode. We find you an opponent.
+          </p>
         </section>
 
-        {/* Bento grid */}
-        <section className="mt-10 grid grid-cols-1 items-start gap-4 lg:grid-cols-12">
-          {/* Leaderboard */}
-          <aside className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 lg:col-span-3">
+        {/* Find Match — main CTAs */}
+        <section className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <FindMatchCard
+            label="1v1"
+            sub="Casual duel"
+            desc="Classic head-to-head. No rating on the line."
+            accent="emerald"
+            onClick={() => goPlay("quick2")}
+          />
+          <FindMatchCard
+            label="4 Players"
+            sub="Free-for-all"
+            desc="Chaotic four-corner mayhem. Last pawn standing wins."
+            accent="sky"
+            onClick={() => goPlay("quick4")}
+          />
+          <FindMatchCard
+            label="Ranked"
+            sub="1v1 · ELO ladder"
+            desc="Climb the ladder. Winner takes rating from the loser."
+            accent="amber"
+            badge="ELO"
+            onClick={() => goPlay("ranked2")}
+          />
+        </section>
+
+        {/* Bento — leaderboard + private + quick actions */}
+        <section className="mt-4 grid grid-cols-1 items-start gap-4 lg:grid-cols-12">
+          {/* ELO Leaderboard */}
+          <aside className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 lg:col-span-5">
             <div className="flex items-center justify-between">
-              <h2 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Leaderboard</h2>
+              <h2 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">ELO Ladder</h2>
               <Link to="/stats" className="text-[10px] text-amber-500 hover:underline">View all</Link>
             </div>
             <ol className="mt-4 space-y-1">
-              {board === null && Array.from({ length: 5 }).map((_, i) => (
+              {board === null && Array.from({ length: 6 }).map((_, i) => (
                 <li key={i} className="flex animate-pulse items-center justify-between p-2">
                   <span className="h-3 w-24 rounded bg-zinc-800" />
-                  <span className="h-3 w-8 rounded bg-zinc-800" />
+                  <span className="h-3 w-10 rounded bg-zinc-800" />
                 </li>
               ))}
               {board?.length === 0 && (
-                <li className="p-2 text-xs text-zinc-500">No matches yet. Be the first.</li>
+                <li className="p-2 text-xs text-zinc-500">No ranked matches yet. Be the first.</li>
               )}
               {board?.map((r, i) => (
                 <li
@@ -179,71 +152,25 @@ function Lobby() {
                     </span>
                     <span className="truncate text-sm font-medium">{r.name}</span>
                   </div>
-                  <span className="font-mono text-xs text-zinc-400">{r.wins}</span>
+                  <span className="font-mono text-xs tabular-nums text-amber-400/90">{r.rating}</span>
                 </li>
               ))}
             </ol>
           </aside>
 
-          {/* Live lobby */}
-          <div className="flex min-h-[380px] flex-col overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/50 lg:col-span-6">
-            <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900/30 p-5">
-              <h2 className="text-sm font-semibold">Open Rooms</h2>
-              <span className="rounded-full bg-zinc-800/70 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-                Live
-              </span>
-            </div>
-
-            <div className="flex-1 overflow-y-auto">
-              {rooms === null ? (
-                <div className="p-10 text-center text-xs text-zinc-600">Loading rooms…</div>
-              ) : rooms.length === 0 ? (
-                <div className="flex h-full flex-col items-center justify-center gap-3 p-10 text-center">
-                  <div className="text-4xl opacity-30" aria-hidden>◇</div>
-                  <p className="text-sm text-zinc-500">No open rooms right now.</p>
-                  <button
-                    onClick={() => goPlay(quickMode === 4 ? "quick4" : "quick2")}
-                    className="mt-2 rounded-lg bg-amber-500 px-4 py-2 text-xs font-bold text-zinc-950 hover:bg-amber-400"
-                  >
-                    Host a room →
-                  </button>
-                </div>
-              ) : (
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="text-[10px] uppercase tracking-widest text-zinc-500">
-                      <th className="px-5 py-3 font-semibold">Host</th>
-                      <th className="px-5 py-3 text-center font-semibold">Mode</th>
-                      <th className="px-5 py-3 text-center font-semibold">Seats</th>
-                      <th className="px-5 py-3" />
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-800/50">
-                    {rooms.map((r) => (
-                      <tr key={r.code} className="group transition-colors hover:bg-zinc-800/30">
-                        <td className="px-5 py-3 text-sm font-medium">{r.host_name}</td>
-                        <td className="px-5 py-3 text-center text-xs text-zinc-400">{r.mode}P</td>
-                        <td className="px-5 py-3 text-center font-mono text-xs text-zinc-400">
-                          {r.seats_taken}/{r.seats_total}
-                        </td>
-                        <td className="px-5 py-3 text-right">
-                          <button
-                            onClick={() => goJoin(r.code)}
-                            className="rounded-lg bg-zinc-800 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-100 transition-colors hover:bg-amber-500 hover:text-zinc-950"
-                          >
-                            Join
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-
+          {/* Private room */}
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 lg:col-span-4">
+            <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Play With Friends</h3>
+            <p className="mt-2 text-xs text-zinc-500">Create a private room, share the code, or join one you were sent.</p>
+            <button
+              onClick={() => goPlay("create")}
+              className="mt-4 w-full rounded-xl bg-amber-500 py-3 text-sm font-bold text-zinc-950 shadow-lg shadow-amber-500/10 transition-all hover:-translate-y-0.5 hover:bg-amber-400"
+            >
+              Create Private Room
+            </button>
             <form
               onSubmit={(e) => { e.preventDefault(); goJoin(cleanCode); }}
-              className="flex gap-2 border-t border-zinc-800 bg-zinc-900/80 p-4"
+              className="mt-3 flex gap-2"
             >
               <input
                 value={cleanCode}
@@ -262,34 +189,8 @@ function Lobby() {
             </form>
           </div>
 
-          {/* Right rail: create + quick actions */}
+          {/* Right rail: quick actions */}
           <div className="space-y-4 lg:col-span-3">
-            <div className="rounded-2xl border border-amber-500/25 bg-zinc-900 p-5">
-              <h3 className="text-[10px] font-bold uppercase tracking-widest text-amber-500/80">Create Game</h3>
-              <div className="mt-4 space-y-3">
-                <div className="flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-950 p-1 text-xs">
-                  {([2, 4] as const).map((m) => (
-                    <button
-                      key={m}
-                      onClick={() => setQuickMode(m)}
-                      className={
-                        "flex-1 rounded-md py-1.5 font-bold uppercase tracking-widest transition-colors " +
-                        (quickMode === m ? "bg-zinc-800 text-zinc-100" : "text-zinc-500 hover:text-zinc-300")
-                      }
-                    >
-                      {m} Players
-                    </button>
-                  ))}
-                </div>
-                <button
-                  onClick={() => goPlay("create")}
-                  className="w-full rounded-xl bg-amber-500 py-3 text-sm font-bold text-zinc-950 shadow-lg shadow-amber-500/10 transition-all hover:-translate-y-0.5 hover:bg-amber-400"
-                >
-                  Create Room
-                </button>
-              </div>
-            </div>
-
             <QuickTile
               to="/game"
               onClick={() => { try { sessionStorage.setItem("quoridor:pendingAction", "create"); } catch {} }}
@@ -314,6 +215,43 @@ function Lobby() {
         </footer>
       </div>
     </main>
+  );
+}
+
+function FindMatchCard({
+  label, sub, desc, accent, badge, onClick,
+}: {
+  label: string; sub: string; desc: string;
+  accent: "emerald" | "sky" | "amber"; badge?: string;
+  onClick: () => void;
+}) {
+  const tone = {
+    emerald: { ring: "hover:border-emerald-500/40", dot: "bg-emerald-500", cta: "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/40" },
+    sky:     { ring: "hover:border-sky-500/40",     dot: "bg-sky-500",     cta: "bg-sky-600 hover:bg-sky-500 text-white shadow-sky-900/40" },
+    amber:   { ring: "hover:border-amber-500/50",   dot: "bg-amber-500",   cta: "bg-amber-500 hover:bg-amber-400 text-zinc-950 shadow-amber-500/20" },
+  }[accent];
+  return (
+    <button
+      onClick={onClick}
+      className={`group relative flex flex-col items-start rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 text-left transition-all hover:-translate-y-0.5 ${tone.ring}`}
+    >
+      {badge && (
+        <span className="absolute right-4 top-4 rounded-full bg-amber-500/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.25em] text-amber-400">
+          {badge}
+        </span>
+      )}
+      <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-zinc-500">
+        <span className={`h-1.5 w-1.5 rounded-full ${tone.dot}`} />
+        Find Match
+      </div>
+      <div className="mt-3 text-2xl font-bold tracking-tight text-zinc-50">{label}</div>
+      <div className="mt-0.5 text-xs font-semibold uppercase tracking-widest text-zinc-500">{sub}</div>
+      <p className="mt-3 text-sm text-zinc-400">{desc}</p>
+      <span className={`mt-5 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-widest shadow-lg transition-all ${tone.cta}`}>
+        Play
+        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M8 5v14l11-7z" /></svg>
+      </span>
+    </button>
   );
 }
 
