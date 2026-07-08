@@ -14,6 +14,7 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as PuzzleRouteImport } from './routes/puzzle'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PuzzleDateRouteImport } from './routes/puzzle.$date'
 
 const StatsRoute = StatsRouteImport.update({
   id: '/stats',
@@ -40,41 +41,62 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PuzzleDateRoute = PuzzleDateRouteImport.update({
+  id: '/$date',
+  path: '/$date',
+  getParentRoute: () => PuzzleRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
-  '/puzzle': typeof PuzzleRoute
+  '/puzzle': typeof PuzzleRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
+  '/puzzle/$date': typeof PuzzleDateRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
-  '/puzzle': typeof PuzzleRoute
+  '/puzzle': typeof PuzzleRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
+  '/puzzle/$date': typeof PuzzleDateRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
-  '/puzzle': typeof PuzzleRoute
+  '/puzzle': typeof PuzzleRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
+  '/puzzle/$date': typeof PuzzleDateRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about' | '/puzzle' | '/sitemap.xml' | '/stats'
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/puzzle'
+    | '/sitemap.xml'
+    | '/stats'
+    | '/puzzle/$date'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/puzzle' | '/sitemap.xml' | '/stats'
-  id: '__root__' | '/' | '/about' | '/puzzle' | '/sitemap.xml' | '/stats'
+  to: '/' | '/about' | '/puzzle' | '/sitemap.xml' | '/stats' | '/puzzle/$date'
+  id:
+    | '__root__'
+    | '/'
+    | '/about'
+    | '/puzzle'
+    | '/sitemap.xml'
+    | '/stats'
+    | '/puzzle/$date'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
-  PuzzleRoute: typeof PuzzleRoute
+  PuzzleRoute: typeof PuzzleRouteWithChildren
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StatsRoute: typeof StatsRoute
 }
@@ -116,13 +138,31 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/puzzle/$date': {
+      id: '/puzzle/$date'
+      path: '/$date'
+      fullPath: '/puzzle/$date'
+      preLoaderRoute: typeof PuzzleDateRouteImport
+      parentRoute: typeof PuzzleRoute
+    }
   }
 }
+
+interface PuzzleRouteChildren {
+  PuzzleDateRoute: typeof PuzzleDateRoute
+}
+
+const PuzzleRouteChildren: PuzzleRouteChildren = {
+  PuzzleDateRoute: PuzzleDateRoute,
+}
+
+const PuzzleRouteWithChildren =
+  PuzzleRoute._addFileChildren(PuzzleRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
-  PuzzleRoute: PuzzleRoute,
+  PuzzleRoute: PuzzleRouteWithChildren,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StatsRoute: StatsRoute,
 }
