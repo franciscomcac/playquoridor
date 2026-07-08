@@ -33,6 +33,16 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
   const [hover, setHover] = useState<HoverTarget | null>(null);
   const boardRef = useRef<HTMLDivElement>(null);
 
+  // Per-player POV rotation so each seat sees their pawn on the bottom.
+  // 2-player: player 1 flips 180°. 4-player: cardinal orientation per seat.
+  const rotation =
+    state.mode === 4
+      ? ([0, 180, -90, 90][you] ?? 0)
+      : state.mode === 2 && you === 1
+        ? 180
+        : 0;
+  const rotated = rotation !== 0;
+
   // Pawn elimination pops — track slots that just went inactive.
   const [pops, setPops] = useState<Pop[]>([]);
   const prevActive = useRef<boolean[]>(state.active);
@@ -63,8 +73,20 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
     const el = boardRef.current;
     if (!el) return null;
     const rect = el.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * BOARD;
-    const y = ((e.clientY - rect.top) / rect.height) * BOARD;
+    // Coords relative to the (rotated) board's axis-aligned bounding rect.
+    let px = e.clientX - rect.left;
+    let py = e.clientY - rect.top;
+    if (rotation !== 0) {
+      const S = rect.width; // board is square
+      const cx = px - S / 2, cy = py - S / 2;
+      const rad = (-rotation * Math.PI) / 180;
+      const rx = cx * Math.cos(rad) - cy * Math.sin(rad);
+      const ry = cx * Math.sin(rad) + cy * Math.cos(rad);
+      px = rx + S / 2;
+      py = ry + S / 2;
+    }
+    const x = (px / rect.width) * BOARD;
+    const y = (py / rect.height) * BOARD;
     if (x < 0 || x > BOARD || y < 0 || y > BOARD) return null;
     const gy = Math.min(BOARD - 1, Math.max(1, Math.round(y)));
     const gx = Math.min(BOARD - 1, Math.max(1, Math.round(x)));
@@ -174,7 +196,7 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
       gridTemplateRows: "minmax(0,1fr) 1.25rem",
       gap: "0.25rem",
     }}>
-      <div aria-hidden className="flex flex-col justify-around py-[3%] text-[10px] font-medium uppercase tracking-widest text-muted-foreground sm:text-xs">
+      <div aria-hidden className="flex flex-col justify-around py-[3%] text-[10px] font-medium uppercase tracking-widest text-muted-foreground sm:text-xs" style={{ visibility: rotated ? "hidden" : undefined }}>
         {Array.from({ length: BOARD }, (_, i) => (
           <span key={i} className="text-center leading-none">{BOARD - i}</span>
         ))}
@@ -182,7 +204,12 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
       <div className="wood-frame aspect-square w-full min-w-0">
       <div ref={boardRef} onPointerMove={handlePointerMove} onPointerLeave={() => setHover(null)} onClick={handleClick}
         className="relative h-full w-full select-none overflow-hidden rounded-md"
-        style={{ cursor, background: "var(--board-bg)" }}>
+        style={{
+          cursor,
+          background: "var(--board-bg)",
+          transform: rotation ? `rotate(${rotation}deg)` : undefined,
+          transition: "transform 240ms ease",
+        }}>
         <div className="grid h-full w-full"
           style={{ gridTemplateColumns: `repeat(${BOARD}, 1fr)`, gridTemplateRows: `repeat(${BOARD}, 1fr)` }}>
           {cells}
@@ -195,7 +222,7 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
                 left: `${(p[1] / BOARD) * 100}%`, top: `${(p[0] / BOARD) * 100}%`,
                 width: `${(1 / BOARD) * 100}%`, height: `${(1 / BOARD) * 100}%`, zIndex: 3,
               }}>
-              <Pawn key={`${p[0]}-${p[1]}`} player={i as PlayerId} you={you} active={state.turn === i && state.winner === null} />
+              <Pawn key={`${p[0]}-${p[1]}`} player={i as PlayerId} you={you} active={state.turn === i && state.winner === null} counterRotate={rotation} />
             </div>
           ) : null,
         )}
@@ -215,7 +242,7 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
       </div>
       </div>
       <div />
-      <div aria-hidden className="flex justify-around px-[3%] text-[10px] font-medium uppercase tracking-widest text-muted-foreground sm:text-xs">
+      <div aria-hidden className="flex justify-around px-[3%] text-[10px] font-medium uppercase tracking-widest text-muted-foreground sm:text-xs" style={{ visibility: rotated ? "hidden" : undefined }}>
         {FILES.map((f) => (
           <span key={f} className="text-center leading-none">{f}</span>
         ))}
@@ -266,7 +293,7 @@ function WallView({ wall, tone, latest }: { wall: Wall; tone: "solid" | "ghost" 
   );
 }
 
-function Pawn({ player, you, active }: { player: PlayerId; you: PlayerId; active: boolean; }) {
+function Pawn({ player, you, active, counterRotate = 0 }: { player: PlayerId; you: PlayerId; active: boolean; counterRotate?: number; }) {
   const color = PLAYER_COLORS[player];
   const isYou = player === you;
   return (
@@ -279,7 +306,9 @@ function Pawn({ player, you, active }: { player: PlayerId; you: PlayerId; active
           (active ? `, 0 0 16px color-mix(in oklab, ${color} 65%, transparent)` : ""),
         color: "oklch(0.15 0.02 55)",
       }}>
-      {player + 1}
+      <span style={{ display: "inline-block", transform: counterRotate ? `rotate(${-counterRotate}deg)` : undefined }}>
+        {player + 1}
+      </span>
     </span>
   );
 }

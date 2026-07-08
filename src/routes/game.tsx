@@ -1006,6 +1006,7 @@ function GameScreen({
     // return to lobby with a "search time exceeded" screen.
     if (ranked) {
       if (!onRankedTimeout) return;
+      const rankedTimeoutMs = initialMode === 4 ? 30_000 : 120_000;
       const t = window.setTimeout(() => {
         if (presenceRef.current.count >= presenceRef.current.expected) return;
         if (stateRef.current.matchWinner !== null) return;
@@ -1013,7 +1014,7 @@ function GameScreen({
         roomRef.current?.close();
         roomRef.current = null;
         onRankedTimeout();
-      }, 120_000);
+      }, rankedTimeoutMs);
       return () => window.clearTimeout(t);
     }
     if (!onBotFallback) return;
