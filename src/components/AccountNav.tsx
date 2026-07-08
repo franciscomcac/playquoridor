@@ -143,6 +143,7 @@ function AccountMenu({ username, country, compact }: { username: string; country
               <MenuItem to="/history" label="Match history" />
               <MenuItem to="/clips" label="Saved clips" />
               <MenuItem to="/stats" label="Leaderboard" />
+              <MenuItem to="/profile" label="Settings" />
               <li className="my-1 border-t border-zinc-800" />
               <li>
                 <button onClick={signOut} className="flex w-full items-center px-4 py-2 text-left text-rose-400 hover:bg-zinc-900">
