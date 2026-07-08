@@ -10,17 +10,38 @@ let initialized = false;
 
 // User-provided MP3 sample for the radar ping. Decoded lazily on first play.
 import radarPingAsset from "@/assets/radar-ping.mp3.asset.json";
-let radarPingBuffer: AudioBuffer | null = null;
-let radarPingLoading = false;
-function loadRadarPing(c: AudioContext) {
-  if (radarPingBuffer || radarPingLoading) return;
-  radarPingLoading = true;
-  fetch(radarPingAsset.url)
+import clashAsset from "@/assets/clash.mp3.asset.json";
+import coinTossAsset from "@/assets/coin-toss.mp3.asset.json";
+const sampleBuffers: Partial<Record<SfxName, AudioBuffer>> = {};
+const sampleLoading: Partial<Record<SfxName, boolean>> = {};
+const sampleUrls: Partial<Record<SfxName, string>> = {
+  searchPing: radarPingAsset.url,
+  clash: clashAsset.url,
+  coinToss: coinTossAsset.url,
+};
+function loadSample(name: SfxName, c: AudioContext) {
+  if (sampleBuffers[name] || sampleLoading[name]) return;
+  const url = sampleUrls[name];
+  if (!url) return;
+  sampleLoading[name] = true;
+  fetch(url)
     .then((r) => r.arrayBuffer())
     .then((buf) => c.decodeAudioData(buf))
-    .then((decoded) => { radarPingBuffer = decoded; })
+    .then((decoded) => { sampleBuffers[name] = decoded; })
     .catch(() => {})
-    .finally(() => { radarPingLoading = false; });
+    .finally(() => { sampleLoading[name] = false; });
+}
+function playSample(name: SfxName, vol = 0.85): boolean {
+  const c = ensureCtx();
+  if (!c || muted || !master) return false;
+  const buffer = sampleBuffers[name];
+  if (!buffer) { loadSample(name, c); return false; }
+  const src = c.createBufferSource();
+  src.buffer = buffer;
+  const g = c.createGain(); g.gain.value = vol;
+  src.connect(g).connect(master);
+  src.start(c.currentTime);
+  return true;
 }
 
 function loadPrefs() {
