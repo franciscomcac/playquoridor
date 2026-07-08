@@ -11,6 +11,8 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { ensureAuthSession, linkAuthToPlayer } from "../lib/identity";
+import { supabase } from "../integrations/supabase/client";
 
 function NotFoundComponent() {
   return (
@@ -128,6 +130,19 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    // Ensure a Supabase session exists (anonymous by default) so every write
+    // is authenticated under the new RLS. Link the auth uid to the local
+    // player row once we have one.
+    void ensureAuthSession().then(() => { void linkAuthToPlayer(); });
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN" || event === "USER_UPDATED") {
+        void linkAuthToPlayer();
+      }
+    });
+    return () => { sub.subscription.unsubscribe(); };
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
