@@ -2024,6 +2024,19 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
   const stateRef = useRef(state); stateRef.current = state;
   const [coinflip, setCoinflip] = useState<{ starter: PlayerId; animating: boolean } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [chat, setChat] = useState<ChatEntry[]>([]);
+
+  const sendChat = useCallback((text: string) => {
+    setChat((prev) => [
+      ...prev.slice(-99),
+      {
+        key: `${Date.now()}-you-${Math.random()}`,
+        slot: YOU as number, name: ident.name,
+        text, ts: Date.now(),
+      },
+    ]);
+    // Bots don't reply. Give a tiny cue so it's clear it's a solo chat.
+  }, [ident.name]);
 
   // Ready-up between rounds. Bot auto-readies after a short beat.
   const [readySlots, setReadySlots] = useState<PlayerId[]>([]);
@@ -2059,6 +2072,17 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
 
   const startMatch = useCallback(() => {
     startRound(initial());
+    const ts = Date.now();
+    setChat((prev) => [
+      ...prev.slice(-99),
+      {
+        key: `sys-${ts}-${Math.random()}`,
+        slot: null,
+        name: "System",
+        text: "Be respectful 🙌 — good luck & have fun.",
+        ts,
+      },
+    ]);
   }, [startRound, initial]);
 
   // Kick off the first round on mount.
