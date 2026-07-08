@@ -1503,6 +1503,7 @@ function GameScreen({
         {afk && state.winner === null && state.matchWinner === null && (
           <AfkBanner slot={afk.slot} deadline={afk.deadline} name={nameOf(afk.slot)} />
         )}
+        <MobileMatchStrip state={state} you={you} nameOf={nameOf} />
         <div className="flex gap-2 sm:gap-3">
           <div className="relative min-w-0 flex-1">
             <QuoridorBoard state={displayState} you={you} onMove={handleMove} interactive={boardInteractive} onActivity={() => markActivity(you)} />
@@ -1527,7 +1528,9 @@ function GameScreen({
                 onPrimary={newMatchAction} onLeave={onLeave} />
             )}
           </div>
-          <BoardSideClocks state={state} you={you} nameOf={nameOf} />
+          <div className="hidden sm:contents">
+            <BoardSideClocks state={state} you={you} nameOf={nameOf} />
+          </div>
         </div>
       </div>
 
