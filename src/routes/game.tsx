@@ -2576,9 +2576,20 @@ function MobileMatchStrip({ state, you, nameOf }: {
                 {formatClock(remaining)}
               </p>
             )}
-            <p className="mt-0.5 text-[10px] font-medium tracking-wider text-muted-foreground">
-              <span style={{ color }}>{state.wallsLeft[i]}</span> walls
-            </p>
+            <div className="mt-1 flex items-center gap-1">
+              <div className="flex flex-1 items-center gap-[2px]">
+                {Array.from({ length: 10 }, (_, k) => {
+                  const filled = k < Math.min(state.wallsLeft[i] ?? 0, 10);
+                  return (
+                    <span key={k} className="block h-2.5 flex-1 rounded-sm"
+                      style={{ background: filled ? color : "var(--border)" }} />
+                  );
+                })}
+              </div>
+              <span className="shrink-0 text-[10px] font-semibold tabular-nums" style={{ color }}>
+                {state.wallsLeft[i]}
+              </span>
+            </div>
           </div>
         );
       })}
