@@ -1,0 +1,1 @@
+DELETE FROM public.moderation_penalties WHERE reason ILIKE 'avatar:%';
