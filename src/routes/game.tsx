@@ -129,13 +129,13 @@ function Home() {
     if (pending === "quick2") setView({ name: "quick", mode: 2 });
     else if (pending === "quick4") setView({ name: "quick", mode: 4 });
     else if (pending === "ranked2") setView({ name: "quick", mode: 2, ranked: true });
-    else if (pending === "create") setView({ name: "create", mode: 2, walls: defaultWallsFor(2), rounds: 5 });
+    else if (pending === "create") setView({ name: "create", mode: 2, walls: defaultWallsFor(2), rounds: 3 });
     else if (pending === "cpu:easy") setView({ name: "bot", difficulty: 0.22, opponentName: "Tom" });
     else if (pending === "cpu:medium") setView({ name: "bot", difficulty: 0.6, opponentName: "Jackeline" });
     else if (pending === "cpu:hard") setView({ name: "bot", difficulty: 0.9, opponentName: "Rachel" });
     else if (pending.startsWith("join:")) {
       const code = pending.slice(5).toUpperCase();
-      if (code.length === 5) setView({ name: "game", isHost: false, code, mode: 2, walls: 10, rounds: 5 });
+      if (code.length === 5) setView({ name: "game", isHost: false, code, mode: 2, walls: 10, rounds: 3 });
     }
     else if (pending.startsWith("spectate:")) {
       const code = pending.slice(9).toUpperCase();
@@ -180,7 +180,7 @@ function Home() {
             {view.name === "join" && (
               <JoinRoom
                 onBack={goHome}
-                onJoin={(code) => setView({ name: "game", isHost: false, code, mode: 2, walls: 10, rounds: 5 })}
+                onJoin={(code) => setView({ name: "game", isHost: false, code, mode: 2, walls: 10, rounds: 3 })}
               />
             )}
             {view.name === "spectate" && (
@@ -203,8 +203,8 @@ function Home() {
                 ranked={!!view.ranked}
                 ident={ident}
                 onBack={goHome}
-                onJoin={(code) => setView({ name: "game", isHost: false, code, mode: view.mode, walls: defaultWallsFor(view.mode), rounds: 5, quickMatch: true, ranked: !!view.ranked })}
-                onHost={(code) => setView({ name: "game", isHost: true, code, mode: view.mode, walls: defaultWallsFor(view.mode), rounds: 5, quickMatch: true, ranked: !!view.ranked })}
+                onJoin={(code) => setView({ name: "game", isHost: false, code, mode: view.mode, walls: defaultWallsFor(view.mode), rounds: 3, quickMatch: true, ranked: !!view.ranked })}
+                onHost={(code) => setView({ name: "game", isHost: true, code, mode: view.mode, walls: defaultWallsFor(view.mode), rounds: 3, quickMatch: true, ranked: !!view.ranked })}
               />
             )}
             {view.name === "game" && (
