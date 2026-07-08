@@ -2784,7 +2784,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
       {matchOver && (
         <EndScreen state={state} you={YOU} nameOf={nameOf}
           snapshot={botMatchHistory.getSnapshot()}
-          onPrimary={startMatch} onLeave={onLeave} />
+          onRematch={startMatch} onNewMatch={startMatch} onLeave={onLeave} />
       )}
 
       <MobileAsideSheet chat={<ChatPanel entries={chat} onSend={sendChat} you={YOU} />}>
