@@ -48,9 +48,25 @@ export const Route = createFileRoute("/")({
    ============================================================ */
 
 function Lobby() {
+  return <LobbyInner />;
+}
+
+function computeOnline(real: number): number {
+  // Baseline drifts smoothly between 150 and 200 using time, plus a bit of
+  // jitter, plus every real ranked player we know about.
+  const t = Date.now() / 60000; // minutes
+  const wave = (Math.sin(t / 3.1) + Math.sin(t / 1.7 + 1.3)) / 2; // -1..1
+  const base = 175 + Math.round(wave * 22); // ~153..197
+  const jitter = Math.floor(Math.random() * 5); // 0..4
+  const n = base + jitter + real;
+  return Math.max(150, Math.min(260, n));
+}
+
+function LobbyInner() {
   const navigate = useNavigate();
   const [board, setBoard] = useState<LeaderRow[] | null>(null);
   const [code, setCode] = useState("");
+  const [onlineCount, setOnlineCount] = useState<number>(() => computeOnline(0));
 
   useEffect(() => {
     let alive = true;
@@ -59,6 +75,15 @@ function Lobby() {
       .catch(() => alive && setBoard([]));
     return () => { alive = false; };
   }, []);
+
+  // Fluctuating online-players count. Baseline drifts between 150 and 200,
+  // plus the count of real ranked players we know about.
+  useEffect(() => {
+    const real = board?.length ?? 0;
+    setOnlineCount(computeOnline(real));
+    const t = setInterval(() => setOnlineCount(computeOnline(real)), 6000);
+    return () => clearInterval(t);
+  }, [board]);
 
   const cleanCode = useMemo(
     () => code.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5),
@@ -99,7 +124,7 @@ function Lobby() {
               Matchmaking online
             </span>
             <span className="text-zinc-700">•</span>
-            <span>{board?.length ?? 0} ranked players</span>
+            <span>{onlineCount} players online</span>
           </div>
         </section>
 
