@@ -400,14 +400,6 @@ function Lobby() {
   );
 }
 
-function Stat({ label, value, border }: { label: string; value: number | string; border?: boolean }) {
-  return (
-    <div className={"px-[26px] py-[13px] text-left " + (border ? "border-l border-[#1c1c22]" : "")}>
-      <div className="font-[IBM_Plex_Mono,monospace] text-[17px] font-semibold leading-none">{value}</div>
-      <div className="mt-[5px] text-[9.5px] font-semibold uppercase tracking-[0.14em] text-[#5c5c66]">{label}</div>
-    </div>
-  );
-}
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return <div className={"rounded-2xl border border-[#232329] bg-[#111114] " + className}>{children}</div>;
 }
@@ -430,17 +422,6 @@ function CpuRow({ onClick, color, lvl, name, desc }: { onClick: () => void; colo
       </div>
       <span className="text-[16px] text-[#3d3d46]">›</span>
     </button>
-  );
-}
-function LearnRow({ to, title, sub }: { to: string; title: string; sub: string }) {
-  return (
-    <Link to={to} className="flex items-center gap-3 border-t border-[#1a1a1f] px-5 py-[11px] transition-colors hover:bg-[#15151a]">
-      <div className="flex-1">
-        <div className="text-[13px] font-semibold">{title}</div>
-        <div className="text-[11px] text-[#5c5c66]">{sub}</div>
-      </div>
-      <span className="text-[16px] text-[#3d3d46]">›</span>
-    </Link>
   );
 }
 function Step({ n, title, desc }: { n: string; title: string; desc: string }) {
