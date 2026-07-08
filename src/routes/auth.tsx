@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { linkAuthToPlayer } from "@/lib/identity";
+import { isOnboarded } from "@/lib/onboarding";
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (s: Record<string, unknown>) => ({
@@ -60,7 +61,8 @@ function AuthPage() {
       // Redirected flow will navigate away; direct flow lands here.
       if (!result.redirected) {
         await linkAuthToPlayer();
-        navigate({ to: "/" });
+        const done = await isOnboarded();
+        navigate({ to: done ? "/" : "/onboarding" });
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Google sign-in failed.");
@@ -82,7 +84,8 @@ function AuthPage() {
         if (err) throw err;
       }
       await linkAuthToPlayer();
-      navigate({ to: "/" });
+      const done = mode === "signup" ? false : await isOnboarded();
+      navigate({ to: done ? "/" : "/onboarding" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sign-in failed.");
     } finally { setBusy(false); }
