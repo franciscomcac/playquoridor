@@ -192,7 +192,7 @@ function MatchActions({ row, meId }: { row: MatchRow; meId: string | null }) {
       <button onClick={gif} disabled={!snap || busy}
         title={snap ? "Download animated GIF" : "This match has no saved replay"}
         className="rounded-md border border-border bg-secondary/40 px-3 py-1.5 text-xs font-medium hover:bg-secondary disabled:opacity-40">
-        {busy ? "Rendering…" : "Download GIF"}
+        {busy ? "Rendering…" : "Download Clip"}
       </button>
       {opp?.player_id && (
         <Link to="/player/$playerId" params={{ playerId: opp.player_id }}
