@@ -84,10 +84,29 @@ function Home() {
   const [ident, setIdent] = useState<Identity | null>(null);
   const [view, setView] = useState<View>({ name: "menu" });
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [pending, setPending] = useState<string | null>(null);
 
   useEffect(() => {
     setIdent(getStoredIdentity());
+    try {
+      const j = sessionStorage.getItem("quoridor:pendingJoin");
+      const a = sessionStorage.getItem("quoridor:pendingAction");
+      if (j) { sessionStorage.removeItem("quoridor:pendingJoin"); setPending(`join:${j}`); }
+      else if (a) { sessionStorage.removeItem("quoridor:pendingAction"); setPending(a); }
+    } catch {}
   }, []);
+
+  useEffect(() => {
+    if (!ident || !pending) return;
+    if (pending === "quick2") setView({ name: "quick", mode: 2 });
+    else if (pending === "quick4") setView({ name: "quick", mode: 4 });
+    else if (pending === "create") setView({ name: "create", mode: 2, walls: defaultWallsFor(2), rounds: 5 });
+    else if (pending.startsWith("join:")) {
+      const code = pending.slice(5).toUpperCase();
+      if (code.length === 5) setView({ name: "game", isHost: false, code, mode: 2, walls: 10, rounds: 5 });
+    }
+    setPending(null);
+  }, [ident, pending]);
 
   const onSetName = (name: string) => {
     const i = setStoredIdentity(name);
