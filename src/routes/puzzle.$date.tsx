@@ -50,6 +50,7 @@ export const Route = createFileRoute("/puzzle/$date")({
 
 function PuzzlePage() {
   const { date } = Route.useParams();
+  if (!DATE_RX.test(date)) throw notFound();
   const [puzzle, setPuzzle] = useState<PuzzleRow | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
