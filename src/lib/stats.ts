@@ -1,6 +1,6 @@
 // Supabase reads/writes for stats, leaderboard, and Quick Match lobby index.
 import { supabase } from "@/integrations/supabase/client";
-import { ensureAuthSession } from "@/lib/identity";
+import { ensureAuthSession, getStoredIdentity } from "@/lib/identity";
 
 export type MatchResult = {
   mode: 2 | 4;
@@ -30,6 +30,7 @@ export type LeaderRow = {
 export async function recordMatch(m: MatchResult) {
   try {
     const uid = await ensureAuthSession();
+    const myLocalId = getStoredIdentity()?.id ?? null;
     const { data: match, error } = await supabase
       .from("matches")
       .insert({ mode: m.mode, rounds: m.rounds, winner_player_id: m.winnerId })
@@ -40,13 +41,10 @@ export async function recordMatch(m: MatchResult) {
       result: p.id && p.id === m.winnerId ? "win" : p.forfeited ? "forfeit" : "loss",
       rounds_won: p.roundsWon, walls_placed: p.wallsPlaced,
       pawns_eliminated: p.pawnsEliminated, forfeited: p.forfeited,
-      // Only tag the caller's own row with their auth id — bots / peers stay null.
-      auth_user_id: p.id && uid && p.id === (m.players.find((x) => x.id === p.id)?.id)
-        ? (p.slot === (m.players.find((x) => x.id && uid && x.id === p.id)?.slot) ? uid : null)
-        : null,
+      // Only tag the caller's own row; bots and remote peers stay null so RLS
+      // (auth_user_id IS NULL OR = auth.uid()) accepts the whole batch.
+      auth_user_id: uid && p.id && p.id === myLocalId ? uid : null,
     }));
-    // Simpler: tag every row whose player_id matches the caller's local id.
-    // (Done via callerId param below to avoid heuristics.)
     await supabase.from("match_players").insert(rows);
   } catch (err) { console.warn("recordMatch failed", err); }
 }
