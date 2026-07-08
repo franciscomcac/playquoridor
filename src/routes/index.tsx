@@ -119,7 +119,8 @@ function Lobby() {
   const [streak, setStreak] = useState<number>(0);
   const [gamesToday, setGamesToday] = useState<number>(0);
   const [inQueue, setInQueue] = useState<number>(0);
-  const [online, setOnline] = useState<number>(() => computeOnline(0));
+  const [online, setOnline] = useState<number>(180);
+  const [signedIn, setSignedIn] = useState<boolean>(false);
   const cleanCode = useMemo(
     () => code.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5),
     [code],
@@ -134,6 +135,7 @@ function Lobby() {
     void (async () => {
       const me = await requireRealUser();
       if (!alive) return;
+      setSignedIn(!!me);
       if (!me) { setRecent([]); return; }
       const [r, st] = await Promise.all([
         fetchRecentMatches(me.playerId, 4).catch(() => []),
@@ -162,6 +164,10 @@ function Lobby() {
   }, [navigate]);
 
   function onPlay() {
+    if (mode === "ranked" && !signedIn) {
+      void navigate({ to: "/auth" });
+      return;
+    }
     if (mode === "2p") go("quick2");
     else if (mode === "4p") go("quick4");
     else go("ranked2");
