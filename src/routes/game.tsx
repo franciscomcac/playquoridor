@@ -1990,8 +1990,8 @@ function CoinflipOverlay({ starter, you, mode, nameOf }: {
     const timers: number[] = [];
     const t = (ms: number, fn: () => void) => timers.push(window.setTimeout(fn, ms));
     t(120, () => setPhase(1));   // slide in
-    t(950, () => { setPhase(2); setShakeKey((k) => k + 1); play("wall"); }); // impact
-    t(1350, () => setPhase(3));  // coin appear
+    t(950, () => { setPhase(2); setShakeKey((k) => k + 1); play("clash"); }); // impact
+    t(1350, () => { setPhase(3); play("coinToss"); });  // coin appear
     t(1550, () => setPhase(4));  // coin spin
     t(3350, () => { setPhase(5); play("roundWin"); }); // reveal
     return () => { timers.forEach((id) => window.clearTimeout(id)); };

@@ -1,5 +1,5 @@
 // Web Audio SFX — synthesized, no assets. Lazy-init on first user gesture.
-type SfxName = "pop"|"wall"|"join"|"matchStart"|"roundWin"|"matchWin"|"afkWarn"|"click"|"lowTime"|"tick"|"denied"|"searchStart"|"searchPing"|"matchFound";
+type SfxName = "pop"|"wall"|"join"|"matchStart"|"roundWin"|"matchWin"|"afkWarn"|"click"|"lowTime"|"tick"|"denied"|"searchStart"|"searchPing"|"matchFound"|"clash"|"coinToss";
 const MUTE_KEY = "quoridor.mute";
 const VOL_KEY = "quoridor.volume";
 let ctx: AudioContext | null = null;
@@ -10,17 +10,38 @@ let initialized = false;
 
 // User-provided MP3 sample for the radar ping. Decoded lazily on first play.
 import radarPingAsset from "@/assets/radar-ping.mp3.asset.json";
-let radarPingBuffer: AudioBuffer | null = null;
-let radarPingLoading = false;
-function loadRadarPing(c: AudioContext) {
-  if (radarPingBuffer || radarPingLoading) return;
-  radarPingLoading = true;
-  fetch(radarPingAsset.url)
+import clashAsset from "@/assets/clash.mp3.asset.json";
+import coinTossAsset from "@/assets/coin-toss.mp3.asset.json";
+const sampleBuffers: Partial<Record<SfxName, AudioBuffer>> = {};
+const sampleLoading: Partial<Record<SfxName, boolean>> = {};
+const sampleUrls: Partial<Record<SfxName, string>> = {
+  searchPing: radarPingAsset.url,
+  clash: clashAsset.url,
+  coinToss: coinTossAsset.url,
+};
+function loadSample(name: SfxName, c: AudioContext) {
+  if (sampleBuffers[name] || sampleLoading[name]) return;
+  const url = sampleUrls[name];
+  if (!url) return;
+  sampleLoading[name] = true;
+  fetch(url)
     .then((r) => r.arrayBuffer())
     .then((buf) => c.decodeAudioData(buf))
-    .then((decoded) => { radarPingBuffer = decoded; })
+    .then((decoded) => { sampleBuffers[name] = decoded; })
     .catch(() => {})
-    .finally(() => { radarPingLoading = false; });
+    .finally(() => { sampleLoading[name] = false; });
+}
+function playSample(name: SfxName, vol = 0.85): boolean {
+  const c = ensureCtx();
+  if (!c || muted || !master) return false;
+  const buffer = sampleBuffers[name];
+  if (!buffer) { loadSample(name, c); return false; }
+  const src = c.createBufferSource();
+  src.buffer = buffer;
+  const g = c.createGain(); g.gain.value = vol;
+  src.connect(g).connect(master);
+  src.start(c.currentTime);
+  return true;
 }
 
 function loadPrefs() {
@@ -47,7 +68,7 @@ export function initSoundOnGesture() {
   if (initialized) return;
   const c = ensureCtx();
   if (c && c.state === "suspended") void c.resume();
-  if (c) loadRadarPing(c);
+  if (c) { loadSample("searchPing", c); loadSample("clash", c); loadSample("coinToss", c); }
   initialized = true;
 }
 export function setMuted(m: boolean) {
@@ -148,6 +169,7 @@ function radarPing() {
 const MIN_GAP_MS: Partial<Record<SfxName, number>> = {
   pop: 60, wall: 60, click: 30, denied: 80, tick: 40,
   lowTime: 800, afkWarn: 400, searchPing: 900, searchStart: 400, matchFound: 400,
+  clash: 200, coinToss: 200,
 };
 const lastPlayed: Partial<Record<SfxName, number>> = {};
 export function play(name: SfxName) {
@@ -203,16 +225,13 @@ export function play(name: SfxName) {
       break;
     // Radar-style ping while queued; quiet enough to loop.
     case "searchPing":
-      {
-        const c = ensureCtx();
-        if (!c || !master) break;
-        if (!radarPingBuffer) { loadRadarPing(c); radarPing(); break; }
-        const src = c.createBufferSource();
-        src.buffer = radarPingBuffer;
-        const g = c.createGain(); g.gain.value = 0.85;
-        src.connect(g).connect(master);
-        src.start(c.currentTime);
-      }
+      if (!playSample("searchPing", 0.85)) radarPing();
+      break;
+    case "clash":
+      playSample("clash", 0.95);
+      break;
+    case "coinToss":
+      playSample("coinToss", 0.9);
       break;
     // Bright confirmation when an opponent is found.
     case "matchFound":
