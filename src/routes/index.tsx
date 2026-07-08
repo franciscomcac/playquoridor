@@ -801,6 +801,14 @@ function GameScreen({
     matchRecordedRef.current = false;
     const { totalWalls, totalRounds, mode } = stateRef.current;
     hostStartRound(initialState(mode, totalWalls, totalRounds));
+    // Kick every match off with a friendly reminder. Host is the source of
+    // truth so the message shows up once for everyone.
+    const sys = { slot: -1, name: "System", text: "Be respectful 🙌 — good luck & have fun.", ts: Date.now() };
+    setChat((prev) => [
+      ...prev.slice(-99),
+      { key: `sys-${sys.ts}-${Math.random()}`, slot: null, name: sys.name, text: sys.text, ts: sys.ts },
+    ]);
+    roomRef.current?.send({ type: "chat", payload: sys });
   }, [hostStartRound]);
 
   const hostApplyForfeit = useCallback((
@@ -931,11 +939,16 @@ function GameScreen({
           setReadySlots(p.slots as PlayerId[]);
         } else if (msg.type === "chat") {
           const p = msg.payload as { slot: number; name: string; text: string; ts: number };
+          const isSystem = (p.slot as number) < 0;
           setChat((prev) => [
             ...prev.slice(-99),
-            { key: `${p.ts}-${p.slot}-${Math.random()}`, slot: p.slot, name: p.name, text: p.text, ts: p.ts },
+            {
+              key: `${p.ts}-${p.slot}-${Math.random()}`,
+              slot: isSystem ? null : p.slot,
+              name: p.name, text: p.text, ts: p.ts,
+            },
           ]);
-          play("click");
+          if (!isSystem) play("click");
         }
       },
       onError: (err: Error) => {
@@ -2011,6 +2024,19 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
   const stateRef = useRef(state); stateRef.current = state;
   const [coinflip, setCoinflip] = useState<{ starter: PlayerId; animating: boolean } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [chat, setChat] = useState<ChatEntry[]>([]);
+
+  const sendChat = useCallback((text: string) => {
+    setChat((prev) => [
+      ...prev.slice(-99),
+      {
+        key: `${Date.now()}-you-${Math.random()}`,
+        slot: YOU as number, name: ident.name,
+        text, ts: Date.now(),
+      },
+    ]);
+    // Bots don't reply. Give a tiny cue so it's clear it's a solo chat.
+  }, [ident.name]);
 
   // Ready-up between rounds. Bot auto-readies after a short beat.
   const [readySlots, setReadySlots] = useState<PlayerId[]>([]);
@@ -2046,6 +2072,17 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
 
   const startMatch = useCallback(() => {
     startRound(initial());
+    const ts = Date.now();
+    setChat((prev) => [
+      ...prev.slice(-99),
+      {
+        key: `sys-${ts}-${Math.random()}`,
+        slot: null,
+        name: "System",
+        text: "Be respectful 🙌 — good luck & have fun.",
+        ts,
+      },
+    ]);
   }, [startRound, initial]);
 
   // Kick off the first round on mount.
@@ -2251,6 +2288,7 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
         <ScoreCard state={state} you={YOU} nameOf={nameOf} />
         <PlayersCard state={state} you={YOU} nameOf={nameOf} />
         <MoveHistoryPanel state={state} nameOf={nameOf} compact defaultOpen onView={setReview} />
+        <ChatPanel entries={chat} onSend={sendChat} you={YOU} />
 
         {toast && (
           <div className="toast-in rounded-xl border border-border bg-card p-3 text-xs uppercase tracking-widest text-primary">

@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -91,7 +91,6 @@ export function AccountNav({ compact = false }: { compact?: boolean }) {
 
 function AccountMenu({ username, country, compact }: { username: string; country: string | null; compact: boolean }) {
   const [open, setOpen] = useState(false);
-  const navigate = useNavigate();
   const flag = country ? (COUNTRY_BY_ISO[country]?.flag ?? "🌐") : "🌐";
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
@@ -103,8 +102,15 @@ function AccountMenu({ username, country, compact }: { username: string; country
   }, []);
   async function signOut() {
     await supabase.auth.signOut();
-    await supabase.auth.signInAnonymously();
-    void navigate({ to: "/" });
+    // Drop the local player identity so the next boot mints a fresh guest
+    // name/id (rather than reusing the signed-out user's stored name).
+    try {
+      localStorage.removeItem("quoridor.playerId");
+      localStorage.removeItem("quoridor.playerName");
+    } catch { /* ignore */ }
+    // Hard reload so every stale piece of app state resets and a new
+    // anonymous session is minted on next boot.
+    window.location.replace("/");
   }
   const btnPad = compact ? "px-2.5 py-1.5 text-[11px]" : "px-3 py-2 text-xs";
   return (
