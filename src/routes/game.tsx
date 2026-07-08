@@ -2272,9 +2272,10 @@ function WinOverlay({ state, you, matchOver, onPrimary, primaryLabel, onLeave, n
   );
 }
 
-function EndScreen({ state, you, onPrimary, onLeave, nameOf, snapshot }: {
+function EndScreen({ state, you, onRematch, onNewMatch, onRequeue, onLeave, nameOf, snapshot }: {
   state: GameState; you: PlayerId;
-  onPrimary: () => void; onLeave: () => void;
+  onRematch: () => void; onNewMatch: () => void; onRequeue?: () => void;
+  onLeave: () => void;
   nameOf: (s: PlayerId) => string;
   snapshot: MatchSnapshot | null;
 }) {
@@ -2336,8 +2337,11 @@ function EndScreen({ state, you, onPrimary, onLeave, nameOf, snapshot }: {
         </div>
 
         <div className="mt-3 flex flex-wrap justify-center gap-2">
-          <button onClick={onPrimary} className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5">
-            New match
+          <button onClick={onNewMatch} className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5">
+            {onRequeue ? "Find new match" : "New match"}
+          </button>
+          <button onClick={onRematch} className="rounded-lg border border-primary/50 bg-primary/10 px-5 py-2 text-sm font-semibold text-primary transition-transform hover:-translate-y-0.5 hover:bg-primary/20">
+            Rematch 🔁
           </button>
           <ShareResultButton state={state} you={you} nameOf={nameOf} matchOver />
           <DownloadGifButton snapshot={snapshot} />
