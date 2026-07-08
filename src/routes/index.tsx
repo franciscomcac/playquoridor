@@ -80,39 +80,37 @@ function Lobby() {
       <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-4 py-5 sm:px-6 sm:py-8">
         <TopBar />
 
-        {/* Hero — split, geometric */}
-        <section className="mt-10 grid grid-cols-1 items-center gap-10 sm:mt-16 lg:grid-cols-2 lg:gap-16">
-          <div className="flex flex-col">
-            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-zinc-500">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              </span>
-              Matchmaking live
+        {/* Compact centered hero — barricade-style */}
+        <section className="mt-10 flex flex-col items-center text-center sm:mt-14">
+          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+            Play <span className="text-amber-500">Quoridor</span>
+          </h1>
+          <button
+            onClick={() => goPlay("quick2")}
+            className="mt-6 inline-flex items-center gap-2.5 rounded-xl bg-emerald-600 px-8 py-4 text-base font-bold text-white shadow-lg shadow-emerald-900/40 transition-all hover:-translate-y-0.5 hover:bg-emerald-500"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M8 5v14l11-7z" /></svg>
+            Play Now
+          </button>
+          <p className="mt-3 text-xs text-zinc-500">Free — no account needed</p>
+          <div className="mt-4 flex items-center gap-3 text-[11px] text-zinc-500">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              Matchmaking online
             </span>
-            <h1 className="mt-5 text-5xl font-bold tracking-tight sm:text-6xl lg:text-7xl">
-              Play <span className="text-amber-500">Quoridor</span>.
-            </h1>
-            <p className="mt-4 max-w-md text-base text-zinc-500">
-              Two walls, one pawn, a race across the board. Pick a mode and jump in.
-            </p>
-
-            <div className="mt-8 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap">
-              <ModeButton label="2 Players" tone="primary" onClick={() => goPlay("quick2")} />
-              <ModeButton label="4 Players" tone="ghost" onClick={() => goPlay("quick4")} />
-              <ModeButton label="Ranked" tone="ghost" badge="ELO" onClick={() => goPlay("ranked2")} />
-            </div>
+            <span className="text-zinc-700">•</span>
+            <span>{board?.length ?? 0} ranked players</span>
           </div>
-
-          <BoardArt />
         </section>
 
-        {/* Bento — leaderboard + private + quick actions */}
-        <section className="mt-16 grid grid-cols-1 items-start gap-4 lg:grid-cols-12">
+        {/* Lobby row — leaderboard | match setup | quick play */}
+        <section className="mt-12 grid grid-cols-1 items-start gap-4 lg:grid-cols-12">
           {/* ELO Leaderboard */}
-          <aside className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 lg:col-span-5">
+          <aside className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 lg:col-span-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">ELO Ladder</h2>
+              <h2 className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+                <span className="text-amber-500">🏆</span> Leaderboard
+              </h2>
               <Link to="/stats" className="text-[10px] text-amber-500 hover:underline">View all</Link>
             </div>
             <ol className="mt-4 space-y-1">
@@ -142,50 +140,68 @@ function Lobby() {
             </ol>
           </aside>
 
-          {/* Private room */}
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 lg:col-span-4">
-            <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Play With Friends</h3>
-            <p className="mt-2 text-xs text-zinc-500">Create a private room, share the code, or join one you were sent.</p>
-            <button
-              onClick={() => goPlay("create")}
-              className="mt-4 w-full rounded-xl bg-amber-500 py-3 text-sm font-bold text-zinc-950 shadow-lg shadow-amber-500/10 transition-all hover:-translate-y-0.5 hover:bg-amber-400"
-            >
-              Create Private Room
-            </button>
-            <form
-              onSubmit={(e) => { e.preventDefault(); goJoin(cleanCode); }}
-              className="mt-3 flex gap-2"
-            >
-              <input
-                value={cleanCode}
-                onChange={(e) => setCode(e.target.value)}
-                placeholder="Enter room code…"
-                maxLength={5}
-                className="flex-1 rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-2 font-mono text-sm uppercase tracking-[0.3em] text-amber-400 placeholder:normal-case placeholder:tracking-normal placeholder:text-zinc-600 focus:border-amber-500/60 focus:outline-none"
-              />
-              <button
-                type="submit"
-                disabled={cleanCode.length !== 5}
-                className="rounded-lg bg-zinc-800 px-4 py-2 text-xs font-bold uppercase tracking-widest transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Join
-              </button>
-            </form>
+          {/* Center: Live Lobby with match modes + private room */}
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 lg:col-span-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-bold tracking-tight text-zinc-100">Live Lobby</h2>
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-emerald-400">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Connected
+              </span>
+            </div>
+
+            <div className="mt-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">Find Match</div>
+            <div className="mt-2 grid grid-cols-3 gap-2">
+              <ModeButton label="2 Players" sub="Casual" onClick={() => goPlay("quick2")} />
+              <ModeButton label="4 Players" sub="Free-for-all" onClick={() => goPlay("quick4")} />
+              <ModeButton label="Ranked" sub="ELO 1v1" tone="primary" onClick={() => goPlay("ranked2")} />
+            </div>
+
+            <div className="mt-5 border-t border-zinc-800 pt-4">
+              <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Play With Friends</div>
+              <div className="mt-2 flex gap-2">
+                <button
+                  onClick={() => goPlay("create")}
+                  className="rounded-lg bg-amber-500 px-4 py-2 text-xs font-bold uppercase tracking-widest text-zinc-950 transition-colors hover:bg-amber-400"
+                >
+                  + Create Room
+                </button>
+                <form
+                  onSubmit={(e) => { e.preventDefault(); goJoin(cleanCode); }}
+                  className="flex flex-1 gap-2"
+                >
+                  <input
+                    value={cleanCode}
+                    onChange={(e) => setCode(e.target.value)}
+                    placeholder="Enter room code…"
+                    maxLength={5}
+                    className="flex-1 rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 font-mono text-sm uppercase tracking-[0.3em] text-amber-400 placeholder:normal-case placeholder:tracking-normal placeholder:text-zinc-600 focus:border-amber-500/60 focus:outline-none"
+                  />
+                  <button
+                    type="submit"
+                    disabled={cleanCode.length !== 5}
+                    className="rounded-lg bg-zinc-800 px-4 py-2 text-xs font-bold uppercase tracking-widest transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Join
+                  </button>
+                </form>
+              </div>
+            </div>
           </div>
 
-          {/* Right rail: quick actions */}
-          <div className="space-y-4 lg:col-span-3">
+          {/* Right: Quick Play */}
+          <div className="space-y-3 lg:col-span-3">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Quick Play</div>
             <QuickTile
               to="/game"
               onClick={() => { try { sessionStorage.setItem("quoridor:pendingAction", "create"); } catch {} }}
               label="CPU Practice"
-              sub="Improve your tactics"
+              sub="vs Computer"
               icon={<svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>}
             />
             <QuickTile
               to="/puzzle"
               label="Daily Puzzle"
-              sub="Solve today's position"
+              sub="Today's position"
               icon={<svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z" /></svg>}
             />
           </div>
