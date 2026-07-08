@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AccountNav } from "@/components/AccountNav";
+import { LobbyChrome } from "@/components/LobbyChrome";
 import { requireRealUser } from "@/lib/auth-gate";
 import {
   fetchGamesToday,
@@ -60,8 +60,7 @@ function computeOnline(real: number): number {
   const wave = (Math.sin(t / 3.1) + Math.sin(t / 1.7 + 1.3)) / 2;
   const base = 175 + Math.round(wave * 22);
   const jitter = Math.floor(Math.random() * 5);
-  const n = base + jitter + real;
-  return Math.max(150, Math.min(260, n));
+  return Math.max(150, Math.min(260, base + jitter + real));
 }
 
 function timeAgo(iso: string): string {
@@ -87,13 +86,13 @@ function Lobby() {
   const [gamesToday, setGamesToday] = useState<number>(0);
   const [inQueue, setInQueue] = useState<number>(0);
   const [online, setOnline] = useState<number>(() => computeOnline(0));
+  const avgQueue = Math.max(6, 22 - inQueue * 2);
 
   const cleanCode = useMemo(
     () => code.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5),
     [code],
   );
 
-  // Initial data pull.
   useEffect(() => {
     let alive = true;
     void fetchLeaderboard(5).then((r) => alive && setBoard(r)).catch(() => alive && setBoard([]));
@@ -102,7 +101,8 @@ function Lobby() {
     void fetchQueueCount().then((n) => alive && setInQueue(n)).catch(() => {});
     void (async () => {
       const me = await requireRealUser();
-      if (!alive || !me) { if (alive) setRecent([]); return; }
+      if (!alive) return;
+      if (!me) { setRecent([]); return; }
       const [r, st] = await Promise.all([
         fetchRecentMatches(me.playerId, 4).catch(() => []),
         fetchMyWinStreak(me.playerId).catch(() => 0),
@@ -113,7 +113,6 @@ function Lobby() {
     return () => { alive = false; };
   }, []);
 
-  // Refresh live counts every 10s. Online drifts locally.
   useEffect(() => {
     setOnline(computeOnline(board?.length ?? 0));
     const drift = setInterval(() => setOnline(computeOnline(board?.length ?? 0)), 6000);
@@ -126,7 +125,7 @@ function Lobby() {
   }, [board]);
 
   const go = useCallback((pending: string) => {
-    try { sessionStorage.setItem("quoridor:pendingAction", pending); } catch {}
+    try { sessionStorage.setItem("quoridor:pendingAction", pending); } catch {/* noop */}
     void navigate({ to: "/game" });
   }, [navigate]);
 
@@ -137,11 +136,11 @@ function Lobby() {
   }
   function onJoin(c: string) {
     if (c.length !== 5) return;
-    try { sessionStorage.setItem("quoridor:pendingJoin", c); } catch {}
+    try { sessionStorage.setItem("quoridor:pendingJoin", c); } catch {/* noop */}
     void navigate({ to: "/game" });
   }
   function onSpectate(c: string) {
-    try { sessionStorage.setItem("quoridor:pendingAction", `spectate:${c}`); } catch {}
+    try { sessionStorage.setItem("quoridor:pendingAction", `spectate:${c}`); } catch {/* noop */}
     void navigate({ to: "/game" });
   }
 
@@ -151,97 +150,52 @@ function Lobby() {
     "QUEUE FOR RANKED";
 
   return (
-    <main className="min-h-screen bg-[#09090b] font-[Space_Grotesk,ui-sans-serif,system-ui] text-[#ececf1] antialiased">
-      <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link
-        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
-        rel="stylesheet"
-      />
-
-      {/* Header */}
-      <header className="h-[68px] border-b border-[#1a1a1f]">
-        <div className="mx-auto flex h-full max-w-[1240px] items-center justify-between px-8">
-          <Link to="/" className="flex items-center gap-3">
-            <span className="grid h-9 w-9 place-items-center rounded-[9px] border border-[#2a2a31] bg-gradient-to-br from-[#1d1d22] to-[#101013]">
-              <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden>
-                <rect x="1" y="1" width="7" height="7" rx="1.5" fill="#f5a524" />
-                <rect x="10" y="1" width="7" height="7" rx="1.5" fill="#2e2e36" />
-                <rect x="1" y="10" width="7" height="7" rx="1.5" fill="#2e2e36" />
-                <rect x="10" y="10" width="7" height="7" rx="1.5" fill="#2e2e36" />
-              </svg>
-            </span>
-            <span className="text-[15px] font-bold">playquoridor<span className="text-[#5c5c66]">.online</span></span>
-          </Link>
-
-          <nav className="hidden items-center gap-2 md:flex">
-            <NavLink href="#play">Play</NavLink>
-            <NavLink to="/puzzle">Puzzles</NavLink>
-            <NavLink to="/stats">Leaderboard</NavLink>
-            <NavLink to="/about">Learn</NavLink>
-          </nav>
-
-          <div className="flex items-center gap-3">
-            <div className="hidden items-center gap-2 rounded-full border border-[#232329] bg-[#0e0e11] px-3 py-1.5 sm:flex">
-              <span className="h-[7px] w-[7px] rounded-full bg-[#2fd575] shadow-[0_0_8px_#2fd575]" />
-              <span className="font-[IBM_Plex_Mono,monospace] text-[12px] text-[#a7a7b2]">{online} online</span>
-            </div>
-            <AccountNav />
-          </div>
-        </div>
-      </header>
-
+    <LobbyChrome online={online}>
       {/* Hero */}
-      <section className="relative overflow-hidden px-8 py-[76px] text-center">
+      <section className="relative overflow-hidden px-8 py-[60px] text-center">
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 -top-10 bottom-0 opacity-[0.55]"
+          className="pointer-events-none absolute inset-x-0 -top-10 bottom-0 opacity-[0.5]"
           style={{
             backgroundImage:
-              "linear-gradient(#1c1c22 1px,transparent 1px),linear-gradient(90deg,#1c1c22 1px,transparent 1px)",
-            backgroundSize: "64px 64px",
-            WebkitMaskImage: "radial-gradient(ellipse 55% 70% at 50% 30%,#000 20%,transparent 75%)",
-            maskImage: "radial-gradient(ellipse 55% 70% at 50% 30%,#000 20%,transparent 75%)",
+              "linear-gradient(#191920 1px,transparent 1px),linear-gradient(90deg,#191920 1px,transparent 1px)",
+            backgroundSize: "48px 48px",
+            WebkitMaskImage: "radial-gradient(ellipse 52% 68% at 50% 32%,#000 15%,transparent 72%)",
+            maskImage: "radial-gradient(ellipse 52% 68% at 50% 32%,#000 15%,transparent 72%)",
           }}
         />
         <div
           aria-hidden
-          className="pointer-events-none absolute left-1/2 top-[10%] h-[420px] w-[760px] -translate-x-1/2"
-          style={{ background: "radial-gradient(closest-side,rgba(245,165,36,0.14),transparent 70%)" }}
+          className="pointer-events-none absolute left-1/2 top-[16%] h-[340px] w-[620px] -translate-x-1/2"
+          style={{ background: "radial-gradient(closest-side,rgba(245,165,36,0.14),transparent 68%)", opacity: 0.6 }}
         />
-        <h1 className="relative m-0 text-[52px] font-bold leading-none tracking-[-0.03em] sm:text-[72px]">
+        <div className="relative text-[11px] font-semibold uppercase tracking-[0.24em] text-[#f5a524]">
+          Ranked · Season 4 · Live
+        </div>
+        <h1 className="relative m-0 mt-3 text-[50px] font-bold leading-none tracking-[-0.035em] sm:text-[66px]">
           Play <span className="text-[#f5a524]">Quoridor</span>
         </h1>
-        <p className="relative mt-4 text-[15px] text-[#83838e]">
-          The strategy classic — block, dodge, and race to the far side.
+        <p className="relative mx-auto mt-4 font-[IBM_Plex_Mono,monospace] text-[13px] tracking-[0.02em] text-[#83838e]">
+          9×9 board · 10 walls each · first pawn across wins
         </p>
         <div className="relative">
           <button
             onClick={onPlay}
-            className="mt-[34px] inline-flex items-center gap-3 rounded-[14px] border-0 bg-gradient-to-b from-[#2fd575] to-[#1caf5c] px-13 py-[19px] text-[19px] font-bold tracking-[0.01em] text-[#04150b] transition-transform hover:-translate-y-0.5"
-            style={{
-              padding: "19px 52px",
-              boxShadow:
-                "0 0 0 1px rgba(47,213,117,.4),0 8px 40px rgba(47,213,117,.28),inset 0 1px 0 rgba(255,255,255,.25)",
-            }}
+            className="mt-8 inline-flex items-center gap-3 rounded-[10px] border border-[rgba(47,213,117,0.6)] bg-gradient-to-b from-[#2bcb6f] to-[#1fb35f] px-[46px] py-4 text-[15.5px] font-bold uppercase tracking-[0.08em] text-[#04150b] transition-transform hover:-translate-y-0.5"
+            style={{ boxShadow: "0 4px 26px rgba(47,213,117,.2),inset 0 1px 0 rgba(255,255,255,.2)" }}
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
+            <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden>
               <path d="M4 2.5v11l9-5.5z" fill="currentColor" />
             </svg>
             Play Now
           </button>
         </div>
-        <div className="relative mt-3 text-[12px] text-[#83838e]">Free — no account needed</div>
 
-        <div className="relative mt-[30px] flex flex-wrap items-center justify-center gap-x-[34px] gap-y-3 text-[13px] text-[#83838e]">
-          <span>
-            <b className="font-[IBM_Plex_Mono,monospace] text-[15px] font-semibold text-[#2fd575]">{online}</b> players online
-          </span>
-          <span>
-            <b className="font-[IBM_Plex_Mono,monospace] text-[15px] font-semibold text-[#ececf1]">{inQueue}</b> in queue
-          </span>
-          <span>
-            <b className="font-[IBM_Plex_Mono,monospace] text-[15px] font-semibold text-[#ececf1]">{gamesToday.toLocaleString()}</b> games today
-          </span>
+        <div className="relative mt-9 inline-flex items-stretch overflow-hidden rounded-[12px] border border-[#232329] bg-[rgba(14,14,17,0.8)] backdrop-blur">
+          <Stat label="Players Online" value={online} />
+          <Stat label="In Queue" value={inQueue} border />
+          <Stat label="Games Today" value={gamesToday.toLocaleString()} border />
+          <Stat label="Avg Queue" value={`${avgQueue}s`} border />
         </div>
       </section>
 
@@ -249,14 +203,11 @@ function Lobby() {
       <div id="play" className="mx-auto grid max-w-[1240px] items-start gap-5 px-8 pb-6 lg:grid-cols-[280px_1fr_300px]">
         {/* Left column */}
         <div className="flex flex-col gap-4">
-          <Card id="leaderboard">
+          <Card>
             <CardHeader eyebrow="🏆 Leaderboard" action={<Link to="/stats" className="text-[11.5px] font-semibold uppercase tracking-[0.06em] text-[#f5a524] hover:text-[#ffc45e]">View all</Link>} />
             <div className="mt-3">
               {board === null && Array.from({ length: 5 }).map((_, i) => (
-                <Row key={i}>
-                  <span className="h-3 w-24 animate-pulse rounded bg-[#1e1e24]" />
-                  <span className="h-3 w-10 animate-pulse rounded bg-[#1e1e24]" />
-                </Row>
+                <Row key={i}><span className="h-3 w-24 animate-pulse rounded bg-[#1e1e24]" /></Row>
               ))}
               {board?.length === 0 && (
                 <div className="border-t border-[#1a1a1f] px-5 py-4 text-[12.5px] text-[#83838e]">
@@ -322,81 +273,51 @@ function Lobby() {
               <span className="text-[11px] font-semibold tracking-[0.12em] text-[#2fd575]">CONNECTED</span>
             </span>
           </div>
-
           <div className="px-6 pt-4">
             <Eyebrow>Find match</Eyebrow>
             <div className="mt-3 flex gap-3">
-              {(
-                [
-                  { id: "2p", title: "2 Players", sub: "Casual" },
-                  { id: "4p", title: "4 Players", sub: "Free-for-all" },
-                  { id: "ranked", title: "Ranked", sub: "ELO 1v1" },
-                ] as { id: Mode; title: string; sub: string }[]
-              ).map((m) => {
+              {([
+                { id: "2p", title: "2 Players", sub: "Casual" },
+                { id: "4p", title: "4 Players", sub: "Free-for-all" },
+                { id: "ranked", title: "Ranked", sub: "ELO 1v1" },
+              ] as { id: Mode; title: string; sub: string }[]).map((m) => {
                 const on = mode === m.id;
                 return (
-                  <button
-                    key={m.id}
-                    onClick={() => setMode(m.id)}
-                    className={
-                      "flex-1 rounded-[12px] border p-4 text-left transition-colors " +
+                  <button key={m.id} onClick={() => setMode(m.id)}
+                    className={"flex-1 rounded-[12px] border p-4 text-left transition-colors " +
                       (on
                         ? "border-[rgba(245,165,36,0.35)] bg-[rgba(245,165,36,0.14)] shadow-[0_0_24px_rgba(245,165,36,0.14)]"
-                        : "border-[#232329] bg-[#17171b] hover:border-[#34343e]")
-                    }
-                  >
+                        : "border-[#232329] bg-[#17171b] hover:border-[#34343e]")}>
                     <div className="text-[16px] font-bold">{m.title}</div>
-                    <div
-                      className={
-                        "mt-[5px] text-[10.5px] font-semibold uppercase tracking-[0.13em] " +
-                        (on ? "text-[#f5a524]" : "text-[#5c5c66]")
-                      }
-                    >
+                    <div className={"mt-[5px] text-[10.5px] font-semibold uppercase tracking-[0.13em] " + (on ? "text-[#f5a524]" : "text-[#5c5c66]")}>
                       {m.sub}
                     </div>
                   </button>
                 );
               })}
             </div>
-            <button
-              onClick={onPlay}
-              className="mt-4 w-full rounded-[11px] bg-[#f5a524] px-4 py-[14px] text-[14.5px] font-bold tracking-[0.02em] text-[#160e00] transition-[filter] hover:brightness-110"
-            >
+            <button onClick={onPlay}
+              className="mt-4 w-full rounded-[11px] bg-[#f5a524] px-4 py-[14px] text-[14.5px] font-bold tracking-[0.02em] text-[#160e00] transition-[filter] hover:brightness-110">
               {queueLabel}
             </button>
           </div>
-
           <div className="px-6 pt-6">
             <Eyebrow>Play with friends</Eyebrow>
             <div className="mt-3 flex flex-wrap gap-[10px]">
-              <button
-                onClick={() => go("create")}
-                className="whitespace-nowrap rounded-[10px] border border-[#2b2b33] bg-[#1e1e24] px-[18px] py-3 text-[12.5px] font-bold uppercase tracking-[0.06em] hover:bg-[#26262e]"
-              >
+              <button onClick={() => go("create")}
+                className="whitespace-nowrap rounded-[10px] border border-[#2b2b33] bg-[#1e1e24] px-[18px] py-3 text-[12.5px] font-bold uppercase tracking-[0.06em] hover:bg-[#26262e]">
                 + Create Room
               </button>
-              <form
-                onSubmit={(e) => { e.preventDefault(); onJoin(cleanCode); }}
-                className="flex flex-1 gap-[10px]"
-              >
-                <input
-                  value={cleanCode}
-                  onChange={(e) => setCode(e.target.value)}
-                  placeholder="Enter room code…"
-                  maxLength={5}
-                  className="min-w-0 flex-1 rounded-[10px] border border-[#232329] bg-[#0d0d10] px-[14px] py-3 font-[IBM_Plex_Mono,monospace] text-[13px] tracking-[0.3em] text-[#ececf1] outline-none placeholder:tracking-normal placeholder:text-[#5c5c66] focus:border-[rgba(245,165,36,0.35)]"
-                />
-                <button
-                  type="submit"
-                  disabled={cleanCode.length !== 5}
-                  className="rounded-[10px] border border-[#2b2b33] bg-[#17171b] px-[22px] py-3 text-[12.5px] font-bold uppercase tracking-[0.08em] hover:border-[rgba(245,165,36,0.35)] hover:text-[#f5a524] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-[#2b2b33] disabled:hover:text-[#ececf1]"
-                >
+              <form onSubmit={(e) => { e.preventDefault(); onJoin(cleanCode); }} className="flex flex-1 gap-[10px]">
+                <input value={cleanCode} onChange={(e) => setCode(e.target.value)} placeholder="Enter room code…" maxLength={5}
+                  className="min-w-0 flex-1 rounded-[10px] border border-[#232329] bg-[#0d0d10] px-[14px] py-3 font-[IBM_Plex_Mono,monospace] text-[13px] tracking-[0.3em] text-[#ececf1] outline-none placeholder:tracking-normal placeholder:text-[#5c5c66] focus:border-[rgba(245,165,36,0.35)]" />
+                <button type="submit" disabled={cleanCode.length !== 5}
+                  className="rounded-[10px] border border-[#2b2b33] bg-[#17171b] px-[22px] py-3 text-[12.5px] font-bold uppercase tracking-[0.08em] hover:border-[rgba(245,165,36,0.35)] hover:text-[#f5a524] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-[#2b2b33] disabled:hover:text-[#ececf1]">
                   Join
                 </button>
               </form>
             </div>
           </div>
-
           <div className="pt-6">
             <div className="flex items-center justify-between px-6">
               <Eyebrow>
@@ -407,10 +328,7 @@ function Lobby() {
             </div>
             <div className="mt-2">
               {live === null && Array.from({ length: 3 }).map((_, i) => (
-                <Row key={i}>
-                  <span className="h-3 w-40 animate-pulse rounded bg-[#1e1e24]" />
-                  <span className="h-3 w-10 animate-pulse rounded bg-[#1e1e24]" />
-                </Row>
+                <Row key={i}><span className="h-3 w-40 animate-pulse rounded bg-[#1e1e24]" /></Row>
               ))}
               {live?.length === 0 && (
                 <div className="border-t border-[#1a1a1f] px-6 py-5 text-[12.5px] text-[#83838e]">
@@ -418,22 +336,15 @@ function Lobby() {
                 </div>
               )}
               {live?.map((g) => (
-                <button
-                  key={g.code}
-                  onClick={() => onSpectate(g.code)}
-                  className="flex w-full items-center gap-3 border-t border-[#1a1a1f] px-6 py-[11px] text-left transition-colors hover:bg-[#15151a]"
-                >
+                <button key={g.code} onClick={() => onSpectate(g.code)}
+                  className="flex w-full items-center gap-3 border-t border-[#1a1a1f] px-6 py-[11px] text-left transition-colors hover:bg-[#15151a]">
                   <div className="flex-1 truncate">
                     <span className="text-[13px] font-semibold">{g.hostName}</span>
                     <span className="text-[12px] text-[#5c5c66]"> · {g.mode}p {g.ranked ? "Ranked" : "Casual"}</span>
                   </div>
-                  <span className="font-[IBM_Plex_Mono,monospace] text-[11px] text-[#5c5c66]">
-                    {g.seatsTaken}/{g.seatsTotal} seats
-                  </span>
-                  <span className="font-[IBM_Plex_Mono,monospace] text-[11px] uppercase tracking-widest text-[#83838e]">
-                    {g.code}
-                  </span>
-                  <span className="text-[16px] text-[#3d3d46] transition-colors group-hover:text-[#f5a524]">›</span>
+                  <span className="font-[IBM_Plex_Mono,monospace] text-[11px] text-[#5c5c66]">{g.seatsTaken}/{g.seatsTotal}</span>
+                  <span className="font-[IBM_Plex_Mono,monospace] text-[11px] uppercase tracking-widest text-[#83838e]">{g.code}</span>
+                  <span className="text-[16px] text-[#3d3d46]">›</span>
                 </button>
               ))}
             </div>
@@ -451,11 +362,8 @@ function Lobby() {
             </div>
           </Card>
 
-          <Link
-            to="/puzzle"
-            id="puzzles"
-            className="block rounded-2xl border border-[#2b2412] bg-[linear-gradient(135deg,#17130a,#111114_60%)] p-5 transition-colors hover:border-[rgba(245,165,36,0.35)]"
-          >
+          <Link to="/puzzle"
+            className="block rounded-2xl border border-[#2b2412] bg-[linear-gradient(135deg,#17130a,#111114_60%)] p-5 transition-colors hover:border-[rgba(245,165,36,0.35)]">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#f5a524]">🧩 Daily puzzle</span>
               {streak > 0 && (
@@ -469,7 +377,7 @@ function Lobby() {
             <div className="mt-3 text-[12px] font-semibold text-[#f5a524]">SOLVE TODAY'S →</div>
           </Link>
 
-          <Card id="learn">
+          <Card>
             <CardHeader eyebrow="Learn" />
             <div className="mt-3">
               <LearnRow to="/about" title="How to play" sub="Rules in 2 minutes" />
@@ -479,7 +387,6 @@ function Lobby() {
         </div>
       </div>
 
-      {/* How to play */}
       <div className="mx-auto max-w-[1240px] px-8">
         <Eyebrow>New here? Quoridor in three moves</Eyebrow>
         <div className="grid gap-4 py-6 md:grid-cols-3">
@@ -488,92 +395,45 @@ function Lobby() {
           <Step n="03" title="Reach the far side" desc="First pawn to touch the opposite edge wins the game." />
         </div>
       </div>
-
-      <footer className="mt-6 border-t border-[#1a1a1f] pb-8 pt-6">
-        <div className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-between gap-4 px-8">
-          <span className="text-[12px] text-[#5c5c66]">© {new Date().getFullYear()} playquoridor.online</span>
-          <nav className="flex flex-wrap gap-6 text-[12px]">
-            <Link to="/about" className="text-[#5c5c66] hover:text-[#a7a7b2]">About</Link>
-            <Link to="/stats" className="text-[#5c5c66] hover:text-[#a7a7b2]">Leaderboard</Link>
-            <Link to="/puzzle" className="text-[#5c5c66] hover:text-[#a7a7b2]">Puzzles</Link>
-            <a href="mailto:hi@playquoridor.online" className="text-[#5c5c66] hover:text-[#a7a7b2]">Contact</a>
-          </nav>
-        </div>
-      </footer>
-    </main>
+    </LobbyChrome>
   );
 }
 
-/* ------------------------- primitives ------------------------- */
-
-function Card({ children, className = "", id }: { children: React.ReactNode; className?: string; id?: string }) {
+function Stat({ label, value, border }: { label: string; value: number | string; border?: boolean }) {
   return (
-    <div id={id} className={"rounded-2xl border border-[#232329] bg-[#111114] " + className}>
-      {children}
+    <div className={"px-[26px] py-[13px] text-left " + (border ? "border-l border-[#1c1c22]" : "")}>
+      <div className="font-[IBM_Plex_Mono,monospace] text-[17px] font-semibold leading-none">{value}</div>
+      <div className="mt-[5px] text-[9.5px] font-semibold uppercase tracking-[0.14em] text-[#5c5c66]">{label}</div>
     </div>
   );
 }
-
+function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <div className={"rounded-2xl border border-[#232329] bg-[#111114] " + className}>{children}</div>;
+}
 function CardHeader({ eyebrow, action }: { eyebrow: React.ReactNode; action?: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between px-5 pt-4">
-      <Eyebrow>{eyebrow}</Eyebrow>
-      {action}
-    </div>
-  );
+  return <div className="flex items-center justify-between px-5 pt-4"><Eyebrow>{eyebrow}</Eyebrow>{action}</div>;
 }
-
 function Eyebrow({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#5c5c66]">
-      {children}
-    </span>
-  );
+  return <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#5c5c66]">{children}</span>;
 }
-
 function Row({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex items-center gap-3 border-t border-[#1a1a1f] px-5 py-[11px]">
-      {children}
-    </div>
-  );
+  return <div className="flex items-center gap-3 border-t border-[#1a1a1f] px-5 py-[11px]">{children}</div>;
 }
-
-function NavLink({ href, to, children }: { href?: string; to?: string; children: React.ReactNode }) {
-  const cls = "rounded-lg px-3 py-2 text-[13.5px] font-medium text-[#a7a7b2] hover:bg-[#17171b] hover:text-[#ececf1]";
-  if (to) return <Link to={to} className={cls}>{children}</Link>;
-  return <a href={href} className={cls}>{children}</a>;
-}
-
-function CpuRow({
-  onClick, color, lvl, name, desc,
-}: { onClick: () => void; color: string; lvl: string; name: string; desc: string }) {
+function CpuRow({ onClick, color, lvl, name, desc }: { onClick: () => void; color: string; lvl: string; name: string; desc: string }) {
   return (
-    <button
-      onClick={onClick}
-      className="flex w-full items-center gap-3 border-t border-[#1a1a1f] px-5 py-[11px] text-left transition-colors hover:bg-[#15151a]"
-    >
-      <span
-        className="h-[9px] w-[9px] flex-none rounded-full"
-        style={{ background: color, boxShadow: `0 0 8px ${color}` }}
-      />
+    <button onClick={onClick} className="flex w-full items-center gap-3 border-t border-[#1a1a1f] px-5 py-[11px] text-left transition-colors hover:bg-[#15151a]">
+      <span className="h-[9px] w-[9px] flex-none rounded-full" style={{ background: color, boxShadow: `0 0 8px ${color}` }} />
       <div className="flex-1">
-        <div className="text-[13px] font-bold">
-          {lvl} <span className="font-medium text-[#83838e]">— {name}</span>
-        </div>
+        <div className="text-[13px] font-bold">{lvl} <span className="font-medium text-[#83838e]">— {name}</span></div>
         <div className="text-[11px] text-[#5c5c66]">{desc}</div>
       </div>
       <span className="text-[16px] text-[#3d3d46]">›</span>
     </button>
   );
 }
-
 function LearnRow({ to, title, sub }: { to: string; title: string; sub: string }) {
   return (
-    <Link
-      to={to}
-      className="flex items-center gap-3 border-t border-[#1a1a1f] px-5 py-[11px] transition-colors hover:bg-[#15151a]"
-    >
+    <Link to={to} className="flex items-center gap-3 border-t border-[#1a1a1f] px-5 py-[11px] transition-colors hover:bg-[#15151a]">
       <div className="flex-1">
         <div className="text-[13px] font-semibold">{title}</div>
         <div className="text-[11px] text-[#5c5c66]">{sub}</div>
@@ -582,7 +442,6 @@ function LearnRow({ to, title, sub }: { to: string; title: string; sub: string }
     </Link>
   );
 }
-
 function Step({ n, title, desc }: { n: string; title: string; desc: string }) {
   return (
     <div className="flex items-start gap-4 rounded-[14px] border border-[#232329] bg-[#111114] px-[18px] py-4">

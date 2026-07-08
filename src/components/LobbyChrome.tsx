@@ -1,0 +1,180 @@
+import { Link, useLocation } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { AccountNav } from "@/components/AccountNav";
+
+const FONT_LINKS = (
+  <>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+  </>
+);
+
+const NAV = [
+  { to: "/", label: "Play" },
+  { to: "/friends", label: "Friends" },
+  { to: "/stats", label: "Leaderboard" },
+  { to: "/profile", label: "Profile" },
+] as const;
+
+export function LobbyChrome({
+  children,
+  online,
+}: {
+  children: React.ReactNode;
+  online?: number;
+}) {
+  const [driftOnline, setDriftOnline] = useState<number>(online ?? 179);
+  useEffect(() => {
+    if (online != null) return;
+    const t = setInterval(
+      () => setDriftOnline((v) => Math.max(120, v + Math.round((Math.random() - 0.48) * 5))),
+      3500,
+    );
+    return () => clearInterval(t);
+  }, [online]);
+  const shownOnline = online ?? driftOnline;
+  const loc = useLocation();
+  const path = loc.pathname;
+
+  return (
+    <main className="min-h-screen bg-[#09090b] font-[Space_Grotesk,ui-sans-serif,system-ui] text-[#ececf1] antialiased">
+      {FONT_LINKS}
+      <header className="h-[68px] border-b border-[#1a1a1f]">
+        <div className="mx-auto flex h-full max-w-[1240px] items-center justify-between px-8">
+          <Link to="/" className="flex items-center gap-3">
+            <span className="grid h-9 w-9 place-items-center rounded-[9px] border border-[#2a2a31] bg-gradient-to-br from-[#1d1d22] to-[#101013]">
+              <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden>
+                <rect x="1" y="1" width="7" height="7" rx="1.5" fill="#f5a524" />
+                <rect x="10" y="1" width="7" height="7" rx="1.5" fill="#2e2e36" />
+                <rect x="1" y="10" width="7" height="7" rx="1.5" fill="#2e2e36" />
+                <rect x="10" y="10" width="7" height="7" rx="1.5" fill="#2e2e36" />
+              </svg>
+            </span>
+            <span className="text-[15px] font-bold">
+              playquoridor<span className="text-[#5c5c66]">.online</span>
+            </span>
+          </Link>
+          <nav className="hidden items-center gap-2 md:flex">
+            {NAV.map((n) => {
+              const on = n.to === "/" ? path === "/" : path.startsWith(n.to);
+              return (
+                <Link
+                  key={n.to}
+                  to={n.to}
+                  className={
+                    "rounded-lg px-3 py-2 text-[13.5px] font-medium " +
+                    (on
+                      ? "bg-[#17171b] text-[#f5a524]"
+                      : "text-[#a7a7b2] hover:bg-[#17171b] hover:text-[#ececf1]")
+                  }
+                >
+                  {n.label}
+                </Link>
+              );
+            })}
+          </nav>
+          <div className="flex items-center gap-3">
+            <div className="hidden items-center gap-2 rounded-full border border-[#232329] bg-[#0e0e11] px-3 py-1.5 sm:flex">
+              <span className="h-[7px] w-[7px] rounded-full bg-[#2fd575] shadow-[0_0_8px_#2fd575]" />
+              <span className="font-[IBM_Plex_Mono,monospace] text-[12px] text-[#a7a7b2]">
+                {shownOnline} online
+              </span>
+            </div>
+            <AccountNav />
+          </div>
+        </div>
+      </header>
+      {children}
+      <footer className="mt-6 border-t border-[#1a1a1f] pb-8 pt-6">
+        <div className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-between gap-4 px-8">
+          <span className="text-[12px] text-[#5c5c66]">
+            © {new Date().getFullYear()} playquoridor.online
+          </span>
+          <nav className="flex flex-wrap gap-6 text-[12px]">
+            <Link to="/about" className="text-[#5c5c66] hover:text-[#a7a7b2]">About</Link>
+            <Link to="/stats" className="text-[#5c5c66] hover:text-[#a7a7b2]">Leaderboard</Link>
+            <Link to="/puzzle" className="text-[#5c5c66] hover:text-[#a7a7b2]">Puzzles</Link>
+            <a href="mailto:hi@playquoridor.online" className="text-[#5c5c66] hover:text-[#a7a7b2]">Contact</a>
+          </nav>
+        </div>
+      </footer>
+    </main>
+  );
+}
+
+/* ---------- shared tier helpers ---------- */
+
+export const AVATAR_SWATCHES = ["#f5a524", "#2fd575", "#6aa5ff", "#ff6b4a", "#c48bff"] as const;
+
+export function initials(name: string): string {
+  return (name || "??").slice(0, 2).toUpperCase();
+}
+
+export type Tier = {
+  name: "Bronze" | "Silver" | "Gold" | "Platinum" | "Diamond" | "Master" | "Grandmaster";
+  color: string;
+  min: number;
+  nextMin: number | null;
+  nextName: string | null;
+};
+
+const TIER_BANDS: Array<{ name: Tier["name"]; min: number; color: string }> = [
+  { name: "Bronze", min: 0, color: "#cd7f32" },
+  { name: "Silver", min: 1200, color: "#c8cdd7" },
+  { name: "Gold", min: 1350, color: "#f5a524" },
+  { name: "Platinum", min: 1550, color: "#7ee0d2" },
+  { name: "Diamond", min: 1600, color: "#6aa5ff" },
+  { name: "Master", min: 1750, color: "#c48bff" },
+  { name: "Grandmaster", min: 1800, color: "#f5c542" },
+];
+
+export function tierFromRating(rating: number): Tier {
+  let cur = TIER_BANDS[0]!;
+  for (const b of TIER_BANDS) if (rating >= b.min) cur = b;
+  const idx = TIER_BANDS.indexOf(cur);
+  const nxt = TIER_BANDS[idx + 1] ?? null;
+  return {
+    name: cur.name,
+    color: cur.color,
+    min: cur.min,
+    nextMin: nxt?.min ?? null,
+    nextName: nxt?.name ?? null,
+  };
+}
+
+export function avatarColorFor(name: string, override?: string | null): string {
+  if (override) return override;
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
+  return AVATAR_SWATCHES[Math.abs(h) % AVATAR_SWATCHES.length]!;
+}
+
+export function Avatar({
+  name,
+  color,
+  size = 34,
+}: {
+  name: string;
+  color?: string | null;
+  size?: number;
+}) {
+  const bg = avatarColorFor(name, color);
+  const fs = Math.max(10, Math.round(size * 0.34));
+  return (
+    <span
+      className="grid flex-none place-items-center rounded-full font-bold text-[#0b0b0d]"
+      style={{
+        width: size,
+        height: size,
+        background: bg,
+        fontSize: fs,
+        borderRadius: size >= 60 ? 22 : 999,
+      }}
+    >
+      {initials(name)}
+    </span>
+  );
+}

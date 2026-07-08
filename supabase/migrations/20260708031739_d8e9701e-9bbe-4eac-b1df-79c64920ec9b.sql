@@ -1,0 +1,1 @@
+ALTER TABLE public.players ADD COLUMN IF NOT EXISTS bio TEXT; ALTER TABLE public.players ADD COLUMN IF NOT EXISTS avatar_color TEXT;
