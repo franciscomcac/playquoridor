@@ -6,13 +6,12 @@ import {
   type Pos, type Wall,
 } from "./quoridor";
 
-export type BotDifficulty = { label: "Easy" | "Medium" | "Hard"; value: number };
+export type BotDifficulty = { label: "Medium" | "Hard"; value: number };
 
 export function randomDifficulty(): BotDifficulty {
   const r = Math.random();
-  // Fluctuate each game: mostly medium, sometimes easy or hard.
-  if (r < 0.3) return { label: "Easy", value: 0.22 + Math.random() * 0.13 };
-  if (r < 0.8) return { label: "Medium", value: 0.5 + Math.random() * 0.15 };
+  // Fluctuate each game between medium and hard — no easy bots.
+  if (r < 0.55) return { label: "Medium", value: 0.55 + Math.random() * 0.15 };
   return { label: "Hard", value: 0.82 + Math.random() * 0.13 };
 }
 
