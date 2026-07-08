@@ -25,6 +25,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PuzzleIndexRouteImport } from './routes/puzzle.index'
 import { Route as PuzzleDateRouteImport } from './routes/puzzle.$date'
+import { Route as PlayerPlayerIdRouteImport } from './routes/player.$playerId'
 import { Route as AnalyzeClipIdRouteImport } from './routes/analyze.$clipId'
 
 const TermsRoute = TermsRouteImport.update({
@@ -107,6 +108,11 @@ const PuzzleDateRoute = PuzzleDateRouteImport.update({
   path: '/puzzle/$date',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PlayerPlayerIdRoute = PlayerPlayerIdRouteImport.update({
+  id: '/player/$playerId',
+  path: '/player/$playerId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AnalyzeClipIdRoute = AnalyzeClipIdRouteImport.update({
   id: '/analyze/$clipId',
   path: '/analyze/$clipId',
@@ -129,6 +135,7 @@ export interface FileRoutesByFullPath {
   '/stats': typeof StatsRoute
   '/terms': typeof TermsRoute
   '/analyze/$clipId': typeof AnalyzeClipIdRoute
+  '/player/$playerId': typeof PlayerPlayerIdRoute
   '/puzzle/$date': typeof PuzzleDateRoute
   '/puzzle/': typeof PuzzleIndexRoute
 }
@@ -148,6 +155,7 @@ export interface FileRoutesByTo {
   '/stats': typeof StatsRoute
   '/terms': typeof TermsRoute
   '/analyze/$clipId': typeof AnalyzeClipIdRoute
+  '/player/$playerId': typeof PlayerPlayerIdRoute
   '/puzzle/$date': typeof PuzzleDateRoute
   '/puzzle': typeof PuzzleIndexRoute
 }
@@ -168,6 +176,7 @@ export interface FileRoutesById {
   '/stats': typeof StatsRoute
   '/terms': typeof TermsRoute
   '/analyze/$clipId': typeof AnalyzeClipIdRoute
+  '/player/$playerId': typeof PlayerPlayerIdRoute
   '/puzzle/$date': typeof PuzzleDateRoute
   '/puzzle/': typeof PuzzleIndexRoute
 }
@@ -189,6 +198,7 @@ export interface FileRouteTypes {
     | '/stats'
     | '/terms'
     | '/analyze/$clipId'
+    | '/player/$playerId'
     | '/puzzle/$date'
     | '/puzzle/'
   fileRoutesByTo: FileRoutesByTo
@@ -208,6 +218,7 @@ export interface FileRouteTypes {
     | '/stats'
     | '/terms'
     | '/analyze/$clipId'
+    | '/player/$playerId'
     | '/puzzle/$date'
     | '/puzzle'
   id:
@@ -227,6 +238,7 @@ export interface FileRouteTypes {
     | '/stats'
     | '/terms'
     | '/analyze/$clipId'
+    | '/player/$playerId'
     | '/puzzle/$date'
     | '/puzzle/'
   fileRoutesById: FileRoutesById
@@ -247,6 +259,7 @@ export interface RootRouteChildren {
   StatsRoute: typeof StatsRoute
   TermsRoute: typeof TermsRoute
   AnalyzeClipIdRoute: typeof AnalyzeClipIdRoute
+  PlayerPlayerIdRoute: typeof PlayerPlayerIdRoute
   PuzzleDateRoute: typeof PuzzleDateRoute
   PuzzleIndexRoute: typeof PuzzleIndexRoute
 }
@@ -365,6 +378,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PuzzleDateRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/player/$playerId': {
+      id: '/player/$playerId'
+      path: '/player/$playerId'
+      fullPath: '/player/$playerId'
+      preLoaderRoute: typeof PlayerPlayerIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/analyze/$clipId': {
       id: '/analyze/$clipId'
       path: '/analyze/$clipId'
@@ -391,6 +411,7 @@ const rootRouteChildren: RootRouteChildren = {
   StatsRoute: StatsRoute,
   TermsRoute: TermsRoute,
   AnalyzeClipIdRoute: AnalyzeClipIdRoute,
+  PlayerPlayerIdRoute: PlayerPlayerIdRoute,
   PuzzleDateRoute: PuzzleDateRoute,
   PuzzleIndexRoute: PuzzleIndexRoute,
 }
