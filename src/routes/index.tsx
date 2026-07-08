@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PLAYER_COLORS, QuoridorBoard } from "@/components/QuoridorBoard";
+import { MoveHistory } from "@/components/MoveHistory";
 import { renderResultCard, shareResultCard } from "@/lib/result-card";
 
 // Warm palette for celebratory confetti — browns, creams, blues, yellows
@@ -1586,6 +1587,7 @@ function WinOverlay({ state, you, matchOver, onPrimary, primaryLabel, onLeave, n
             Leave
           </button>
         </div>
+        <MoveHistory state={state} nameOf={nameOf} />
       </div>
     </div>
   );
@@ -1661,6 +1663,7 @@ function EndScreen({ state, you, onPrimary, onLeave, nameOf }: {
             Leave
           </button>
         </div>
+        <MoveHistory state={state} nameOf={nameOf} />
       </div>
     </div>
   );

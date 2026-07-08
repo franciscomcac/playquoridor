@@ -11,6 +11,8 @@ export type Goal = { kind: "row" | "col"; value: number };
 
 export type Move = { kind: "pawn"; to: Pos } | { kind: "wall"; wall: WallSpec };
 
+export type MoveRecord = { move: Move; by: PlayerId };
+
 export type GameState = {
   mode: Mode;
   pawns: Pos[];
@@ -37,6 +39,8 @@ export type GameState = {
   endLoser?: PlayerId;
   // Total moves played this round (pawn moves + wall placements).
   moveCount?: number;
+  // Ordered move history for the current round. Used for post-game review.
+  moves?: MoveRecord[];
 };
 
 export const BOARD = 9;
@@ -71,6 +75,8 @@ export function initialState(mode: Mode = 2, totalWalls = defaultWallsFor(mode),
     totalRounds, matchWinner: null,
     wallsPlacedByPlayer: Array.from({ length: mode }, () => 0),
     pawnsEliminatedByPlayer: Array.from({ length: mode }, () => 0),
+    moveCount: 0,
+    moves: [],
   };
 }
 
@@ -89,7 +95,7 @@ export function newRound(state: GameState, starter: PlayerId): GameState {
     active,
     wallsLeft: state.wallsLeft.map((_, i) => (active[i] ? state.totalWalls : 0)),
     walls: [], lastWall: null, turn: s, winner: null,
-    endReason: undefined, endLoser: undefined, moveCount: 0,
+    endReason: undefined, endLoser: undefined, moveCount: 0, moves: [],
   };
 }
 
@@ -234,7 +240,8 @@ export function applyMove(state: GameState, player: PlayerId, move: Move): GameS
     }
     return { ...state, pawns, active,
       turn: winner !== null ? player : nextTurn(state.mode, active, player),
-      winner, score, matchWinner, moveCount: (state.moveCount ?? 0) + 1 };
+      winner, score, matchWinner, moveCount: (state.moveCount ?? 0) + 1,
+      moves: [...(state.moves ?? []), { move, by: player }] };
   } else {
     if (!canPlaceWall(state, player, move.wall)) return null;
     const placed: Wall = { ...move.wall, by: player };
@@ -243,7 +250,8 @@ export function applyMove(state: GameState, player: PlayerId, move: Move): GameS
     wallsPlacedByPlayer[player] = (wallsPlacedByPlayer[player] ?? 0) + 1;
     return { ...state, walls: [...state.walls, placed], wallsLeft, lastWall: placed,
       turn: nextTurn(state.mode, state.active, player), wallsPlacedByPlayer,
-      moveCount: (state.moveCount ?? 0) + 1 };
+      moveCount: (state.moveCount ?? 0) + 1,
+      moves: [...(state.moves ?? []), { move, by: player }] };
   }
 }
 
