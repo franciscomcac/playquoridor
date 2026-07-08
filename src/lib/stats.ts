@@ -188,6 +188,26 @@ export async function findOpenRoom(mode: 2 | 4, ranked = false): Promise<string 
   return null;
 }
 
+/**
+ * Matchmaking race helper: when two searchers register their own rooms at the
+ * same time (both saw an empty lobby before either row hit the DB), the newer
+ * host needs to cede and join the older host. We return the oldest OTHER open
+ * room with the same mode/ranked so the caller can decide to hand off.
+ */
+export async function findOpenRoomOlderThan(
+  myCode: string, mode: 2 | 4, ranked = false,
+): Promise<string | null> {
+  const cutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+  const { data } = await supabase.from("open_rooms")
+    .select("code, seats_taken, seats_total, updated_at")
+    .eq("mode", mode).eq("ranked", ranked).gte("updated_at", cutoff)
+    .neq("code", myCode)
+    .order("created_at", { ascending: true }).limit(5);
+  if (!data?.length) return null;
+  for (const r of data) if (r.seats_taken < r.seats_total) return r.code;
+  return null;
+}
+
 /** Count of matches played since 00:00 UTC today. */
 export async function fetchGamesToday(): Promise<number> {
   const start = new Date();

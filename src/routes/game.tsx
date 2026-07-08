@@ -36,7 +36,7 @@ import {
   getStoredIdentity, setStoredIdentity, type Identity,
 } from "@/lib/identity";
 import {
-  bumpMyStats, fetchMyStats, fetchMyWinStreak, findOpenRoom, recordMatch, setMatchEloDelta,
+  bumpMyStats, fetchMyStats, fetchMyWinStreak, findOpenRoom, findOpenRoomOlderThan, recordMatch, setMatchEloDelta,
   registerOpenRoom, removeOpenRoom, updateOpenRoomSeats, applyElo1v1,
 } from "@/lib/stats";
 import {
@@ -643,6 +643,7 @@ function QuickMatch({ mode, ranked, ident, onBack, onJoin, onHost }: {
     cancelled.current = false;
     transitioned.current = false;
     registeredCode.current = null;
+    let cedePoll: number | null = null;
     (async () => {
       const existing = await findOpenRoom(mode, !!ranked);
       if (cancelled.current) return;
@@ -668,6 +669,38 @@ function QuickMatch({ mode, ranked, ident, onBack, onJoin, onHost }: {
       }
       transitioned.current = true;
       onHost(code);
+      // Race fix: two searchers can each register their own room before
+      // either sees the other. After we hand off to GameScreen (which sets
+      // up the peer host), keep polling briefly for an older sibling room —
+      // if one exists we should be the guest instead. We only cede to a
+      // strictly older room to keep the decision deterministic (the older
+      // room never cedes to us).
+      if (registeredCode.current) {
+        const myCode = registeredCode.current;
+        const started = Date.now();
+        const tick = async () => {
+          if (cancelled.current) return;
+          // Stop trying to cede once someone has actually joined our peer
+          // room (open_rooms row is removed on onFull) or ~8s have passed.
+          if (Date.now() - started > 8000) {
+            if (cedePoll != null) window.clearInterval(cedePoll);
+            return;
+          }
+          try {
+            const older = await findOpenRoomOlderThan(myCode, mode, !!ranked);
+            if (!older || cancelled.current) return;
+            if (cedePoll != null) window.clearInterval(cedePoll);
+            await removeOpenRoom(myCode);
+            registeredCode.current = null;
+            // GameScreen is already mounted as host — the parent's onJoin
+            // will swap the view to guest, tearing that peer session down.
+            onJoin(older);
+          } catch { /* transient; try again next tick */ }
+        };
+        cedePoll = window.setInterval(tick, 1500);
+        // Fire once immediately so a fast second registration also flips.
+        void tick();
+      }
     })();
     const onUnload = () => {
       if (registeredCode.current && !transitioned.current) {
@@ -679,6 +712,7 @@ function QuickMatch({ mode, ranked, ident, onBack, onJoin, onHost }: {
     return () => {
       cancelled.current = true;
       window.removeEventListener("beforeunload", onUnload);
+      if (cedePoll != null) window.clearInterval(cedePoll);
       if (registeredCode.current && !transitioned.current) {
         void removeOpenRoom(registeredCode.current);
         registeredCode.current = null;
@@ -1179,10 +1213,15 @@ function GameScreen({
   // ---------- Activity + AFK (host authoritative) ----------
   const lastInputRef = useRef<number[]>(Array.from({ length: initialMode }, () => Date.now()));
 
+  // Host-only: slots currently controlled by a local bot (used when a 4p
+  // quick match starts with fewer than 4 humans and we fill the empty seats).
+  const [botSlots, setBotSlots] = useState<PlayerId[]>([]);
+
   // ---------- Quick Match → bot fallback ----------
-  // If we hosted via Quick Match and nobody joins within 10s, drop the room
-  // and hand off to a local bot game so the player isn't left staring at a
-  // spinner. Only fires when we're still waiting for players.
+  // If we hosted via Quick Match and nobody joins in a while, take one of two
+  // paths: (a) still alone → drop the peer room and hand off to a fresh local
+  // bot game; (b) 4p with 2-3 humans in → fill the empty seats with bots so
+  // the group can start instead of waiting forever.
   useEffect(() => {
     if (!quickMatch || !isHost) return;
     // Ranked: no bot fallback. Wait up to 2 minutes for an opponent, then
@@ -1200,17 +1239,81 @@ function GameScreen({
       }, rankedTimeoutMs);
       return () => window.clearTimeout(t);
     }
-    if (!onBotFallback) return;
-    const t = window.setTimeout(() => {
-      if (presenceRef.current.count >= presenceRef.current.expected) return;
+    // 4p: after 60s with 2-3 humans, fill the empty seats with bots.
+    const partialFillT = initialMode === 4 ? window.setTimeout(() => {
+      const cur = presenceRef.current;
+      if (cur.count >= cur.expected) return;
+      if (cur.count < 2) return; // solo fallback handles this
       if (stateRef.current.matchWinner !== null) return;
-      void removeOpenRoom(code);
-      roomRef.current?.close();
-      roomRef.current = null;
-      onBotFallback();
-  }, 30_000);
+      const missing = cur.expected - cur.count;
+      if (missing <= 0) return;
+      const bots = Array.from({ length: missing }, () => ({ name: randomGamerName() }));
+      const assigned = roomRef.current?.addBotPlayers?.(bots) ?? [];
+      if (assigned.length > 0) {
+        setBotSlots((prev) => [...prev, ...assigned.map((s) => s as PlayerId)]);
+        void removeOpenRoom(code);
+      }
+    }, 60_000) : null;
+    // Solo-host fallback → replace with a full local bot game.
+    let soloT: number | null = null;
+    if (onBotFallback) {
+      const soloDelay = initialMode === 4 ? 60_000 : 30_000;
+      soloT = window.setTimeout(() => {
+        const cur = presenceRef.current;
+        if (cur.count >= cur.expected) return;
+        if (cur.count >= 2) return; // partial-fill path will handle this
+        if (stateRef.current.matchWinner !== null) return;
+        void removeOpenRoom(code);
+        roomRef.current?.close();
+        roomRef.current = null;
+        onBotFallback();
+      }, soloDelay);
+    }
+    return () => {
+      if (partialFillT) window.clearTimeout(partialFillT);
+      if (soloT != null) window.clearTimeout(soloT);
+    };
+  }, [quickMatch, isHost, onBotFallback, onRankedTimeout, ranked, code, initialMode]);
+
+  // Host-only: when it's a bot slot's turn, think for a beat then play a move.
+  useEffect(() => {
+    if (!isHost) return;
+    if (botSlots.length === 0) return;
+    if (state.matchWinner !== null || state.winner !== null) return;
+    if (coinflip?.animating) return;
+    if (status !== "connected") return;
+    const turn = state.turn as PlayerId;
+    if (!botSlots.includes(turn)) return;
+    if (!state.active[turn]) return;
+    const difficulty = 0.55;
+    const move = pickBotMove(state, turn, difficulty);
+    if (!move) {
+      hostApplyForfeit(turn, false, "forfeit");
+      return;
+    }
+    let delay = humanThinkTimeMs(state, move, difficulty);
+    if (state.clocks) {
+      const remaining = liveRemaining(state.clocks, state.turn, turn, Date.now());
+      delay = Math.min(delay, Math.max(200, remaining - 500));
+    }
+    const t = window.setTimeout(() => {
+      const cur = stateRef.current;
+      if (cur.turn !== turn || cur.winner !== null || cur.matchWinner !== null) return;
+      const next = applyMove(cur, turn, move);
+      if (!next) return;
+      if (cur.clocks) next.clocks = endTurn(cur.clocks, turn, Date.now());
+      if (next.winner !== null) {
+        next.endReason = "goal";
+        next.endLoser = (next.winner === turn
+          ? ((turn === 0 ? 1 : 0) as PlayerId)
+          : (turn as PlayerId));
+      }
+      setState(next);
+      roomRef.current?.send({ type: "state", payload: next });
+    }, Math.max(250, delay));
     return () => window.clearTimeout(t);
-  }, [quickMatch, isHost, onBotFallback, onRankedTimeout, ranked, code]);
+  }, [isHost, botSlots, state, coinflip?.animating, status, hostApplyForfeit]);
+
   const markActivity = useCallback((who: PlayerId) => {
     lastInputRef.current[who] = Date.now();
     if (afk && afk.slot === who) {
