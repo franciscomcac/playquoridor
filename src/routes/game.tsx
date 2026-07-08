@@ -1780,7 +1780,7 @@ function ScoreCard({ state, you, nameOf }: { state: GameState; you: PlayerId; na
     for (let i = 0; i < state.score.length; i++) {
       if ((prev[i] ?? 0) < (state.score[i] ?? 0)) {
         setBumped(i);
-        play("wall");
+        play("roundWin");
         const id = window.setTimeout(() => setBumped(null), 900);
         prevScoreRef.current = [...state.score];
         return () => window.clearTimeout(id);
