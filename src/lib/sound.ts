@@ -1,5 +1,5 @@
 // Web Audio SFX — synthesized, no assets. Lazy-init on first user gesture.
-type SfxName = "pop"|"wall"|"join"|"matchStart"|"roundWin"|"matchWin"|"afkWarn"|"click"|"lowTime"|"tick"|"denied"|"searchStart"|"searchPing"|"matchFound";
+type SfxName = "pop"|"wall"|"join"|"matchStart"|"roundWin"|"matchWin"|"afkWarn"|"click"|"lowTime"|"tick"|"denied"|"searchStart"|"searchPing"|"matchFound"|"clash"|"coinToss";
 const MUTE_KEY = "quoridor.mute";
 const VOL_KEY = "quoridor.volume";
 let ctx: AudioContext | null = null;
