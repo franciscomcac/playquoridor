@@ -521,6 +521,8 @@ function CreateRoom({ mode, walls, rounds, setMode, setWalls, setRounds, onBack,
     navigator.clipboard?.writeText(code).catch(() => {});
     setCopied(true); window.setTimeout(() => setCopied(false), 1400);
   };
+  // Series length is fixed for every match: best of 3, first to 2, max 3 rounds.
+  void rounds; void setRounds;
   return (
     <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl sm:p-8">
       <button onClick={onBack} className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground hover:text-foreground">← Back</button>
@@ -544,14 +546,9 @@ function CreateRoom({ mode, walls, rounds, setMode, setWalls, setRounds, onBack,
         <input type="range" min={0} max={20} step={1} value={walls} onChange={(e) => setWalls(Number(e.target.value))}
           className="mt-2 w-full accent-[color:var(--primary)]" />
       </div>
-      <div className="mt-6">
-        <label className="flex items-baseline justify-between text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-          Rounds <span className="text-base font-semibold text-foreground">
-            {rounds === 1 ? "single game" : `best of ${rounds} · first to ${winsNeeded(rounds)}`}
-          </span>
-        </label>
-        <input type="range" min={1} max={10} step={1} value={rounds} onChange={(e) => setRounds(Number(e.target.value))}
-          className="mt-2 w-full accent-[color:var(--primary)]" />
+      <div className="mt-6 rounded-lg border border-border bg-secondary/20 px-4 py-3 text-xs text-muted-foreground">
+        <p className="text-[10px] uppercase tracking-[0.2em]">Format</p>
+        <p className="mt-1 text-sm font-semibold text-foreground">Best of 3 · first to 2 · max 3 rounds</p>
       </div>
       <div className="mt-6 rounded-lg border border-dashed border-border bg-background/40 p-4">
         <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Room code</p>
