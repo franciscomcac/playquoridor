@@ -485,11 +485,11 @@ const AFK_COUNTDOWN_MS = 15_000;
 
 function GameScreen({
   ident, code, isHost, mode: initialMode, initialWalls, initialRounds, onLeave,
-  quickMatch, onBotFallback,
+  quickMatch, ranked, onBotFallback,
 }: {
   ident: Identity; code: string; isHost: boolean; mode: Mode;
   initialWalls: number; initialRounds: number; onLeave: () => void;
-  quickMatch?: boolean; onBotFallback?: () => void;
+  quickMatch?: boolean; ranked?: boolean; onBotFallback?: () => void;
 }) {
   const [status, setStatus] = useState<Status>("connecting");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -714,7 +714,7 @@ function GameScreen({
           : await createGuestRoom(code, { name: ident.name, playerId: ident.id }, handlers);
         if (cancelled) { room.close(); return; }
         roomRef.current = room;
-        if (isHost) void registerOpenRoom(code, initialMode, ident.name);
+        if (isHost) void registerOpenRoom(code, initialMode, ident.name, !!ranked);
       } catch (err) { handlers.onError(err as Error); }
     };
     boot();
