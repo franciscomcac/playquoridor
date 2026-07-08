@@ -2269,6 +2269,37 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
   const [chat, setChat] = useState<ChatEntry[]>([]);
   const botMatchHistory = useMatchHistory(state, Array.from({ length: mode }, (_, i) => (i === YOU ? ident.name : opponentNames[i - 1] ?? `Player ${i + 1}`)));
 
+  // Record bot matches to history so they show up alongside multiplayer games.
+  const botRecordedRef = useRef(false);
+  useEffect(() => {
+    if (state.matchWinner === null) return;
+    if (botRecordedRef.current) return;
+    botRecordedRef.current = true;
+    const winnerSlot = state.matchWinner;
+    const winnerIsYou = winnerSlot === YOU;
+    void recordMatch({
+      mode: mode as 2 | 4,
+      rounds: state.totalRounds,
+      ranked: false,
+      winnerId: winnerIsYou ? ident.id : null,
+      snapshot: botMatchHistory.getSnapshot(),
+      players: Array.from({ length: mode }, (_, i) => {
+        const isYou = i === YOU;
+        const botName = opponentNames[i - 1] ?? `Bot ${i}`;
+        return {
+          id: isYou ? ident.id : null,
+          slot: i,
+          name: isYou ? ident.name : botName,
+          roundsWon: state.score[i] ?? 0,
+          wallsPlaced: state.wallsPlacedByPlayer[i] ?? 0,
+          pawnsEliminated: state.pawnsEliminatedByPlayer[i] ?? 0,
+          forfeited: state.leftMatch[i] ?? false,
+        };
+      }),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.matchWinner]);
+
   const sendChat = useCallback((text: string) => {
     setChat((prev) => [
       ...prev.slice(-99),
