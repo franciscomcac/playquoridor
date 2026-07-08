@@ -15,6 +15,53 @@ const DATE_RX = /^\d{4}-\d{2}-\d{2}$/;
 
 type PuzzleEntry = GeneratedPuzzle & { difficulty: 1 | 2 | 3; label: string };
 
+// Pool of 100 puzzles — roughly 34 easy / 33 medium / 33 hard.
+// Each date deterministically pulls one of each so daily sets rotate
+// through the whole library over ~a month.
+const POOL_EASY = 34;
+const POOL_MED = 33;
+const POOL_HARD = 33;
+
+function daysSinceEpoch(dateISO: string): number {
+  const t = Date.parse(dateISO + "T00:00:00Z");
+  if (!Number.isFinite(t)) return 0;
+  return Math.floor(t / 86_400_000);
+}
+
+function pickDailyEntries(date: string): PuzzleEntry[] {
+  const d = daysSinceEpoch(date);
+  const idxE = ((d % POOL_EASY) + POOL_EASY) % POOL_EASY;
+  const idxM = ((d % POOL_MED) + POOL_MED) % POOL_MED;
+  const idxH = ((d % POOL_HARD) + POOL_HARD) % POOL_HARD;
+  const specs: Array<{ label: string; d: 1 | 2 | 3; seedTag: string }> = [
+    { label: "Easy",   d: 1, seedTag: `pool:easy:${idxE}` },
+    { label: "Medium", d: 2, seedTag: `pool:med:${idxM}` },
+    { label: "Hard",   d: 3, seedTag: `pool:hard:${idxH}` },
+  ];
+  return specs.map(({ label, d, seedTag }, i) => {
+    const gen = generatePuzzle(seedFromString(`quoridor:${seedTag}`), d);
+    return { ...gen, id: `${date}-${i}`, title: `${label} — Puzzle ${i + 1}`, difficulty: d, label };
+  });
+}
+
+const SOLVED_KEY = (date: string) => `quoridor:puzzles:solved:${date}`;
+function loadSolved(date: string): boolean[] {
+  if (typeof window === "undefined") return [false, false, false];
+  try {
+    const raw = window.localStorage.getItem(SOLVED_KEY(date));
+    if (!raw) return [false, false, false];
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length === 3) {
+      return parsed.map(Boolean);
+    }
+  } catch { /* ignore */ }
+  return [false, false, false];
+}
+function saveSolved(date: string, solved: boolean[]) {
+  if (typeof window === "undefined") return;
+  try { window.localStorage.setItem(SOLVED_KEY(date), JSON.stringify(solved)); } catch { /* ignore */ }
+}
+
 export const Route = createFileRoute("/puzzle/$date")({
   head: ({ params }) => {
     const title = `Daily Quoridor Race Puzzles — ${params.date}`;
@@ -44,26 +91,22 @@ function PuzzlePage() {
   if (!DATE_RX.test(date)) throw notFound();
   const navigate = useNavigate();
 
-  const puzzles = useMemo<PuzzleEntry[]>(() => {
-    const diffs: Array<{ label: string; d: 1 | 2 | 3 }> = [
-      { label: "Easy", d: 1 },
-      { label: "Medium", d: 2 },
-      { label: "Hard", d: 3 },
-    ];
-    return diffs.map(({ label, d }, i) => {
-      const gen = generatePuzzle(seedFromString(`quoridor:${date}:${i}`), d);
-      return { ...gen, id: `${date}-${i}`, title: `${label} — Puzzle ${i + 1}`, difficulty: d, label };
-    });
-  }, [date]);
+  const puzzles = useMemo<PuzzleEntry[]>(() => pickDailyEntries(date), [date]);
 
-  const [activeIdx, setActiveIdx] = useState(0);
-  const [solved, setSolved] = useState<boolean[]>(() => [false, false, false]);
-  const [transition, setTransition] = useState<null | "solved-flash" | "advancing" | "all-done">(null);
+  const initialSolved = useMemo(() => loadSolved(date), [date]);
+  const initialAllDone = initialSolved.every(Boolean);
+  const firstUnsolved = initialSolved.findIndex((s) => !s);
+  const [activeIdx, setActiveIdx] = useState(() => (initialAllDone ? 2 : Math.max(0, firstUnsolved)));
+  const [solved, setSolved] = useState<boolean[]>(() => initialSolved);
+  const [transition, setTransition] = useState<null | "solved-flash" | "advancing" | "all-done">(
+    initialAllDone ? "all-done" : null,
+  );
   const puzzle = puzzles[activeIdx];
   const markSolved = useCallback((i: number) => {
     setSolved((s) => {
       if (s[i]) return s;
       const n = [...s]; n[i] = true;
+      saveSolved(date, n);
       const isLast = i === 2 || n.every(Boolean);
       // Flash "solved" then either advance or show completion.
       setTransition("solved-flash");
@@ -80,10 +123,12 @@ function PuzzlePage() {
       }, 900);
       return n;
     });
-  }, []);
+  }, [date]);
 
   const allDone = transition === "all-done";
   const solvedCount = solved.filter(Boolean).length;
+  // Puzzle i is unlocked once all earlier puzzles are solved.
+  const isUnlocked = (i: number) => i === 0 || solved.slice(0, i).every(Boolean);
 
   return (
     <main className="mx-auto flex h-[100dvh] w-full max-w-3xl flex-col gap-3 overflow-hidden px-4 py-3 sm:gap-4 sm:px-6 sm:py-5">
@@ -105,11 +150,13 @@ function PuzzlePage() {
       <div className="flex flex-none gap-2">
         {puzzles.map((p, i) => {
           const active = i === activeIdx;
+          const unlocked = isUnlocked(i);
           return (
             <button
               key={p.id}
-              onClick={() => { if (!transition) setActiveIdx(i); }}
-              disabled={!!transition}
+              onClick={() => { if (!transition && unlocked) setActiveIdx(i); }}
+              disabled={!!transition || !unlocked}
+              title={unlocked ? undefined : "Finish the previous puzzle first"}
               className={
                 "flex-1 rounded-xl border px-3 py-1.5 text-left transition disabled:opacity-60 " +
                 (active
@@ -119,7 +166,9 @@ function PuzzlePage() {
             >
               <div className="flex items-center justify-between text-[10px] uppercase tracking-widest text-muted-foreground">
                 <span>Puzzle {i + 1}</span>
-                {solved[i] && <span className="text-emerald-500">✓ Solved</span>}
+                {solved[i]
+                  ? <span className="text-emerald-500">✓ Solved</span>
+                  : !unlocked ? <span>🔒 Locked</span> : null}
               </div>
               <div className="text-sm font-semibold">{p.label}</div>
             </button>
@@ -238,7 +287,7 @@ function PuzzleBoard({ puzzle, onSolved }: { puzzle: PuzzleEntry; onSolved: () =
     if (busy.current) return;
     busy.current = true;
     const t = window.setTimeout(() => {
-      const bot = pickBotMove(state, opp, 1); // pure shortest-path (no walls left)
+      const bot = pickBotMove(state, opp, 1); // strong bot; will place walls when it has any
       busy.current = false;
       if (!bot) return;
       const next = applyMove(state, opp, bot);

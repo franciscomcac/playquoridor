@@ -49,6 +49,8 @@ export type GeneratedPuzzle = {
   active_player: 0;
   /** Wall budget the human player is given. Opponent has 0 walls. */
   playerWalls: number;
+  /** Wall budget the opponent bot is given. */
+  oppWalls: number;
   /** Opponent's shortest-path distance at start (informational). */
   oppSteps: number;
   /** Your shortest-path distance at start (informational). */
@@ -96,6 +98,10 @@ export function generatePuzzle(seed: number, difficulty: 1 | 2 | 3 = 2): Generat
 
   // Wall budget for the human player. Opponent has none (pure race bot).
   const playerWalls = ({ 1: 4, 2: 3, 3: 2 } as const)[difficulty];
+  // Opponent bot wall budget. More walls at higher difficulty so the
+  // opponent can actively block you back — makes the puzzle interactive
+  // rather than a pure race against a straight-line runner.
+  const oppWalls    = ({ 1: 1, 2: 2, 3: 3 } as const)[difficulty];
   // Pre-placed walls to give the board some structure.
   const preWalls    = ({ 1: 2, 2: 4, 3: 6 } as const)[difficulty];
   // How much closer to their goal the opponent starts than you do.
@@ -140,6 +146,7 @@ export function generatePuzzle(seed: number, difficulty: 1 | 2 | 3 = 2): Generat
     walls,
     active_player: 0,
     playerWalls,
+    oppWalls,
     oppSteps,
     yourSteps,
   };
@@ -147,12 +154,13 @@ export function generatePuzzle(seed: number, difficulty: 1 | 2 | 3 = 2): Generat
 
 export function buildPuzzleGameState(p: GeneratedPuzzle | {
   mode: number; pawns: Pos[]; walls: Wall[]; active_player: number;
-  playerWalls?: number;
+  playerWalls?: number; oppWalls?: number;
 }): GameState {
   const mode = (p.mode === 4 ? 4 : 2) as 2 | 4;
   const pawns = p.pawns.map((pp) => [pp[0], pp[1]] as Pos);
   const playerWalls = "playerWalls" in p && typeof p.playerWalls === "number" ? p.playerWalls : 0;
-  const wallsLeft = Array.from({ length: mode }, (_, i) => (i === 0 ? playerWalls : 0));
+  const oppWalls = "oppWalls" in p && typeof p.oppWalls === "number" ? p.oppWalls : 0;
+  const wallsLeft = Array.from({ length: mode }, (_, i) => (i === 0 ? playerWalls : i === 1 ? oppWalls : 0));
   return {
     mode,
     pawns,
