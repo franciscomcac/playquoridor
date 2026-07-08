@@ -1017,6 +1017,7 @@ function GameScreen({
       onFull: () => {
         if (cancelled) return;
         setStatus("connected");
+        if (quickMatch) play("matchFound");
         if (isHost) {
           void removeOpenRoom(code);
           if (!matchStartedRef.current) hostStartMatch();
