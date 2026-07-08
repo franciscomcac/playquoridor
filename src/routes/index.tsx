@@ -1,8 +1,18 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import { fetchLeaderboard, type LeaderRow } from "@/lib/stats";
-import { supabase } from "@/integrations/supabase/client";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AccountNav } from "@/components/AccountNav";
+import { requireRealUser } from "@/lib/auth-gate";
+import {
+  fetchGamesToday,
+  fetchLeaderboard,
+  fetchLiveRooms,
+  fetchMyWinStreak,
+  fetchQueueCount,
+  fetchRecentMatches,
+  type LeaderRow,
+  type LiveRoom,
+  type RecentMatchRow,
+} from "@/lib/stats";
 
 const SITE_URL = "https://playquoridor.online";
 const TITLE = "Quoridor Online — Play now, free";
@@ -43,345 +53,546 @@ export const Route = createFileRoute("/")({
   component: Lobby,
 });
 
-/* ============================================================
-   Play-first lobby. Three big Find-Match cards, ELO leaderboard,
-   private room code join. No open-rooms list — matchmaking is
-   handled server-side by /game.
-   ============================================================ */
-
-function Lobby() {
-  return <LobbyInner />;
-}
+type Mode = "2p" | "4p" | "ranked";
 
 function computeOnline(real: number): number {
-  // Baseline drifts smoothly between 150 and 200 using time, plus a bit of
-  // jitter, plus every real ranked player we know about.
-  const t = Date.now() / 60000; // minutes
-  const wave = (Math.sin(t / 3.1) + Math.sin(t / 1.7 + 1.3)) / 2; // -1..1
-  const base = 175 + Math.round(wave * 22); // ~153..197
-  const jitter = Math.floor(Math.random() * 5); // 0..4
+  const t = Date.now() / 60000;
+  const wave = (Math.sin(t / 3.1) + Math.sin(t / 1.7 + 1.3)) / 2;
+  const base = 175 + Math.round(wave * 22);
+  const jitter = Math.floor(Math.random() * 5);
   const n = base + jitter + real;
   return Math.max(150, Math.min(260, n));
 }
 
-function LobbyInner() {
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const s = Math.max(0, Math.floor(diff / 1000));
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h`;
+  return `${Math.floor(h / 24)}d`;
+}
+
+function Lobby() {
   const navigate = useNavigate();
-  const [board, setBoard] = useState<LeaderRow[] | null>(null);
+  const [mode, setMode] = useState<Mode>("ranked");
   const [code, setCode] = useState("");
-  const [onlineCount, setOnlineCount] = useState<number>(() => computeOnline(0));
 
-  useEffect(() => {
-    let alive = true;
-    void fetchLeaderboard(8)
-      .then((r) => alive && setBoard(r))
-      .catch(() => alive && setBoard([]));
-    return () => { alive = false; };
-  }, []);
-
-  // Fluctuating online-players count. Baseline drifts between 150 and 200,
-  // plus the count of real ranked players we know about.
-  useEffect(() => {
-    const real = board?.length ?? 0;
-    setOnlineCount(computeOnline(real));
-    const t = setInterval(() => setOnlineCount(computeOnline(real)), 6000);
-    return () => clearInterval(t);
-  }, [board]);
+  const [board, setBoard] = useState<LeaderRow[] | null>(null);
+  const [live, setLive] = useState<LiveRoom[] | null>(null);
+  const [recent, setRecent] = useState<RecentMatchRow[] | null>(null);
+  const [streak, setStreak] = useState<number>(0);
+  const [gamesToday, setGamesToday] = useState<number>(0);
+  const [inQueue, setInQueue] = useState<number>(0);
+  const [online, setOnline] = useState<number>(() => computeOnline(0));
 
   const cleanCode = useMemo(
     () => code.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5),
     [code],
   );
 
-  function goPlay(action: "quick2" | "quick4" | "ranked2" | "create") {
-    try { sessionStorage.setItem("quoridor:pendingAction", action); } catch {}
+  // Initial data pull.
+  useEffect(() => {
+    let alive = true;
+    void fetchLeaderboard(5).then((r) => alive && setBoard(r)).catch(() => alive && setBoard([]));
+    void fetchLiveRooms(5).then((r) => alive && setLive(r)).catch(() => alive && setLive([]));
+    void fetchGamesToday().then((n) => alive && setGamesToday(n)).catch(() => {});
+    void fetchQueueCount().then((n) => alive && setInQueue(n)).catch(() => {});
+    void (async () => {
+      const me = await requireRealUser();
+      if (!alive || !me) { if (alive) setRecent([]); return; }
+      const [r, st] = await Promise.all([
+        fetchRecentMatches(me.playerId, 4).catch(() => []),
+        fetchMyWinStreak(me.playerId).catch(() => 0),
+      ]);
+      if (!alive) return;
+      setRecent(r); setStreak(st);
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  // Refresh live counts every 10s. Online drifts locally.
+  useEffect(() => {
+    setOnline(computeOnline(board?.length ?? 0));
+    const drift = setInterval(() => setOnline(computeOnline(board?.length ?? 0)), 6000);
+    const poll = setInterval(() => {
+      void fetchLiveRooms(5).then(setLive).catch(() => {});
+      void fetchQueueCount().then(setInQueue).catch(() => {});
+      void fetchGamesToday().then(setGamesToday).catch(() => {});
+    }, 10000);
+    return () => { clearInterval(drift); clearInterval(poll); };
+  }, [board]);
+
+  const go = useCallback((pending: string) => {
+    try { sessionStorage.setItem("quoridor:pendingAction", pending); } catch {}
     void navigate({ to: "/game" });
+  }, [navigate]);
+
+  function onPlay() {
+    if (mode === "2p") go("quick2");
+    else if (mode === "4p") go("quick4");
+    else go("ranked2");
   }
-  function goCpu(diff: "easy" | "medium" | "hard") {
-    try { sessionStorage.setItem("quoridor:pendingAction", `cpu:${diff}`); } catch {}
-    void navigate({ to: "/game" });
-  }
-  function goJoin(c: string) {
+  function onJoin(c: string) {
     if (c.length !== 5) return;
     try { sessionStorage.setItem("quoridor:pendingJoin", c); } catch {}
     void navigate({ to: "/game" });
   }
+  function onSpectate(c: string) {
+    try { sessionStorage.setItem("quoridor:pendingAction", `spectate:${c}`); } catch {}
+    void navigate({ to: "/game" });
+  }
+
+  const queueLabel =
+    mode === "2p" ? "FIND CASUAL MATCH" :
+    mode === "4p" ? "FIND 4-PLAYER MATCH" :
+    "QUEUE FOR RANKED";
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-zinc-100 antialiased">
-      <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-4 py-5 sm:px-6 sm:py-8">
-        <TopBar />
+    <main className="min-h-screen bg-[#09090b] font-[Space_Grotesk,ui-sans-serif,system-ui] text-[#ececf1] antialiased">
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet"
+      />
 
-        {/* Compact centered hero — barricade-style */}
-        <section className="mt-10 flex flex-col items-center text-center sm:mt-14">
-          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-            Play <span className="text-amber-500">Quoridor</span>
-          </h1>
+      {/* Header */}
+      <header className="h-[68px] border-b border-[#1a1a1f]">
+        <div className="mx-auto flex h-full max-w-[1240px] items-center justify-between px-8">
+          <Link to="/" className="flex items-center gap-3">
+            <span className="grid h-9 w-9 place-items-center rounded-[9px] border border-[#2a2a31] bg-gradient-to-br from-[#1d1d22] to-[#101013]">
+              <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden>
+                <rect x="1" y="1" width="7" height="7" rx="1.5" fill="#f5a524" />
+                <rect x="10" y="1" width="7" height="7" rx="1.5" fill="#2e2e36" />
+                <rect x="1" y="10" width="7" height="7" rx="1.5" fill="#2e2e36" />
+                <rect x="10" y="10" width="7" height="7" rx="1.5" fill="#2e2e36" />
+              </svg>
+            </span>
+            <span className="text-[15px] font-bold">playquoridor<span className="text-[#5c5c66]">.online</span></span>
+          </Link>
+
+          <nav className="hidden items-center gap-2 md:flex">
+            <NavLink href="#play">Play</NavLink>
+            <NavLink to="/puzzle">Puzzles</NavLink>
+            <NavLink to="/stats">Leaderboard</NavLink>
+            <NavLink to="/about">Learn</NavLink>
+          </nav>
+
+          <div className="flex items-center gap-3">
+            <div className="hidden items-center gap-2 rounded-full border border-[#232329] bg-[#0e0e11] px-3 py-1.5 sm:flex">
+              <span className="h-[7px] w-[7px] rounded-full bg-[#2fd575] shadow-[0_0_8px_#2fd575]" />
+              <span className="font-[IBM_Plex_Mono,monospace] text-[12px] text-[#a7a7b2]">{online} online</span>
+            </div>
+            <AccountNav />
+          </div>
+        </div>
+      </header>
+
+      {/* Hero */}
+      <section className="relative overflow-hidden px-8 py-[76px] text-center">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 -top-10 bottom-0 opacity-[0.55]"
+          style={{
+            backgroundImage:
+              "linear-gradient(#1c1c22 1px,transparent 1px),linear-gradient(90deg,#1c1c22 1px,transparent 1px)",
+            backgroundSize: "64px 64px",
+            WebkitMaskImage: "radial-gradient(ellipse 55% 70% at 50% 30%,#000 20%,transparent 75%)",
+            maskImage: "radial-gradient(ellipse 55% 70% at 50% 30%,#000 20%,transparent 75%)",
+          }}
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 top-[10%] h-[420px] w-[760px] -translate-x-1/2"
+          style={{ background: "radial-gradient(closest-side,rgba(245,165,36,0.14),transparent 70%)" }}
+        />
+        <h1 className="relative m-0 text-[52px] font-bold leading-none tracking-[-0.03em] sm:text-[72px]">
+          Play <span className="text-[#f5a524]">Quoridor</span>
+        </h1>
+        <p className="relative mt-4 text-[15px] text-[#83838e]">
+          The strategy classic — block, dodge, and race to the far side.
+        </p>
+        <div className="relative">
           <button
-            onClick={() => goPlay("quick2")}
-            className="group mt-8 inline-flex items-center gap-3 rounded-2xl bg-gradient-to-b from-emerald-500 to-emerald-600 px-12 py-5 text-lg font-bold text-white shadow-[0_20px_50px_-15px_rgba(16,185,129,0.6)] ring-1 ring-emerald-400/50 transition-all hover:-translate-y-0.5 hover:from-emerald-400 hover:to-emerald-500 hover:shadow-[0_25px_55px_-15px_rgba(16,185,129,0.75)] active:translate-y-0"
+            onClick={onPlay}
+            className="mt-[34px] inline-flex items-center gap-3 rounded-[14px] border-0 bg-gradient-to-b from-[#2fd575] to-[#1caf5c] px-13 py-[19px] text-[19px] font-bold tracking-[0.01em] text-[#04150b] transition-transform hover:-translate-y-0.5"
+            style={{
+              padding: "19px 52px",
+              boxShadow:
+                "0 0 0 1px rgba(47,213,117,.4),0 8px 40px rgba(47,213,117,.28),inset 0 1px 0 rgba(255,255,255,.25)",
+            }}
           >
-            <svg className="h-5 w-5 transition-transform group-hover:scale-110" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M8 5v14l11-7z" /></svg>
+            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
+              <path d="M4 2.5v11l9-5.5z" fill="currentColor" />
+            </svg>
             Play Now
           </button>
-          <p className="mt-3 text-sm text-zinc-300">Free — no account needed</p>
-          <div className="mt-4 flex items-center gap-3 text-xs text-zinc-300">
-            <span className="inline-flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              Matchmaking online
-            </span>
-            <span className="text-zinc-700">•</span>
-            <span>{onlineCount} players online</span>
-          </div>
-        </section>
+        </div>
+        <div className="relative mt-3 text-[12px] text-[#83838e]">Free — no account needed</div>
 
-        {/* Lobby row — leaderboard | match setup | quick play */}
-        <section className="mt-12 grid grid-cols-1 items-start gap-4 lg:grid-cols-12">
-          {/* ELO Leaderboard */}
-          <aside className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 lg:col-span-3">
-            <div className="flex items-center justify-between">
-              <h2 className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                <span className="text-amber-500">🏆</span> Leaderboard
-              </h2>
-              <Link to="/stats" className="text-[10px] text-amber-500 hover:underline">View all</Link>
-            </div>
-            <ol className="mt-4 space-y-1">
-              {board === null && Array.from({ length: 6 }).map((_, i) => (
-                <li key={i} className="flex animate-pulse items-center justify-between p-2">
-                  <span className="h-3 w-24 rounded bg-zinc-800" />
-                  <span className="h-3 w-10 rounded bg-zinc-800" />
-                </li>
+        <div className="relative mt-[30px] flex flex-wrap items-center justify-center gap-x-[34px] gap-y-3 text-[13px] text-[#83838e]">
+          <span>
+            <b className="font-[IBM_Plex_Mono,monospace] text-[15px] font-semibold text-[#2fd575]">{online}</b> players online
+          </span>
+          <span>
+            <b className="font-[IBM_Plex_Mono,monospace] text-[15px] font-semibold text-[#ececf1]">{inQueue}</b> in queue
+          </span>
+          <span>
+            <b className="font-[IBM_Plex_Mono,monospace] text-[15px] font-semibold text-[#ececf1]">{gamesToday.toLocaleString()}</b> games today
+          </span>
+        </div>
+      </section>
+
+      {/* Main grid */}
+      <div id="play" className="mx-auto grid max-w-[1240px] items-start gap-5 px-8 pb-6 lg:grid-cols-[280px_1fr_300px]">
+        {/* Left column */}
+        <div className="flex flex-col gap-4">
+          <Card id="leaderboard">
+            <CardHeader eyebrow="🏆 Leaderboard" action={<Link to="/stats" className="text-[11.5px] font-semibold uppercase tracking-[0.06em] text-[#f5a524] hover:text-[#ffc45e]">View all</Link>} />
+            <div className="mt-3">
+              {board === null && Array.from({ length: 5 }).map((_, i) => (
+                <Row key={i}>
+                  <span className="h-3 w-24 animate-pulse rounded bg-[#1e1e24]" />
+                  <span className="h-3 w-10 animate-pulse rounded bg-[#1e1e24]" />
+                </Row>
               ))}
               {board?.length === 0 && (
-                <li className="p-2 text-sm text-zinc-300">No ranked matches yet. Be the first.</li>
-              )}
-              {board?.map((r, i) => (
-                <li
-                  key={r.id}
-                  className="flex items-center justify-between rounded-lg p-2 transition-colors hover:bg-zinc-800/50"
-                >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span className={"w-4 text-xs font-bold " + (i === 0 ? "text-amber-500" : "text-zinc-300")}>
-                      {i + 1}
-                    </span>
-                    <span className="truncate text-sm font-medium">{r.name}</span>
-                  </div>
-                  <span className="font-mono text-xs tabular-nums text-amber-400/90">{r.rating}</span>
-                </li>
-              ))}
-            </ol>
-          </aside>
-
-          {/* Center: Live Lobby with match modes + private room */}
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 lg:col-span-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold tracking-tight text-zinc-100">Live Lobby</h2>
-              <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-emerald-400">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Connected
-              </span>
-            </div>
-
-            <div className="mt-4 text-[10px] font-bold uppercase tracking-widest text-zinc-300">Find Match</div>
-            <div className="mt-3 grid grid-cols-3 gap-3">
-              <ModeButton label="2 Players" sub="Casual" onClick={() => goPlay("quick2")} />
-              <ModeButton label="4 Players" sub="Free-for-all" onClick={() => goPlay("quick4")} badge="CHAOS" />
-              <ModeButton label="Ranked" sub="ELO 1v1" tone="primary" onClick={() => goPlay("ranked2")} />
-            </div>
-
-            <div className="mt-6 border-t border-zinc-800 pt-5">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-300">Play With Friends</div>
-              <div className="mt-3 flex gap-2">
-                <button
-                  onClick={() => goPlay("create")}
-                  className="rounded-xl bg-amber-500 px-5 py-3 text-xs font-bold uppercase tracking-widest text-zinc-950 shadow-lg shadow-amber-900/30 transition-all hover:-translate-y-0.5 hover:bg-amber-400"
-                >
-                  + Create Room
-                </button>
-                <form
-                  onSubmit={(e) => { e.preventDefault(); goJoin(cleanCode); }}
-                  className="flex flex-1 gap-2"
-                >
-                  <input
-                    value={cleanCode}
-                    onChange={(e) => setCode(e.target.value)}
-                    placeholder="Enter room code…"
-                    maxLength={5}
-                    className="flex-1 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 font-mono text-sm uppercase tracking-[0.3em] text-amber-400 placeholder:normal-case placeholder:tracking-normal placeholder:text-zinc-600 focus:border-amber-500/60 focus:outline-none"
-                  />
-                  <button
-                    type="submit"
-                    disabled={cleanCode.length !== 5}
-                    className="rounded-xl bg-zinc-800 px-5 py-3 text-xs font-bold uppercase tracking-widest text-zinc-100 transition-all hover:-translate-y-0.5 hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0"
-                  >
-                    Join
-                  </button>
-                </form>
-              </div>
-            </div>
-          </div>
-
-          {/* Right: Quick Play */}
-          <div className="space-y-3 lg:col-span-3">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-300">Quick Play</div>
-            <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-3">
-              <div className="flex items-center gap-2 px-1 pb-2">
-                <span className="grid h-8 w-8 place-items-center rounded-lg bg-zinc-800 text-zinc-300">
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                </span>
-                <div>
-                  <div className="text-sm font-semibold text-zinc-100">CPU Practice</div>
-                  <div className="text-[10px] uppercase tracking-widest text-zinc-300">Choose difficulty</div>
+                <div className="border-t border-[#1a1a1f] px-5 py-4 text-[12.5px] text-[#83838e]">
+                  No ranked matches yet. Be the first.
                 </div>
-              </div>
-              <div className="space-y-1.5">
-                <CpuBtn onClick={() => goCpu("easy")} tone="emerald" tier="Easy" name="Tom" />
-                <CpuBtn onClick={() => goCpu("medium")} tone="amber" tier="Medium" name="Jackeline" />
-                <CpuBtn onClick={() => goCpu("hard")} tone="rose" tier="Hard" name="Rachel" />
-              </div>
+              )}
+              {board?.map((p, i) => (
+                <Row key={p.id}>
+                  <span className={"w-[22px] font-[IBM_Plex_Mono,monospace] text-[12px] " + (i === 0 ? "text-[#f5a524]" : "text-[#5c5c66]")}>
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <span className="flex-1 truncate text-[13.5px] font-semibold">{p.name}</span>
+                  <span className="font-[IBM_Plex_Mono,monospace] text-[12.5px] text-[#83838e]">{p.rating}</span>
+                </Row>
+              ))}
             </div>
-            <QuickTile
-              to="/puzzle"
-              label="Daily Puzzle"
-              sub="Today's position"
-              icon={<svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z" /></svg>}
-            />
-          </div>
-        </section>
+          </Card>
 
-        <footer className="mt-10 flex flex-wrap justify-center gap-8 pt-6 text-[10px] font-semibold uppercase tracking-[0.3em] text-zinc-300">
-          <Link to="/about" className="hover:text-zinc-300">About</Link>
-          <Link to="/stats" className="hover:text-zinc-300">Leaderboard</Link>
-          <Link to="/puzzle" className="hover:text-zinc-300">Puzzles</Link>
-          <a href="mailto:hi@playquoridor.online" className="hover:text-zinc-300">Contact</a>
-        </footer>
+          <Card>
+            <CardHeader
+              eyebrow="Recent matches"
+              action={recent && recent.length > 0 ? (
+                <Link to="/history" className="text-[11.5px] font-semibold uppercase tracking-[0.06em] text-[#f5a524] hover:text-[#ffc45e]">History</Link>
+              ) : null}
+            />
+            <div className="mt-3">
+              {recent === null && Array.from({ length: 3 }).map((_, i) => (
+                <Row key={i}>
+                  <span className="h-[26px] w-[26px] animate-pulse rounded-lg bg-[#1e1e24]" />
+                  <span className="h-3 w-24 animate-pulse rounded bg-[#1e1e24]" />
+                </Row>
+              ))}
+              {recent?.length === 0 && (
+                <div className="border-t border-[#1a1a1f] px-5 py-4 text-[12.5px] text-[#83838e]">
+                  Sign in and play to see your history.
+                </div>
+              )}
+              {recent?.map((m) => {
+                const win = m.result === "win";
+                return (
+                  <Row key={m.matchId}>
+                    <span className={"grid h-[26px] w-[26px] place-items-center rounded-lg font-[IBM_Plex_Mono,monospace] text-[11.5px] font-bold " + (win ? "bg-[rgba(47,213,117,0.12)] text-[#2fd575]" : "bg-[rgba(255,92,92,0.1)] text-[#ff7a7a]")}>
+                      {win ? "W" : "L"}
+                    </span>
+                    <div className="flex-1">
+                      <div className="text-[13px] font-semibold">vs {m.opponentName}</div>
+                      <div className="text-[11px] text-[#5c5c66]">{m.ranked ? "Ranked" : "Casual"} · {m.mode}p</div>
+                    </div>
+                    <span className="font-[IBM_Plex_Mono,monospace] text-[11px] text-[#5c5c66]">{timeAgo(m.endedAt)}</span>
+                  </Row>
+                );
+              })}
+            </div>
+          </Card>
+        </div>
+
+        {/* Middle: Live Lobby */}
+        <Card className="pb-5">
+          <div className="flex items-center justify-between px-6 pt-5">
+            <span className="text-[16px] font-bold">Live Lobby</span>
+            <span className="flex items-center gap-2">
+              <span className="h-[7px] w-[7px] rounded-full bg-[#2fd575] shadow-[0_0_8px_#2fd575]" />
+              <span className="text-[11px] font-semibold tracking-[0.12em] text-[#2fd575]">CONNECTED</span>
+            </span>
+          </div>
+
+          <div className="px-6 pt-4">
+            <Eyebrow>Find match</Eyebrow>
+            <div className="mt-3 flex gap-3">
+              {(
+                [
+                  { id: "2p", title: "2 Players", sub: "Casual" },
+                  { id: "4p", title: "4 Players", sub: "Free-for-all" },
+                  { id: "ranked", title: "Ranked", sub: "ELO 1v1" },
+                ] as { id: Mode; title: string; sub: string }[]
+              ).map((m) => {
+                const on = mode === m.id;
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => setMode(m.id)}
+                    className={
+                      "flex-1 rounded-[12px] border p-4 text-left transition-colors " +
+                      (on
+                        ? "border-[rgba(245,165,36,0.35)] bg-[rgba(245,165,36,0.14)] shadow-[0_0_24px_rgba(245,165,36,0.14)]"
+                        : "border-[#232329] bg-[#17171b] hover:border-[#34343e]")
+                    }
+                  >
+                    <div className="text-[16px] font-bold">{m.title}</div>
+                    <div
+                      className={
+                        "mt-[5px] text-[10.5px] font-semibold uppercase tracking-[0.13em] " +
+                        (on ? "text-[#f5a524]" : "text-[#5c5c66]")
+                      }
+                    >
+                      {m.sub}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              onClick={onPlay}
+              className="mt-4 w-full rounded-[11px] bg-[#f5a524] px-4 py-[14px] text-[14.5px] font-bold tracking-[0.02em] text-[#160e00] transition-[filter] hover:brightness-110"
+            >
+              {queueLabel}
+            </button>
+          </div>
+
+          <div className="px-6 pt-6">
+            <Eyebrow>Play with friends</Eyebrow>
+            <div className="mt-3 flex flex-wrap gap-[10px]">
+              <button
+                onClick={() => go("create")}
+                className="whitespace-nowrap rounded-[10px] border border-[#2b2b33] bg-[#1e1e24] px-[18px] py-3 text-[12.5px] font-bold uppercase tracking-[0.06em] hover:bg-[#26262e]"
+              >
+                + Create Room
+              </button>
+              <form
+                onSubmit={(e) => { e.preventDefault(); onJoin(cleanCode); }}
+                className="flex flex-1 gap-[10px]"
+              >
+                <input
+                  value={cleanCode}
+                  onChange={(e) => setCode(e.target.value)}
+                  placeholder="Enter room code…"
+                  maxLength={5}
+                  className="min-w-0 flex-1 rounded-[10px] border border-[#232329] bg-[#0d0d10] px-[14px] py-3 font-[IBM_Plex_Mono,monospace] text-[13px] tracking-[0.3em] text-[#ececf1] outline-none placeholder:tracking-normal placeholder:text-[#5c5c66] focus:border-[rgba(245,165,36,0.35)]"
+                />
+                <button
+                  type="submit"
+                  disabled={cleanCode.length !== 5}
+                  className="rounded-[10px] border border-[#2b2b33] bg-[#17171b] px-[22px] py-3 text-[12.5px] font-bold uppercase tracking-[0.08em] hover:border-[rgba(245,165,36,0.35)] hover:text-[#f5a524] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-[#2b2b33] disabled:hover:text-[#ececf1]"
+                >
+                  Join
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <div className="pt-6">
+            <div className="flex items-center justify-between px-6">
+              <Eyebrow>
+                <span className="mr-2 inline-block h-[6px] w-[6px] rounded-full bg-[#ff5c5c] shadow-[0_0_6px_#ff5c5c] align-middle" />
+                Live games — spectate
+              </Eyebrow>
+              <span className="text-[11.5px] font-semibold uppercase tracking-[0.06em] text-[#f5a524]">All tables</span>
+            </div>
+            <div className="mt-2">
+              {live === null && Array.from({ length: 3 }).map((_, i) => (
+                <Row key={i}>
+                  <span className="h-3 w-40 animate-pulse rounded bg-[#1e1e24]" />
+                  <span className="h-3 w-10 animate-pulse rounded bg-[#1e1e24]" />
+                </Row>
+              ))}
+              {live?.length === 0 && (
+                <div className="border-t border-[#1a1a1f] px-6 py-5 text-[12.5px] text-[#83838e]">
+                  No live games right now. Host one to get the party going.
+                </div>
+              )}
+              {live?.map((g) => (
+                <button
+                  key={g.code}
+                  onClick={() => onSpectate(g.code)}
+                  className="flex w-full items-center gap-3 border-t border-[#1a1a1f] px-6 py-[11px] text-left transition-colors hover:bg-[#15151a]"
+                >
+                  <div className="flex-1 truncate">
+                    <span className="text-[13px] font-semibold">{g.hostName}</span>
+                    <span className="text-[12px] text-[#5c5c66]"> · {g.mode}p {g.ranked ? "Ranked" : "Casual"}</span>
+                  </div>
+                  <span className="font-[IBM_Plex_Mono,monospace] text-[11px] text-[#5c5c66]">
+                    {g.seatsTaken}/{g.seatsTotal} seats
+                  </span>
+                  <span className="font-[IBM_Plex_Mono,monospace] text-[11px] uppercase tracking-widest text-[#83838e]">
+                    {g.code}
+                  </span>
+                  <span className="text-[16px] text-[#3d3d46] transition-colors group-hover:text-[#f5a524]">›</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </Card>
+
+        {/* Right column */}
+        <div className="flex flex-col gap-4">
+          <Card>
+            <CardHeader eyebrow="CPU Practice" action={<span className="text-[11px] text-[#5c5c66]">choose difficulty</span>} />
+            <div className="mt-3">
+              <CpuRow onClick={() => go("cpu:easy")} color="#2fd575" lvl="Easy" name="Tom" desc="Learns the ropes with you" />
+              <CpuRow onClick={() => go("cpu:medium")} color="#f5a524" lvl="Medium" name="Jackeline" desc="Punishes lazy walls" />
+              <CpuRow onClick={() => go("cpu:hard")} color="#ff5c7a" lvl="Hard" name="Rachel" desc="Near-perfect pathing" />
+            </div>
+          </Card>
+
+          <Link
+            to="/puzzle"
+            id="puzzles"
+            className="block rounded-2xl border border-[#2b2412] bg-[linear-gradient(135deg,#17130a,#111114_60%)] p-5 transition-colors hover:border-[rgba(245,165,36,0.35)]"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#f5a524]">🧩 Daily puzzle</span>
+              {streak > 0 && (
+                <span className="rounded-md bg-[rgba(245,165,36,0.14)] px-2 py-[3px] font-[IBM_Plex_Mono,monospace] text-[11.5px] text-[#f5a524]">
+                  🔥 {streak} win streak
+                </span>
+              )}
+            </div>
+            <div className="mt-3 text-[15px] font-bold">Today's board</div>
+            <div className="mt-1 text-[12px] text-[#83838e]">Solve it in N moves</div>
+            <div className="mt-3 text-[12px] font-semibold text-[#f5a524]">SOLVE TODAY'S →</div>
+          </Link>
+
+          <Card id="learn">
+            <CardHeader eyebrow="Learn" />
+            <div className="mt-3">
+              <LearnRow to="/about" title="How to play" sub="Rules in 2 minutes" />
+              <LearnRow to="/about" title="Wall tactics 101" sub="Openings & traps" />
+            </div>
+          </Card>
+        </div>
       </div>
+
+      {/* How to play */}
+      <div className="mx-auto max-w-[1240px] px-8">
+        <Eyebrow>New here? Quoridor in three moves</Eyebrow>
+        <div className="grid gap-4 py-6 md:grid-cols-3">
+          <Step n="01" title="Move your pawn" desc="One square per turn — forward, back, or sideways across the 9×9 board." />
+          <Step n="02" title="Or place a wall" desc="Drop one of your 10 walls to slow your opponent. You can never fully block them." />
+          <Step n="03" title="Reach the far side" desc="First pawn to touch the opposite edge wins the game." />
+        </div>
+      </div>
+
+      <footer className="mt-6 border-t border-[#1a1a1f] pb-8 pt-6">
+        <div className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-between gap-4 px-8">
+          <span className="text-[12px] text-[#5c5c66]">© {new Date().getFullYear()} playquoridor.online</span>
+          <nav className="flex flex-wrap gap-6 text-[12px]">
+            <Link to="/about" className="text-[#5c5c66] hover:text-[#a7a7b2]">About</Link>
+            <Link to="/stats" className="text-[#5c5c66] hover:text-[#a7a7b2]">Leaderboard</Link>
+            <Link to="/puzzle" className="text-[#5c5c66] hover:text-[#a7a7b2]">Puzzles</Link>
+            <a href="mailto:hi@playquoridor.online" className="text-[#5c5c66] hover:text-[#a7a7b2]">Contact</a>
+          </nav>
+        </div>
+      </footer>
     </main>
   );
 }
 
-function TopBar() {
-  return (
-    <nav className="flex items-center justify-between">
-      <Link to="/" className="flex items-center gap-2.5">
-        <img
-          src="/favicon.png"
-          alt="Quoridor"
-          width={32}
-          height={32}
-          className="h-8 w-8 rounded-md ring-1 ring-zinc-800"
-        />
-        <span className="text-sm font-semibold tracking-tight text-zinc-100">playquoridor.online</span>
-      </Link>
-      <AccountNav />
-    </nav>
-  );
-}
+/* ------------------------- primitives ------------------------- */
 
-function ModeButton({
-  label, sub, tone = "ghost", onClick, badge,
-}: { label: string; sub?: string; tone?: "primary" | "ghost"; onClick: () => void; badge?: string }) {
-  const styles =
-    tone === "primary"
-      ? "border-amber-500/50 bg-gradient-to-b from-amber-500/20 to-amber-500/5 shadow-lg shadow-amber-900/20 hover:border-amber-400 hover:from-amber-500/30 hover:to-amber-500/10"
-      : "border-zinc-800 bg-zinc-950/60 hover:border-zinc-500 hover:bg-zinc-900";
+function Card({ children, className = "", id }: { children: React.ReactNode; className?: string; id?: string }) {
   return (
-    <button
-      onClick={onClick}
-      className={`group relative flex flex-col items-start gap-1 rounded-xl border px-4 py-4 text-left transition-all hover:-translate-y-1 ${styles}`}
-    >
-      {badge && (
-        <span className="absolute -right-2 -top-2 rounded-md bg-gradient-to-r from-fuchsia-500 to-rose-500 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-white shadow-[0_0_15px_rgba(244,63,94,0.6)] animate-pulse">
-          ⚡ {badge}
-        </span>
-      )}
-      <span className={`text-base font-bold tracking-tight ${tone === "primary" ? "text-amber-300" : "text-zinc-100"}`}>
-        {label}
-      </span>
-      {sub && (
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-zinc-300">{sub}</span>
-      )}
-    </button>
-  );
-}
-
-function _BoardArt() {
-  // 9x9 board silhouette with two pawns and a couple of walls — pure geometry, no state
-  const cells = Array.from({ length: 81 });
-  return (
-    <div className="relative mx-auto w-full max-w-md">
-      <div className="absolute -inset-8 rounded-[2rem] bg-gradient-to-br from-amber-500/10 via-transparent to-transparent blur-2xl" aria-hidden />
-      <div className="relative rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4 shadow-2xl shadow-black/40">
-        <div className="grid aspect-square grid-cols-9 gap-1.5">
-          {cells.map((_, i) => {
-            const row = Math.floor(i / 9);
-            const col = i % 9;
-            const isTop = row === 0 && col === 4;
-            const isBot = row === 8 && col === 4;
-            return (
-              <div
-                key={i}
-                className={
-                  "relative rounded-[3px] " +
-                  (isTop || isBot ? "bg-zinc-800" : "bg-zinc-900/70 ring-1 ring-inset ring-zinc-800/60")
-                }
-              >
-                {isTop && <span className="absolute inset-1 rounded-full bg-zinc-200 shadow-[0_0_10px_rgba(255,255,255,0.35)]" />}
-                {isBot && <span className="absolute inset-1 rounded-full bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.6)]" />}
-              </div>
-            );
-          })}
-        </div>
-        {/* Two decorative walls */}
-        <span className="pointer-events-none absolute left-[24%] top-[38%] h-1.5 w-[20%] rounded-full bg-amber-500/80" aria-hidden />
-        <span className="pointer-events-none absolute right-[20%] top-[58%] h-1.5 w-[20%] rounded-full bg-zinc-200/80" aria-hidden />
-      </div>
+    <div id={id} className={"rounded-2xl border border-[#232329] bg-[#111114] " + className}>
+      {children}
     </div>
   );
 }
 
-function QuickTile({
-  to, label, sub, icon, onClick,
-}: { to: string; label: string; sub: string; icon: React.ReactNode; onClick?: () => void }) {
+function CardHeader({ eyebrow, action }: { eyebrow: React.ReactNode; action?: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between px-5 pt-4">
+      <Eyebrow>{eyebrow}</Eyebrow>
+      {action}
+    </div>
+  );
+}
+
+function Eyebrow({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#5c5c66]">
+      {children}
+    </span>
+  );
+}
+
+function Row({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-3 border-t border-[#1a1a1f] px-5 py-[11px]">
+      {children}
+    </div>
+  );
+}
+
+function NavLink({ href, to, children }: { href?: string; to?: string; children: React.ReactNode }) {
+  const cls = "rounded-lg px-3 py-2 text-[13.5px] font-medium text-[#a7a7b2] hover:bg-[#17171b] hover:text-[#ececf1]";
+  if (to) return <Link to={to} className={cls}>{children}</Link>;
+  return <a href={href} className={cls}>{children}</a>;
+}
+
+function CpuRow({
+  onClick, color, lvl, name, desc,
+}: { onClick: () => void; color: string; lvl: string; name: string; desc: string }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex w-full items-center gap-3 border-t border-[#1a1a1f] px-5 py-[11px] text-left transition-colors hover:bg-[#15151a]"
+    >
+      <span
+        className="h-[9px] w-[9px] flex-none rounded-full"
+        style={{ background: color, boxShadow: `0 0 8px ${color}` }}
+      />
+      <div className="flex-1">
+        <div className="text-[13px] font-bold">
+          {lvl} <span className="font-medium text-[#83838e]">— {name}</span>
+        </div>
+        <div className="text-[11px] text-[#5c5c66]">{desc}</div>
+      </div>
+      <span className="text-[16px] text-[#3d3d46]">›</span>
+    </button>
+  );
+}
+
+function LearnRow({ to, title, sub }: { to: string; title: string; sub: string }) {
   return (
     <Link
       to={to}
-      onClick={onClick}
-      className="group flex items-center gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4 text-left transition-all hover:-translate-y-0.5 hover:border-zinc-600"
+      className="flex items-center gap-3 border-t border-[#1a1a1f] px-5 py-[11px] transition-colors hover:bg-[#15151a]"
     >
-      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-800 text-zinc-300 transition-colors group-hover:bg-zinc-700 group-hover:text-amber-400">
-        {icon}
-      </span>
-      <span className="min-w-0">
-        <span className="block text-sm font-bold text-zinc-100">{label}</span>
-        <span className="block text-xs text-zinc-300">{sub}</span>
-      </span>
+      <div className="flex-1">
+        <div className="text-[13px] font-semibold">{title}</div>
+        <div className="text-[11px] text-[#5c5c66]">{sub}</div>
+      </div>
+      <span className="text-[16px] text-[#3d3d46]">›</span>
     </Link>
   );
 }
 
-function CpuBtn({
-  onClick, tier, name, tone,
-}: { onClick: () => void; tier: "Easy" | "Medium" | "Hard"; name: string; tone: "emerald" | "amber" | "rose" }) {
-  const dot =
-    tone === "emerald" ? "bg-emerald-500"
-    : tone === "amber" ? "bg-amber-500"
-    : "bg-rose-500";
-  const hover =
-    tone === "emerald" ? "hover:border-emerald-500/60"
-    : tone === "amber" ? "hover:border-amber-500/60"
-    : "hover:border-rose-500/60";
+function Step({ n, title, desc }: { n: string; title: string; desc: string }) {
   return (
-    <button
-      onClick={onClick}
-      className={`group flex w-full items-center justify-between rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-3 text-left transition-all hover:-translate-y-0.5 hover:bg-zinc-900 ${hover}`}
-    >
-      <span className="flex items-center gap-2.5">
-        <span className={`h-2 w-2 rounded-full ${dot} shadow-[0_0_8px_currentColor]`} aria-hidden />
-        <span className="text-sm font-bold text-zinc-100">{tier}</span>
-        <span className="text-xs text-zinc-300">— {name}</span>
+    <div className="flex items-start gap-4 rounded-[14px] border border-[#232329] bg-[#111114] px-[18px] py-4">
+      <span className="grid h-7 w-7 flex-none place-items-center rounded-[9px] bg-[rgba(245,165,36,0.14)] font-[IBM_Plex_Mono,monospace] text-[12.5px] font-semibold text-[#f5a524]">
+        {n}
       </span>
-      <svg className="h-4 w-4 text-zinc-600 transition-transform group-hover:translate-x-0.5 group-hover:text-zinc-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-      </svg>
-    </button>
+      <div>
+        <div className="text-[13.5px] font-semibold">{title}</div>
+        <div className="mt-[3px] text-[12.5px] leading-[1.45] text-[#83838e]">{desc}</div>
+      </div>
+    </div>
   );
 }

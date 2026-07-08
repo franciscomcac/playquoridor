@@ -169,3 +169,86 @@ export async function findOpenRoom(mode: 2 | 4, ranked = false): Promise<string 
   for (const r of data) if (r.seats_taken < r.seats_total) return r.code;
   return null;
 }
+
+/** Count of matches played since 00:00 UTC today. */
+export async function fetchGamesToday(): Promise<number> {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const { count } = await supabase
+    .from("matches")
+    .select("id", { count: "exact", head: true })
+    .gte("created_at", start.toISOString());
+  return count ?? 0;
+}
+
+/** Count of ranked open rooms currently waiting for opponents. */
+export async function fetchQueueCount(): Promise<number> {
+  const cutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+  const { data } = await supabase
+    .from("open_rooms")
+    .select("seats_taken, seats_total")
+    .gte("updated_at", cutoff);
+  if (!data?.length) return 0;
+  return data.filter((r) => r.seats_taken < r.seats_total).length;
+}
+
+export type LiveRoom = {
+  code: string;
+  mode: 2 | 4;
+  ranked: boolean;
+  hostName: string;
+  seatsTaken: number;
+  seatsTotal: number;
+};
+
+/** Currently-known open rooms (both waiting and full). Used for the spectate/live list. */
+export async function fetchLiveRooms(limit = 6): Promise<LiveRoom[]> {
+  const cutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+  const { data } = await supabase
+    .from("open_rooms")
+    .select("code, mode, ranked, host_name, seats_taken, seats_total, updated_at")
+    .gte("updated_at", cutoff)
+    .order("updated_at", { ascending: false })
+    .limit(limit);
+  return (data ?? []).map((r) => ({
+    code: r.code, mode: r.mode as 2 | 4, ranked: !!r.ranked,
+    hostName: r.host_name ?? "Host",
+    seatsTaken: r.seats_taken, seatsTotal: r.seats_total,
+  }));
+}
+
+export type RecentMatchRow = {
+  matchId: string;
+  mode: 2 | 4;
+  ranked: boolean;
+  endedAt: string;
+  result: "win" | "loss" | "forfeit";
+  opponentName: string;
+};
+
+/** Recent matches for a specific player, most-recent first. */
+export async function fetchRecentMatches(playerId: string, limit = 5): Promise<RecentMatchRow[]> {
+  const { data: mine } = await supabase
+    .from("match_players")
+    .select("match_id, result")
+    .eq("player_id", playerId)
+    .order("match_id", { ascending: false })
+    .limit(limit * 2);
+  const ids = Array.from(new Set((mine ?? []).map((r) => r.match_id)));
+  if (ids.length === 0) return [];
+  const [{ data: matches }, { data: others }] = await Promise.all([
+    supabase.from("matches").select("id, mode, ranked, ended_at, winner_player_id")
+      .in("id", ids).order("ended_at", { ascending: false }),
+    supabase.from("match_players").select("match_id, player_id, name").in("match_id", ids),
+  ]);
+  const myResultByMatch = new Map((mine ?? []).map((r) => [r.match_id, r.result as RecentMatchRow["result"]]));
+  return (matches ?? []).slice(0, limit).map((m) => {
+    const opps = (others ?? []).filter((p) => p.match_id === m.id && p.player_id !== playerId);
+    const opp = opps[0]?.name ?? "Opponent";
+    return {
+      matchId: m.id, mode: m.mode as 2 | 4, ranked: !!m.ranked,
+      endedAt: m.ended_at, result: myResultByMatch.get(m.id) ?? "loss",
+      opponentName: opp,
+    };
+  });
+}
