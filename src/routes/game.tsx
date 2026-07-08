@@ -316,7 +316,6 @@ function Footer() {
 }
 
 function ForfeitButton({ onConfirm, disabled }: { onConfirm: () => void; disabled?: boolean }) {
-  // placeholder anchor
   const [armed, setArmed] = useState(false);
   const timerRef = useRef<number | null>(null);
   useEffect(() => () => { if (timerRef.current) window.clearTimeout(timerRef.current); }, []);
