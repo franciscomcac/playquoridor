@@ -625,6 +625,7 @@ function GameScreen({
   const [toast, setToast] = useState<string | null>(null);
   const [log, setLog] = useState<EventEntry[]>([]);
   const [afk, setAfk] = useState<AfkState>(null);
+  const [chat, setChat] = useState<ChatEntry[]>([]);
   const roomRef = useRef<Room | null>(null);
   const matchRecordedRef = useRef(false);
 
