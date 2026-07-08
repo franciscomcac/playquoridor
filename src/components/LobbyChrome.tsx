@@ -43,7 +43,7 @@ export function LobbyChrome({
     <main className="min-h-screen bg-[#09090b] font-[Space_Grotesk,ui-sans-serif,system-ui] text-[#ececf1] antialiased">
       {FONT_LINKS}
       <header className="h-[68px] border-b border-[#1a1a1f]">
-        <div className="mx-auto flex h-full max-w-[1240px] items-center justify-between px-8">
+        <div className="mx-auto flex h-full max-w-[1240px] items-center justify-between gap-3 px-4 sm:px-8">
           <Link to="/" className="flex items-center gap-3">
             <span className="grid h-9 w-9 place-items-center rounded-[9px] border border-[#2a2a31] bg-gradient-to-br from-[#1d1d22] to-[#101013]">
               <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden>
@@ -89,7 +89,7 @@ export function LobbyChrome({
       </header>
       {children}
       <footer className="mt-6 border-t border-[#1a1a1f] pb-8 pt-6">
-        <div className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-between gap-4 px-8">
+        <div className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-between gap-4 px-4 sm:px-8">
           <span className="text-[12px] text-[#5c5c66]">
             © {new Date().getFullYear()} playquoridor.online
           </span>

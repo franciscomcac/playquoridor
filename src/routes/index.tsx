@@ -233,7 +233,7 @@ function Lobby() {
   return (
     <LobbyChrome online={online}>
       {/* Hero */}
-      <section className="relative overflow-hidden px-8 py-[60px] text-center">
+      <section className="relative overflow-hidden px-4 py-10 text-center sm:px-8 sm:py-[60px]">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-x-0 -top-10 bottom-0 opacity-[0.5]"
@@ -250,7 +250,7 @@ function Lobby() {
           className="pointer-events-none absolute left-1/2 top-[16%] h-[340px] w-[620px] -translate-x-1/2"
           style={{ background: "radial-gradient(closest-side,rgba(245,165,36,0.14),transparent 68%)", opacity: 0.6 }}
         />
-        <h1 className="relative m-0 text-[50px] font-bold leading-none tracking-[-0.035em] sm:text-[66px]">
+        <h1 className="relative m-0 text-[44px] font-bold leading-none tracking-[-0.035em] sm:text-[66px]">
           Play <span className="text-[#f5a524]">Quoridor</span>
         </h1>
         {/* Desktop / signed-in mobile: green Play Now. Signed-out mobile gets a Sign in CTA instead. */}
@@ -292,7 +292,7 @@ function Lobby() {
         <div className="relative mt-4 text-[12px] text-[#83838e]">
           Free — no account needed
         </div>
-        <div className="relative mt-4 flex items-center justify-center gap-3 text-[11.5px] text-[#83838e]">
+        <div className="relative mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[11.5px] text-[#83838e]">
           <span className="inline-flex items-center gap-2">
             <span className="h-[7px] w-[7px] rounded-full bg-[#2fd575] shadow-[0_0_8px_#2fd575]" />
             Matchmaking online
@@ -315,7 +315,7 @@ function Lobby() {
       </section>
 
       {/* Main grid */}
-      <div id="play" className={"mx-auto grid max-w-[1240px] items-start gap-5 px-8 pb-6 lg:grid-cols-[280px_1fr_300px] " + (signedIn ? "" : "hidden sm:grid")}>
+      <div id="play" className={"mx-auto grid max-w-[1240px] items-start gap-5 px-4 pb-6 sm:px-8 lg:grid-cols-[280px_1fr_300px] " + (signedIn ? "" : "hidden sm:grid")}>
         {/* Left column */}
         <div className="hidden flex-col gap-4 lg:flex">
           <Card>
@@ -381,16 +381,16 @@ function Lobby() {
 
         {/* Middle: Live Lobby */}
         <Card className="pb-5">
-          <div className="flex items-center justify-between px-6 pt-5">
+          <div className="flex items-center justify-between px-4 pt-5 sm:px-6">
             <span className="text-[16px] font-bold">Live Lobby</span>
             <span className="flex items-center gap-2">
               <span className="h-[7px] w-[7px] rounded-full bg-[#2fd575] shadow-[0_0_8px_#2fd575]" />
               <span className="text-[11px] font-semibold tracking-[0.12em] text-[#2fd575]">CONNECTED</span>
             </span>
           </div>
-          <div className="px-6 pt-4">
+          <div className="px-4 pt-4 sm:px-6">
             <Eyebrow>Find match</Eyebrow>
-            <div className="mt-3 flex gap-3">
+            <div className="mt-3 grid grid-cols-3 gap-2 sm:flex sm:gap-3">
               {([
                 { id: "2p", title: "2 Players", sub: "Casual" },
                 { id: "4p", title: "4 Players", sub: "Free-for-all" },
@@ -400,12 +400,12 @@ function Lobby() {
                 const locked = m.id === "ranked" && !signedIn;
                 return (
                   <button key={m.id} onClick={() => setMode(m.id)}
-                    className={"relative flex-1 rounded-[12px] border p-4 text-left transition-colors " +
+                    className={"relative min-w-0 rounded-[12px] border p-3 text-left transition-colors sm:flex-1 sm:p-4 " +
                       (on
                         ? "border-[rgba(245,165,36,0.35)] bg-[rgba(245,165,36,0.14)] shadow-[0_0_24px_rgba(245,165,36,0.14)]"
                         : "border-[#232329] bg-[#17171b] hover:border-[#34343e]")}>
-                    <div className="text-[16px] font-bold">{m.title}</div>
-                    <div className={"mt-[5px] text-[10.5px] font-semibold uppercase tracking-[0.13em] " + (on ? "text-[#f5a524]" : "text-[#5c5c66]")}>
+                    <div className="text-[13px] font-bold sm:text-[16px]">{m.title}</div>
+                    <div className={"mt-[5px] text-[9.5px] font-semibold uppercase tracking-[0.1em] sm:text-[10.5px] sm:tracking-[0.13em] " + (on ? "text-[#f5a524]" : "text-[#5c5c66]")}>
                       {m.sub}
                     </div>
                     {locked && (
@@ -423,7 +423,7 @@ function Lobby() {
                     {m.id === "4p" && (
                       <span
                         title="Free-for-all mayhem"
-                        className="chaos-badge absolute -right-2 -top-2 inline-flex items-center gap-1 rounded-full border border-fuchsia-400/60 bg-linear-to-r from-fuchsia-600 via-rose-500 to-amber-400 px-2 py-[3px] font-[IBM_Plex_Mono,monospace] text-[9px] font-black uppercase tracking-[0.18em] text-white shadow-[0_4px_14px_rgba(217,70,239,0.5),inset_0_1px_0_rgba(255,255,255,0.35)]"
+                        className="chaos-badge absolute -top-2 right-1 inline-flex items-center gap-1 rounded-full border border-fuchsia-400/60 bg-linear-to-r from-fuchsia-600 via-rose-500 to-amber-400 px-1.5 py-[2px] font-[IBM_Plex_Mono,monospace] text-[8px] font-black uppercase tracking-[0.14em] text-white shadow-[0_4px_14px_rgba(217,70,239,0.5),inset_0_1px_0_rgba(255,255,255,0.35)] sm:-right-2 sm:px-2 sm:py-[3px] sm:text-[9px] sm:tracking-[0.18em]"
                       >
                         <span aria-hidden>⚡</span>
                         Chaos
@@ -438,7 +438,7 @@ function Lobby() {
               {queueLabel}
             </button>
           </div>
-          <div className="px-6 pt-6">
+          <div className="px-4 pt-6 sm:px-6">
             <Eyebrow>Play with friends</Eyebrow>
             <div className="mt-3 flex flex-wrap gap-[10px]">
               <button onClick={() => go("create")}
@@ -456,7 +456,7 @@ function Lobby() {
             </div>
           </div>
           <div className="pt-6">
-            <div className="flex items-center justify-between px-6">
+            <div className="flex items-center justify-between px-4 sm:px-6">
               <Eyebrow>
                 <span className="mr-2 inline-block h-[6px] w-[6px] rounded-full bg-[#ff5c5c] shadow-[0_0_6px_#ff5c5c] align-middle" />
                 Live games — spectate
@@ -468,13 +468,13 @@ function Lobby() {
                 <Row key={i}><span className="h-3 w-40 animate-pulse rounded bg-[#1e1e24]" /></Row>
               ))}
               {live?.length === 0 && (
-                <div className="border-t border-[#1a1a1f] px-6 py-5 text-[12.5px] text-[#83838e]">
+                <div className="border-t border-[#1a1a1f] px-4 py-5 text-[12.5px] text-[#83838e] sm:px-6">
                   No live games right now. Host one to get the party going.
                 </div>
               )}
               {live?.map((g) => (
                 <button key={g.code} onClick={() => onSpectate(g.code)}
-                  className="flex w-full items-center gap-3 border-t border-[#1a1a1f] px-6 py-[11px] text-left transition-colors hover:bg-[#15151a]">
+                  className="flex w-full items-center gap-3 border-t border-[#1a1a1f] px-4 py-[11px] text-left transition-colors hover:bg-[#15151a] sm:px-6">
                   <div className="flex-1 truncate">
                     <span className="text-[13px] font-semibold">{g.hostName}</span>
                     <span className="text-[12px] text-[#5c5c66]"> · {g.mode}p {g.ranked ? "Ranked" : "Casual"}</span>
