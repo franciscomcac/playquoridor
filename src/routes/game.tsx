@@ -1569,14 +1569,14 @@ function ScoreCard({ state, you, nameOf }: { state: GameState; you: PlayerId; na
         <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Score</p>
         <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">first to {target}</p>
       </div>
-      <div className="mt-3 grid gap-2" style={{ gridTemplateColumns: `repeat(${state.mode}, 1fr)` }}>
+      <div className="mt-3 grid gap-2" style={{ gridTemplateColumns: `repeat(${state.mode}, minmax(0, 1fr))` }}>
         {Array.from({ length: state.mode }, (_, i) => (
-          <div key={i} className="flex flex-col items-center gap-1 rounded-lg border border-border bg-background/40 px-2 py-2">
-            <span className="truncate max-w-full text-[10px] uppercase tracking-[0.15em]"
+          <div key={i} className="flex min-w-0 flex-col items-center gap-1 rounded-lg border border-border bg-background/40 px-1.5 py-2">
+            <span className="block w-full truncate text-center text-[10px] uppercase tracking-[0.1em]"
               style={{ color: state.matchWinner === i ? PLAYER_COLORS[i] : "var(--muted-foreground)" }}>
               {i === you ? "You" : nameOf(i as PlayerId)}
             </span>
-            <span className="grid h-10 w-10 place-items-center rounded-full text-lg font-semibold"
+            <span className="grid h-9 w-9 place-items-center rounded-full text-base font-semibold"
               style={{
                 background: PLAYER_COLORS[i], color: "oklch(0.15 0.02 55)",
                 boxShadow: state.matchWinner === i ? `0 0 0 3px color-mix(in oklab, ${PLAYER_COLORS[i]} 45%, transparent)` : "0 1px 3px rgba(0,0,0,0.4)",
