@@ -991,7 +991,22 @@ function GameScreen({
   // and hand off to a local bot game so the player isn't left staring at a
   // spinner. Only fires when we're still waiting for players.
   useEffect(() => {
-    if (!quickMatch || !isHost || !onBotFallback) return;
+    if (!quickMatch || !isHost) return;
+    // Ranked: no bot fallback. Wait up to 2 minutes for an opponent, then
+    // return to lobby with a "search time exceeded" screen.
+    if (ranked) {
+      if (!onRankedTimeout) return;
+      const t = window.setTimeout(() => {
+        if (presenceRef.current.count >= presenceRef.current.expected) return;
+        if (stateRef.current.matchWinner !== null) return;
+        void removeOpenRoom(code);
+        roomRef.current?.close();
+        roomRef.current = null;
+        onRankedTimeout();
+      }, 120_000);
+      return () => window.clearTimeout(t);
+    }
+    if (!onBotFallback) return;
     const t = window.setTimeout(() => {
       if (presenceRef.current.count >= presenceRef.current.expected) return;
       if (stateRef.current.matchWinner !== null) return;
@@ -1001,7 +1016,7 @@ function GameScreen({
       onBotFallback();
     }, 10_000);
     return () => window.clearTimeout(t);
-  }, [quickMatch, isHost, onBotFallback, code]);
+  }, [quickMatch, isHost, onBotFallback, onRankedTimeout, ranked, code]);
   const markActivity = useCallback((who: PlayerId) => {
     lastInputRef.current[who] = Date.now();
     if (afk && afk.slot === who) {
