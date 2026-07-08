@@ -1518,12 +1518,17 @@ function GameScreen({
   // ---------- Sound on round/match transitions ----------
   const prevWinnerRef = useRef<PlayerId | null>(null);
   const prevMatchWinnerRef = useRef<PlayerId | null>(null);
+  const [roundEndAnim, setRoundEndAnim] = useState(false);
   useEffect(() => {
     if (state.winner !== null && prevWinnerRef.current === null) {
       const r = state.endReason;
       if (r === "time" || r === "afk" || r === "forfeit") play("afkWarn");
-      play("roundWin");
+      // Score animation owns the win SFX (whoosh + point). Fall back to
+      // the classic chime only for non-goal endings (time/afk/forfeit).
+      if (r === "time" || r === "afk" || r === "forfeit") play("roundWin");
+      else setRoundEndAnim(true);
     }
+    if (state.winner === null) setRoundEndAnim(false);
     if (state.matchWinner !== null && prevMatchWinnerRef.current === null) play("matchWin");
     prevWinnerRef.current = state.winner;
     prevMatchWinnerRef.current = state.matchWinner;
