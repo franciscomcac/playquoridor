@@ -2288,6 +2288,7 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
         <ScoreCard state={state} you={YOU} nameOf={nameOf} />
         <PlayersCard state={state} you={YOU} nameOf={nameOf} />
         <MoveHistoryPanel state={state} nameOf={nameOf} compact defaultOpen onView={setReview} />
+        <ChatPanel entries={chat} onSend={sendChat} you={YOU} />
 
         {toast && (
           <div className="toast-in rounded-xl border border-border bg-card p-3 text-xs uppercase tracking-widest text-primary">
