@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as StatsRouteImport } from './routes/stats'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as PuzzleRouteImport } from './routes/puzzle'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as HistoryRouteImport } from './routes/history'
@@ -30,6 +31,11 @@ const StatsRoute = StatsRouteImport.update({
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PuzzleRoute = PuzzleRouteImport.update({
@@ -93,6 +99,7 @@ export interface FileRoutesByFullPath {
   '/history': typeof HistoryRoute
   '/onboarding': typeof OnboardingRoute
   '/puzzle': typeof PuzzleRouteWithChildren
+  '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
   '/puzzle/$date': typeof PuzzleDateRoute
@@ -107,6 +114,7 @@ export interface FileRoutesByTo {
   '/history': typeof HistoryRoute
   '/onboarding': typeof OnboardingRoute
   '/puzzle': typeof PuzzleRouteWithChildren
+  '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
   '/puzzle/$date': typeof PuzzleDateRoute
@@ -122,6 +130,7 @@ export interface FileRoutesById {
   '/history': typeof HistoryRoute
   '/onboarding': typeof OnboardingRoute
   '/puzzle': typeof PuzzleRouteWithChildren
+  '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
   '/puzzle/$date': typeof PuzzleDateRoute
@@ -138,6 +147,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/onboarding'
     | '/puzzle'
+    | '/reset-password'
     | '/sitemap.xml'
     | '/stats'
     | '/puzzle/$date'
@@ -152,6 +162,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/onboarding'
     | '/puzzle'
+    | '/reset-password'
     | '/sitemap.xml'
     | '/stats'
     | '/puzzle/$date'
@@ -166,6 +177,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/onboarding'
     | '/puzzle'
+    | '/reset-password'
     | '/sitemap.xml'
     | '/stats'
     | '/puzzle/$date'
@@ -181,6 +193,7 @@ export interface RootRouteChildren {
   HistoryRoute: typeof HistoryRoute
   OnboardingRoute: typeof OnboardingRoute
   PuzzleRoute: typeof PuzzleRouteWithChildren
+  ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StatsRoute: typeof StatsRoute
 }
@@ -199,6 +212,13 @@ declare module '@tanstack/react-router' {
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/puzzle': {
@@ -295,6 +315,7 @@ const rootRouteChildren: RootRouteChildren = {
   HistoryRoute: HistoryRoute,
   OnboardingRoute: OnboardingRoute,
   PuzzleRoute: PuzzleRouteWithChildren,
+  ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StatsRoute: StatsRoute,
 }

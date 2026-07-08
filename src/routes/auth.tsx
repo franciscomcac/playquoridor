@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { linkAuthToPlayer } from "@/lib/identity";
 import { isOnboarded } from "@/lib/onboarding";
+import { Eye, EyeOff } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (s: Record<string, unknown>) => ({
@@ -31,6 +32,8 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [resetMsg, setResetMsg] = useState<string | null>(null);
   const [signedIn, setSignedIn] = useState<null | { email?: string | null; anon: boolean }>(null);
 
   useEffect(() => {
@@ -101,6 +104,22 @@ function AuthPage() {
     } finally { setBusy(false); }
   }
 
+  async function onForgotPassword() {
+    setError(null); setResetMsg(null);
+    const target = email.trim();
+    if (!target) { setError("Enter your email above first, then click Forgot password."); return; }
+    setBusy(true);
+    try {
+      const { error: err } = await supabase.auth.resetPasswordForEmail(target, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (err) throw err;
+      setResetMsg("Password reset email sent. Check your inbox.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not send reset email.");
+    } finally { setBusy(false); }
+  }
+
   const hasAccount = signedIn && !signedIn.anon;
 
   return (
@@ -146,20 +165,42 @@ function AuthPage() {
               </label>
               <label className="text-xs uppercase tracking-widest text-muted-foreground">
                 Password
-                <input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)}
-                  autoComplete={mode === "signup" ? "new-password" : "current-password"}
-                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary" />
+                <div className="relative mt-1">
+                  <input type={showPassword ? "text" : "password"} required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)}
+                    autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 pr-10 text-sm text-foreground outline-none focus:border-primary" />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </label>
               {error && <p className="text-xs text-destructive">{error}</p>}
+              {resetMsg && <p className="text-xs text-emerald-500">{resetMsg}</p>}
               <button type="submit" disabled={busy}
                 className="rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-70">
                 {busy ? "Please wait…" : mode === "signup" ? "Create account" : "Sign in"}
               </button>
             </form>
 
+            {mode === "signin" && (
+              <button
+                type="button"
+                onClick={onForgotPassword}
+                disabled={busy}
+                className="text-xs text-muted-foreground hover:text-foreground disabled:opacity-60"
+              >
+                Forgot password?
+              </button>
+            )}
+
             <button
               type="button"
-              onClick={() => { setMode(mode === "signup" ? "signin" : "signup"); setError(null); }}
+              onClick={() => { setMode(mode === "signup" ? "signin" : "signup"); setError(null); setResetMsg(null); }}
               className="text-xs text-muted-foreground hover:text-foreground"
             >
               {mode === "signup" ? "Have an account? Sign in" : "New here? Create an account"}
