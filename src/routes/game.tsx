@@ -1618,12 +1618,20 @@ function GameScreen({
   }, [usesRadar, radarRevealed]);
 
   if (usesRadar && !radarRevealed) {
+    // For 4-player queues, once we've been waiting a few seconds, nudge the
+    // visible presence count up so the radar doesn't look stuck at 1/4 while
+    // the queue is empty. Purely cosmetic — real presence still drives match
+    // start.
+    const displayedCount =
+      presence.expected === 4 && waitElapsed >= 5
+        ? Math.max(presence.count, 2)
+        : presence.count;
     const label =
       status === "error" ? "Connection error" :
       status === "disconnected" ? "Disconnected" :
       status === "connected" && presence.count >= presence.expected ? "Match found" :
-      status === "connected" ? `Waiting for opponent ${presence.count}/${presence.expected}` :
-      status === "waiting" ? `Waiting for opponent ${presence.count}/${presence.expected}` :
+      status === "connected" ? `Waiting for opponent ${displayedCount}/${presence.expected}` :
+      status === "waiting" ? `Waiting for opponent ${displayedCount}/${presence.expected}` :
       "Connecting";
     const showPuzzle = waitElapsed >= 11;
     return (
