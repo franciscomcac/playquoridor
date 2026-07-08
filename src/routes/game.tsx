@@ -647,10 +647,15 @@ function QuickMatch({ mode, ranked, ident, onBack, onJoin, onHost }: {
   // Play a soft radar loop while queued; stop as soon as we transition.
   useEffect(() => {
     play("searchStart");
+    // Fire the first ping quickly so users get audible feedback even when
+    // the match resolves in under 1.6s.
+    const firstPing = window.setTimeout(() => {
+      if (!cancelled.current && !transitioned.current) play("searchPing");
+    }, 600);
     const ping = window.setInterval(() => {
       if (!cancelled.current && !transitioned.current) play("searchPing");
     }, 1600);
-    return () => window.clearInterval(ping);
+    return () => { window.clearTimeout(firstPing); window.clearInterval(ping); };
   }, []);
 
   useEffect(() => {
@@ -1012,6 +1017,7 @@ function GameScreen({
       onFull: () => {
         if (cancelled) return;
         setStatus("connected");
+        if (quickMatch) play("matchFound");
         if (isHost) {
           void removeOpenRoom(code);
           if (!matchStartedRef.current) hostStartMatch();
