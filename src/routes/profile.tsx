@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { AVATAR_SWATCHES, Avatar, LobbyChrome, tierFromRating } from "@/components/LobbyChrome";
 import { requireRealUser } from "@/lib/auth-gate";
-import { fetchProfile, fetchMyWinStreak, updateMyProfile } from "@/lib/stats";
+import { fetchProfile, fetchMyWinStreak, updateMyProfile, renameMyPlayer } from "@/lib/stats";
 import { saveBio, saveAvatar } from "@/lib/moderation.functions";
 
 export const Route = createFileRoute("/profile")({
@@ -29,6 +29,7 @@ function ProfilePage() {
   const [pbio, setPbio] = useState("");
   const [avColor, setAvColor] = useState<string>(AVATAR_SWATCHES[0]!);
   const [avUrl, setAvUrl] = useState<string | null>(null);
+  const [nameChangedAt, setNameChangedAt] = useState<string | null>(null);
   const [saved, setSaved] = useState<null | "ok" | "err">(null);
   const [busy, setBusy] = useState(false);
   const [modMsg, setModMsg] = useState<string | null>(null);
@@ -50,13 +51,25 @@ function ProfilePage() {
     void fetchProfile(me.playerId).then((p) => {
       setProfile(p);
       const pl = p.player as { name?: string; bio?: string | null; avatar_color?: string | null; avatar_url?: string | null } | null;
+      const pAny = p.player as { name_changed_at?: string | null } | null;
       setPname(pl?.name ?? me.username);
+      setNameChangedAt(pAny?.name_changed_at ?? null);
       setPbio(pl?.bio ?? "");
       setAvColor(pl?.avatar_color ?? AVATAR_SWATCHES[0]!);
       setAvUrl(pl?.avatar_url ?? null);
     });
     void fetchMyWinStreak(me.playerId).then(setStreak);
   }, [me]);
+
+  const nameLockedUntil = useMemo(() => {
+    if (!nameChangedAt) return null;
+    const next = new Date(new Date(nameChangedAt).getTime() + 30 * 24 * 60 * 60 * 1000);
+    return next.getTime() > Date.now() ? next : null;
+  }, [nameChangedAt]);
+  const daysLeft = nameLockedUntil ? Math.ceil((nameLockedUntil.getTime() - Date.now()) / 86400000) : 0;
+  const originalName = (profile?.player as { name?: string } | null)?.name ?? me?.username ?? "";
+  const nameDirty = !!me && pname !== originalName;
+  const nameLocked = !!nameLockedUntil;
 
   const stats = profile?.stats as
     | { rating?: number; matches?: number; wins?: number; losses?: number }
@@ -82,12 +95,18 @@ function ProfilePage() {
     if (!me) return;
     setBusy(true);
     setModMsg(null);
-    // Save color + name directly; bio goes through moderation.
-    const { error } = await updateMyProfile(me.playerId, {
-      avatar_color: avColor,
-      ...(pname !== me.username ? { name: pname } : {}),
-    });
+    // Save color; bio goes through moderation; name uses cooldown-gated RPC.
+    const { error } = await updateMyProfile(me.playerId, { avatar_color: avColor });
     let ok = !error;
+    if (nameDirty) {
+      const r = await renameMyPlayer(me.playerId, pname);
+      if (!r.ok) {
+        ok = false;
+        setModMsg(r.message || "Couldn't change display name.");
+      } else {
+        setNameChangedAt(new Date().toISOString());
+      }
+    }
     try {
       const bioRes = await callSaveBio({ data: { playerId: me.playerId, bio: pbio } });
       if (!bioRes.allow) {
@@ -191,8 +210,17 @@ function ProfilePage() {
             <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#5c5c66]">Edit profile</div>
 
             <Label>Display name</Label>
-            <input value={pname} onChange={(e) => setPname(e.target.value.slice(0, 20).replace(/[^a-zA-Z0-9_]/g, ""))}
-              className="mt-2 block w-full rounded-[10px] border border-[#232329] bg-[#0d0d10] px-[14px] py-3 text-[13.5px] text-[#ececf1] outline-none focus:border-[rgba(245,165,36,0.35)]" />
+            <input
+              value={pname}
+              disabled={nameLocked}
+              onChange={(e) => setPname(e.target.value.slice(0, 16).replace(/[^a-zA-Z0-9_]/g, ""))}
+              className={"mt-2 block w-full rounded-[10px] border border-[#232329] bg-[#0d0d10] px-[14px] py-3 text-[13.5px] text-[#ececf1] outline-none focus:border-[rgba(245,165,36,0.35)] " + (nameLocked ? "cursor-not-allowed opacity-60" : "")}
+            />
+            <div className="mt-[6px] text-[11px] text-[#5c5c66]">
+              {nameLocked
+                ? `Display name is locked. You can change it again in ${daysLeft} day${daysLeft === 1 ? "" : "s"} (on ${nameLockedUntil!.toLocaleDateString()}).`
+                : "You can change your display name once every 30 days."}
+            </div>
 
             <div className="mt-4 flex items-center justify-between">
               <Label>Bio</Label>
