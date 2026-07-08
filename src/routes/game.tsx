@@ -1456,6 +1456,25 @@ function GameScreen({
     else roomRef.current?.send({ type: "newMatch", payload: {} });
   }, [isHost, hostStartMatch]);
 
+  // Rematch = play again with the same opponents. Also fires a lightweight
+  // chat notification so the other side sees "@name wants a rematch".
+  const rematchAction = useCallback(() => {
+    const name = rosterRef.current.find((e) => e.slot === slotRef.current)?.name
+      ?? `Player ${slotRef.current + 1}`;
+    const text = `${name} wants a rematch 🔁`;
+    const ts = Date.now();
+    const sys = { slot: -1, name: "System", text, ts };
+    setChat((prev) => {
+      if (prev.some((m) => m.slot === null && m.text === text)) return prev;
+      return [
+        ...prev.slice(-99),
+        { key: `sys-rematch-${ts}`, slot: null, name: "System", text, ts },
+      ];
+    });
+    roomRef.current?.send({ type: "chat", payload: sys });
+    newMatchAction();
+  }, [newMatchAction]);
+
   const forfeit = useCallback(() => {
     if (status !== "connected") return;
     if (state.winner !== null || state.matchWinner !== null) return;
