@@ -1777,7 +1777,7 @@ function TurnBar({ state, you, status, presence, coinAnimating, nameOf }: {
       <div className="flex-1 min-w-0">
         <p className="truncate text-base font-semibold">{label}</p>
         <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-          {state.mode}-player · best of {state.totalRounds}
+          {state.mode}-player · {state.mode === 4 ? `first to ${winsNeeded(state.totalRounds, state.mode)}` : `best of ${state.totalRounds}`}
         </p>
       </div>
     </div>
@@ -1802,7 +1802,7 @@ function AfkBanner({ deadline, name }: { slot: PlayerId; deadline: number; name:
 }
 
 function ScoreCard({ state, you, nameOf }: { state: GameState; you: PlayerId; nameOf: (s: PlayerId) => string }) {
-  const target = winsNeeded(state.totalRounds);
+  const target = winsNeeded(state.totalRounds, state.mode);
   const prevScoreRef = useRef<number[]>(state.score);
   const [bumped, setBumped] = useState<number | null>(null);
   useEffect(() => {

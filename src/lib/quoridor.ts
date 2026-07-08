@@ -61,7 +61,12 @@ export function startsFor(mode: Mode): Pos[] {
 }
 export function goalsFor(mode: Mode): Goal[] { return mode === 2 ? GOALS_2 : GOALS_4; }
 export function defaultWallsFor(mode: Mode): number { return mode === 2 ? 10 : 5; }
-export function winsNeeded(totalRounds: number): number { return Math.floor(totalRounds / 2) + 1; }
+// 4-player matches end as soon as someone banks 2 round wins (short and
+// snappy with 4 players in the pool). 2-player matches use best-of.
+export function winsNeeded(totalRounds: number, mode: Mode = 2): number {
+  if (mode === 4) return 2;
+  return Math.floor(totalRounds / 2) + 1;
+}
 
 export function initialState(mode: Mode = 2, totalWalls = defaultWallsFor(mode), totalRounds = 5): GameState {
   return {
@@ -260,7 +265,7 @@ export function applyMove(state: GameState, player: PlayerId, move: Move): GameS
     if (winner !== null) {
       score = [...state.score];
       score[winner] += 1;
-      if (score[winner] >= winsNeeded(state.totalRounds)) matchWinner = winner;
+      if (score[winner] >= winsNeeded(state.totalRounds, state.mode)) matchWinner = winner;
     }
     return { ...state, pawns, active,
       turn: winner !== null ? player : nextTurn(state.mode, active, player),
@@ -304,7 +309,7 @@ export function applyForfeit(state: GameState, player: PlayerId, permanent = fal
     if (remaining.length === 1) {
       winner = remaining[0];
       score = [...state.score]; score[winner] += 1;
-      if (score[winner] >= winsNeeded(state.totalRounds)) matchWinner = winner;
+      if (score[winner] >= winsNeeded(state.totalRounds, state.mode)) matchWinner = winner;
       turn = winner;
     } else if (remaining.length === 0) {
       // Everyone left — no winner.
