@@ -216,13 +216,22 @@ function LobbyInner() {
           {/* Right: Quick Play */}
           <div className="space-y-3 lg:col-span-3">
             <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Quick Play</div>
-            <QuickTile
-              to="/game"
-              onClick={() => { try { sessionStorage.setItem("quoridor:pendingAction", "create"); } catch {} }}
-              label="CPU Practice"
-              sub="vs Computer"
-              icon={<svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>}
-            />
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-3">
+              <div className="flex items-center gap-2 px-1 pb-2">
+                <span className="grid h-8 w-8 place-items-center rounded-lg bg-zinc-800 text-zinc-300">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                </span>
+                <div>
+                  <div className="text-sm font-semibold text-zinc-100">CPU Practice</div>
+                  <div className="text-[10px] uppercase tracking-widest text-zinc-500">Choose difficulty</div>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <CpuBtn onClick={() => goCpu("easy")} tone="emerald" tier="Easy" name="Tom" />
+                <CpuBtn onClick={() => goCpu("medium")} tone="amber" tier="Medium" name="Jackeline" />
+                <CpuBtn onClick={() => goCpu("hard")} tone="rose" tier="Hard" name="Rachel" />
+              </div>
+            </div>
             <QuickTile
               to="/puzzle"
               label="Daily Puzzle"
