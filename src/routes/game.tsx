@@ -2262,7 +2262,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
   );
 
   const initial = useCallback((): GameState => {
-    const s = initialState(mode, defaultWallsFor(mode), 5);
+    const s = initialState(mode, defaultWallsFor(mode), 3);
     return { ...s, clocks: initClocks(mode, DEFAULT_CLOCK_MS) };
   }, [mode]);
 
@@ -2271,6 +2271,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
   const [coinflip, setCoinflip] = useState<{ starter: PlayerId; animating: boolean } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [chat, setChat] = useState<ChatEntry[]>([]);
+  const botMatchHistory = useMatchHistory(state, Array.from({ length: mode }, (_, i) => (i === YOU ? ident.name : opponentNames[i - 1] ?? `Player ${i + 1}`)));
 
   const sendChat = useCallback((text: string) => {
     setChat((prev) => [
