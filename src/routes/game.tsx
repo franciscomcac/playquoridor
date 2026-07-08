@@ -184,9 +184,9 @@ function Home() {
     else if (pending === "quick4") setView({ name: "quick", mode: 4 });
     else if (pending === "ranked2") setView({ name: "quick", mode: 2, ranked: true });
     else if (pending === "create") setView({ name: "create", mode: 2, walls: defaultWallsFor(2), rounds: 3 });
-    else if (pending === "cpu:easy") setView({ name: "bot", difficulty: 0.22, opponentName: "Tom" });
-    else if (pending === "cpu:medium") setView({ name: "bot", difficulty: 0.6, opponentName: "Jackeline" });
-    else if (pending === "cpu:hard") setView({ name: "bot", difficulty: 0.9, opponentName: "Rachel" });
+    else if (pending === "cpu:easy") setView({ name: "bot", mode: 2, difficulty: 0.22, opponentNames: ["Tom"] });
+    else if (pending === "cpu:medium") setView({ name: "bot", mode: 2, difficulty: 0.6, opponentNames: ["Jackeline"] });
+    else if (pending === "cpu:hard") setView({ name: "bot", mode: 2, difficulty: 0.9, opponentNames: ["Rachel"] });
     else if (pending.startsWith("join:")) {
       const code = pending.slice(5).toUpperCase();
       if (code.length === 5) setView({ name: "game", isHost: false, code, mode: 2, walls: 10, rounds: 3 });
