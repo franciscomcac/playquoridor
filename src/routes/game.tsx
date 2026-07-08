@@ -912,10 +912,11 @@ function GameScreen({
     // Kick every match off with a friendly reminder. Host is the source of
     // truth so the message shows up once for everyone.
     const sys = { slot: -1, name: "System", text: "Be respectful 🙌 — good luck & have fun.", ts: Date.now() };
-    setChat((prev) => [
-      ...prev.slice(-99),
-      { key: `sys-${sys.ts}-${Math.random()}`, slot: null, name: sys.name, text: sys.text, ts: sys.ts },
-    ]);
+    const sysKey = `sys-greet-${sys.ts}`;
+    setChat((prev) => {
+      if (prev.some((m) => m.slot === null && m.text === sys.text)) return prev;
+      return [...prev.slice(-99), { key: sysKey, slot: null, name: sys.name, text: sys.text, ts: sys.ts }];
+    });
     roomRef.current?.send({ type: "chat", payload: sys });
   }, [hostStartRound]);
 
