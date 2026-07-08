@@ -48,6 +48,40 @@ export const Route = createFileRoute("/")({
           offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
         }),
       },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: [
+            {
+              "@type": "Question",
+              name: "Is Quoridor free to play online?",
+              acceptedAnswer: { "@type": "Answer", text: "Yes. Play Quoridor free in your browser — no download, no signup. Quick match, ranked, private rooms, 4-player free-for-alls and bot practice are all included." },
+            },
+            {
+              "@type": "Question",
+              name: "How do you play Quoridor?",
+              acceptedAnswer: { "@type": "Answer", text: "On your turn either move your pawn one square (orthogonally) or place one of your walls to block an opponent. Walls cannot fully seal any player off from their goal row. First pawn to reach the opposite side wins." },
+            },
+            {
+              "@type": "Question",
+              name: "How many walls does each player get?",
+              acceptedAnswer: { "@type": "Answer", text: "In a 2-player game each side gets 10 walls. In a 4-player game each player gets 5 walls." },
+            },
+            {
+              "@type": "Question",
+              name: "Can I play Quoridor against a computer?",
+              acceptedAnswer: { "@type": "Answer", text: "Yes. Choose CPU Practice from the lobby and pick Easy, Medium or Hard to play solo against a bot." },
+            },
+            {
+              "@type": "Question",
+              name: "Can I play Quoridor with a friend?",
+              acceptedAnswer: { "@type": "Answer", text: "Yes. Create a private room and share the 5-character code, or enter a friend's code from the lobby to join their game." },
+            },
+          ],
+        }),
+      },
     ],
   }),
   component: Lobby,
@@ -388,7 +422,61 @@ function Lobby() {
         </div>
       </div>
 
+      <SeoFaq />
     </LobbyChrome>
+  );
+}
+
+function SeoFaq() {
+  const items: { q: string; a: React.ReactNode }[] = [
+    {
+      q: "What is Quoridor?",
+      a: (
+        <>Quoridor is a two- or four-player abstract strategy board game on a 9×9 grid. On your turn you either move your pawn one square or place a wall to slow your opponents. First pawn to reach the opposite side wins.</>
+      ),
+    },
+    {
+      q: "How do you play Quoridor online?",
+      a: (
+        <>Hit <strong>Play Now</strong>, pick 2-player casual, 4-player free-for-all or ranked 1v1, and you're matched in seconds. No download and no account needed to start.</>
+      ),
+    },
+    {
+      q: "What are the full rules?",
+      a: (
+        <>Each player starts with a pawn on their baseline. On your turn move one square orthogonally <em>or</em> place a wall between squares. Walls are two squares long and can't cross another wall or completely block any player from reaching their goal row. Pawns facing each other may jump; if the square behind is blocked, you may step diagonally. 2-player games use 10 walls per side, 4-player games use 5 walls per player.</>
+      ),
+    },
+    {
+      q: "Can I play against a computer or a friend?",
+      a: (
+        <>Yes — pick a CPU opponent (Easy, Medium or Hard) from the lobby, or create a private room and share the 5-letter code with a friend to play online together.</>
+      ),
+    },
+    {
+      q: "Is Quoridor really free — no signup, no download?",
+      a: (
+        <>Yes. Everything runs in the browser. Optional sign-in unlocks ranked ELO, stats and friends, but you can jump into a casual match without an account.</>
+      ),
+    },
+  ];
+  return (
+    <section aria-labelledby="faq-heading" className="mx-auto mt-32 max-w-2xl px-8 pb-16 text-[12.5px] text-muted-foreground/80">
+      <h2 id="faq-heading" className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[#5c5c66]">
+        Quoridor — frequently asked questions
+      </h2>
+      <div className="mt-4 divide-y divide-border/30 border-y border-border/30">
+        {items.map((it) => (
+          <details key={it.q} className="group py-3">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[13px] font-medium text-[#c9c9d1] marker:hidden [&::-webkit-details-marker]:hidden">
+              <span>{it.q}</span>
+              <span className="text-[10px] text-[#5c5c66] transition-transform group-open:rotate-180">▼</span>
+            </summary>
+            <div className="mt-2 leading-relaxed">{it.a}</div>
+          </details>
+        ))}
+      </div>
+    </section>
   );
 }
 
