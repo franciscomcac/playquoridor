@@ -189,6 +189,42 @@ export type Database = {
         }
         Relationships: []
       }
+      puzzles: {
+        Row: {
+          active_player: number
+          created_at: string
+          goal_moves: number
+          id: string
+          mode: number
+          pawns: Json
+          puzzle_date: string
+          title: string
+          walls: Json
+        }
+        Insert: {
+          active_player?: number
+          created_at?: string
+          goal_moves: number
+          id?: string
+          mode?: number
+          pawns: Json
+          puzzle_date: string
+          title?: string
+          walls?: Json
+        }
+        Update: {
+          active_player?: number
+          created_at?: string
+          goal_moves?: number
+          id?: string
+          mode?: number
+          pawns?: Json
+          puzzle_date?: string
+          title?: string
+          walls?: Json
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
