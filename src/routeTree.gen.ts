@@ -27,6 +27,8 @@ import { Route as PuzzleIndexRouteImport } from './routes/puzzle.index'
 import { Route as PuzzleDateRouteImport } from './routes/puzzle.$date'
 import { Route as PlayerPlayerIdRouteImport } from './routes/player.$playerId'
 import { Route as AnalyzeClipIdRouteImport } from './routes/analyze.$clipId'
+import { Route as ApiClipSignRouteImport } from './routes/api/clip/sign'
+import { Route as ApiClipRenderRouteImport } from './routes/api/clip/render'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -118,6 +120,16 @@ const AnalyzeClipIdRoute = AnalyzeClipIdRouteImport.update({
   path: '/analyze/$clipId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiClipSignRoute = ApiClipSignRouteImport.update({
+  id: '/api/clip/sign',
+  path: '/api/clip/sign',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiClipRenderRoute = ApiClipRenderRouteImport.update({
+  id: '/api/clip/render',
+  path: '/api/clip/render',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -138,6 +150,8 @@ export interface FileRoutesByFullPath {
   '/player/$playerId': typeof PlayerPlayerIdRoute
   '/puzzle/$date': typeof PuzzleDateRoute
   '/puzzle/': typeof PuzzleIndexRoute
+  '/api/clip/render': typeof ApiClipRenderRoute
+  '/api/clip/sign': typeof ApiClipSignRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -158,6 +172,8 @@ export interface FileRoutesByTo {
   '/player/$playerId': typeof PlayerPlayerIdRoute
   '/puzzle/$date': typeof PuzzleDateRoute
   '/puzzle': typeof PuzzleIndexRoute
+  '/api/clip/render': typeof ApiClipRenderRoute
+  '/api/clip/sign': typeof ApiClipSignRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -179,6 +195,8 @@ export interface FileRoutesById {
   '/player/$playerId': typeof PlayerPlayerIdRoute
   '/puzzle/$date': typeof PuzzleDateRoute
   '/puzzle/': typeof PuzzleIndexRoute
+  '/api/clip/render': typeof ApiClipRenderRoute
+  '/api/clip/sign': typeof ApiClipSignRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -201,6 +219,8 @@ export interface FileRouteTypes {
     | '/player/$playerId'
     | '/puzzle/$date'
     | '/puzzle/'
+    | '/api/clip/render'
+    | '/api/clip/sign'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -221,6 +241,8 @@ export interface FileRouteTypes {
     | '/player/$playerId'
     | '/puzzle/$date'
     | '/puzzle'
+    | '/api/clip/render'
+    | '/api/clip/sign'
   id:
     | '__root__'
     | '/'
@@ -241,6 +263,8 @@ export interface FileRouteTypes {
     | '/player/$playerId'
     | '/puzzle/$date'
     | '/puzzle/'
+    | '/api/clip/render'
+    | '/api/clip/sign'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -262,6 +286,8 @@ export interface RootRouteChildren {
   PlayerPlayerIdRoute: typeof PlayerPlayerIdRoute
   PuzzleDateRoute: typeof PuzzleDateRoute
   PuzzleIndexRoute: typeof PuzzleIndexRoute
+  ApiClipRenderRoute: typeof ApiClipRenderRoute
+  ApiClipSignRoute: typeof ApiClipSignRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -392,6 +418,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AnalyzeClipIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/clip/sign': {
+      id: '/api/clip/sign'
+      path: '/api/clip/sign'
+      fullPath: '/api/clip/sign'
+      preLoaderRoute: typeof ApiClipSignRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/clip/render': {
+      id: '/api/clip/render'
+      path: '/api/clip/render'
+      fullPath: '/api/clip/render'
+      preLoaderRoute: typeof ApiClipRenderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -414,7 +454,19 @@ const rootRouteChildren: RootRouteChildren = {
   PlayerPlayerIdRoute: PlayerPlayerIdRoute,
   PuzzleDateRoute: PuzzleDateRoute,
   PuzzleIndexRoute: PuzzleIndexRoute,
+  ApiClipRenderRoute: ApiClipRenderRoute,
+  ApiClipSignRoute: ApiClipSignRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { requireRealUser } from "@/lib/auth-gate";
 import { isMatchSnapshot, type MatchSnapshot } from "@/lib/matchHistory";
-import { renderMatchGif, downloadBlob } from "@/lib/gifExport";
+import { ExportClipModal } from "@/components/ExportClipModal";
 
 export const Route = createFileRoute("/history")({
   head: () => ({
@@ -199,22 +199,13 @@ function HistoryPage() {
 
 function MatchActions({ row, meId }: { row: MatchRow; meId: string | null }) {
   const nav = useNavigate();
-  const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(false);
   const snap = isMatchSnapshot(row.snapshot) ? (row.snapshot as MatchSnapshot) : null;
   const opp = row.players.find((p) => p.player_id && p.player_id !== meId);
   const analyze = () => {
     if (!snap) return;
     try { sessionStorage.setItem("analyze:pending", JSON.stringify(snap)); } catch {}
     void nav({ to: "/analyze/$clipId", params: { clipId: "local" } });
-  };
-  const gif = async () => {
-    if (!snap) return;
-    setBusy(true);
-    try {
-      const blob = await renderMatchGif(snap);
-      const stamp = new Date(row.ended_at).toISOString().slice(0, 10);
-      downloadBlob(blob, `quoridor-${stamp}.gif`);
-    } finally { setBusy(false); }
   };
   return (
     <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -223,11 +214,12 @@ function MatchActions({ row, meId }: { row: MatchRow; meId: string | null }) {
         className="rounded-md border border-primary/50 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 disabled:opacity-40">
         Analyze
       </button>
-      <button onClick={gif} disabled={!snap || busy}
-        title={snap ? "Download animated GIF" : "This match has no saved replay"}
+      <button onClick={() => setOpen(true)} disabled={!snap}
+        title={snap ? "Export a shareable clip" : "This match has no saved replay"}
         className="rounded-md border border-border bg-secondary/40 px-3 py-1.5 text-xs font-medium hover:bg-secondary disabled:opacity-40">
-        {busy ? "Rendering…" : "Download Clip"}
+        Download clip
       </button>
+      <ExportClipModal open={open} snapshot={snap} onClose={() => setOpen(false)} />
       {opp?.player_id && (
         <Link to="/player/$playerId" params={{ playerId: opp.player_id }}
           className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-secondary">

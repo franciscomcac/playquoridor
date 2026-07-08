@@ -5,7 +5,7 @@ import { requireRealUser } from "@/lib/auth-gate";
 import { QuoridorBoard } from "@/components/QuoridorBoard";
 import type { GameState } from "@/lib/quoridor";
 import { isMatchSnapshot, type MatchSnapshot } from "@/lib/matchHistory";
-import { renderMatchGif, downloadBlob } from "@/lib/gifExport";
+import { ExportClipModal } from "@/components/ExportClipModal";
 import { drawState, replay } from "@/lib/matchReplay";
 import { useRef } from "react";
 
@@ -110,7 +110,7 @@ function ClipView({ clip }: { clip: Clip }) {
       <div>
         <p className="mb-2 text-[10px] uppercase tracking-widest text-zinc-500">{clip.title}</p>
         <QuoridorBoard state={state} you={0} onMove={() => {}} interactive={false} />
-        <p className="mt-2 text-[11px] text-zinc-500">Old-format clip — analyze and GIF export unavailable.</p>
+        <p className="mt-2 text-[11px] text-zinc-500">Old-format clip — analyze and clip export unavailable.</p>
       </div>
     );
   } catch {
@@ -121,34 +121,28 @@ function ClipView({ clip }: { clip: Clip }) {
 function MatchClipView({ clip, snapshot }: { clip: Clip; snapshot: MatchSnapshot }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const frames = replay(snapshot);
-  const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(false);
   useEffect(() => {
     const c = canvasRef.current; if (!c) return;
     const ctx = c.getContext("2d"); if (!ctx) return;
     // Show the final position of the match.
     drawState(ctx, frames[frames.length - 1].state, c.width, c.height);
   }, [frames]);
-  const download = async () => {
-    setBusy(true);
-    try {
-      const blob = await renderMatchGif(snapshot);
-      downloadBlob(blob, `${clip.title.replace(/[^a-z0-9]+/gi, "-")}.gif`);
-    } finally { setBusy(false); }
-  };
   return (
     <div>
       <p className="mb-2 text-[10px] uppercase tracking-widest text-zinc-500">{clip.title}</p>
       <canvas ref={canvasRef} width={320} height={320} className="w-full max-w-[320px] rounded-lg" />
       <div className="mt-3 flex flex-wrap gap-2">
-        <button onClick={download} disabled={busy}
+        <button onClick={() => setOpen(true)}
           className="rounded-md border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs font-medium hover:bg-zinc-700 disabled:opacity-60">
-          {busy ? "Rendering…" : "Download GIF"}
+          Download clip
         </button>
         <Link to="/analyze/$clipId" params={{ clipId: clip.id }}
           className="rounded-md border border-emerald-500/60 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20">
           Analyze
         </Link>
       </div>
+      <ExportClipModal open={open} snapshot={snapshot} onClose={() => setOpen(false)} filename={`${clip.title.replace(/[^a-z0-9]+/gi, "-")}.gif`} />
       <p className="mt-2 text-[11px] text-zinc-500">
         {snapshot.rounds.length} round{snapshot.rounds.length === 1 ? "" : "s"} · winner:{" "}
         {snapshot.matchWinner !== null ? snapshot.playerNames[snapshot.matchWinner] : "—"}

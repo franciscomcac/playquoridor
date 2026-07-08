@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { PLAYER_COLORS, QuoridorBoard } from "@/components/QuoridorBoard";
 import { MoveHistory, MoveHistoryPanel, type HistorySnapshot } from "@/components/MoveHistory";
 import { useMatchHistory, type MatchSnapshot } from "@/lib/matchHistory";
-import { renderMatchGif, downloadBlob } from "@/lib/gifExport";
+import { ExportClipModal } from "@/components/ExportClipModal";
 import { ChatPanel, type ChatEntry } from "@/components/ChatPanel";
 import { MobileAsideSheet } from "@/components/MobileAsideSheet";
 import { useServerFn } from "@tanstack/react-start";
@@ -411,23 +411,19 @@ function SaveClipButton({ state, you, nameOf, snapshot }: {
 }
 
 function DownloadGifButton({ snapshot }: { snapshot: MatchSnapshot | null }) {
-  const [busy, setBusy] = useState(false);
-  const onClick = async () => {
-    if (!snapshot || snapshot.rounds.length === 0) return;
-    setBusy(true);
-    try {
-      const blob = await renderMatchGif(snapshot);
-      const stamp = new Date().toISOString().slice(0, 10);
-      downloadBlob(blob, `quoridor-${stamp}.gif`);
-    } catch (e) {
-      console.warn("gif render failed", e);
-    } finally { setBusy(false); }
-  };
+  const [open, setOpen] = useState(false);
+  const disabled = !snapshot || snapshot.rounds.length === 0;
   return (
-    <button onClick={onClick} disabled={busy || !snapshot || snapshot.rounds.length === 0}
-      className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary disabled:opacity-60">
-      {busy ? "Rendering…" : "Download GIF"}
-    </button>
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        disabled={disabled}
+        className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary disabled:opacity-60"
+      >
+        Download clip
+      </button>
+      <ExportClipModal open={open} snapshot={snapshot} onClose={() => setOpen(false)} />
+    </>
   );
 }
 
