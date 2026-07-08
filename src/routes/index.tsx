@@ -202,43 +202,6 @@ function Lobby() {
   );
 }
 
-function FindMatchCard({
-  label, sub, desc, accent, badge, onClick,
-}: {
-  label: string; sub: string; desc: string;
-  accent: "emerald" | "sky" | "amber"; badge?: string;
-  onClick: () => void;
-}) {
-  const tone = {
-    emerald: { ring: "hover:border-emerald-500/40", dot: "bg-emerald-500", cta: "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/40" },
-    sky:     { ring: "hover:border-sky-500/40",     dot: "bg-sky-500",     cta: "bg-sky-600 hover:bg-sky-500 text-white shadow-sky-900/40" },
-    amber:   { ring: "hover:border-amber-500/50",   dot: "bg-amber-500",   cta: "bg-amber-500 hover:bg-amber-400 text-zinc-950 shadow-amber-500/20" },
-  }[accent];
-  return (
-    <button
-      onClick={onClick}
-      className={`group relative flex flex-col items-start rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 text-left transition-all hover:-translate-y-0.5 ${tone.ring}`}
-    >
-      {badge && (
-        <span className="absolute right-4 top-4 rounded-full bg-amber-500/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.25em] text-amber-400">
-          {badge}
-        </span>
-      )}
-      <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-zinc-500">
-        <span className={`h-1.5 w-1.5 rounded-full ${tone.dot}`} />
-        Find Match
-      </div>
-      <div className="mt-3 text-2xl font-bold tracking-tight text-zinc-50">{label}</div>
-      <div className="mt-0.5 text-xs font-semibold uppercase tracking-widest text-zinc-500">{sub}</div>
-      <p className="mt-3 text-sm text-zinc-400">{desc}</p>
-      <span className={`mt-5 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-widest shadow-lg transition-all ${tone.cta}`}>
-        Play
-        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M8 5v14l11-7z" /></svg>
-      </span>
-    </button>
-  );
-}
-
 function TopBar() {
   return (
     <nav className="flex items-center justify-between">
@@ -318,31 +281,6 @@ function BoardArt() {
         <span className="pointer-events-none absolute right-[20%] top-[58%] h-1.5 w-[20%] rounded-full bg-zinc-200/80" aria-hidden />
       </div>
     </div>
-  );
-}
-
-function _LegacyTopBar() {
-  return (
-    <nav className="flex items-center justify-between">
-      <Link to="/" className="flex items-center gap-2.5">
-        <img
-          src="/favicon.png"
-          alt="Quoridor"
-          width={32}
-          height={32}
-          className="h-8 w-8 rounded-md ring-1 ring-zinc-800"
-        />
-        <span className="text-sm font-semibold tracking-tight text-zinc-100">playquoridor.online</span>
-      </Link>
-      <div className="flex items-center gap-2">
-        <Link to="/auth" className="rounded-md border border-zinc-800 bg-zinc-900/60 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-zinc-300 hover:bg-zinc-800">
-          Sign in
-        </Link>
-        <Link to="/game" className="rounded-md bg-amber-500 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-950 hover:bg-amber-400">
-          Lobby
-        </Link>
-      </div>
-    </nav>
   );
 }
 
