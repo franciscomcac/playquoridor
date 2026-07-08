@@ -895,6 +895,7 @@ function GameScreen({
 
   // ---------- Rank-up overlay (ranked 1v1 only) ----------
   const preRatingRef = useRef<number | null>(null);
+  const preRankedMatchesRef = useRef<number>(0);
   const rankUpFiredRef = useRef(false);
   const [rankUp, setRankUp] = useState<{ oldRating: number; newRating: number } | null>(null);
   useEffect(() => {
@@ -905,6 +906,8 @@ function GameScreen({
       if (cancel) return;
       const r = (s as { rating?: number } | null)?.rating;
       preRatingRef.current = typeof r === "number" ? r : 1000;
+      const rm = (s as { ranked_matches?: number } | null)?.ranked_matches;
+      preRankedMatchesRef.current = typeof rm === "number" ? rm : 0;
     })();
     return () => { cancel = true; };
   }, [ranked, initialMode, ident.id]);
