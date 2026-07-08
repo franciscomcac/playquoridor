@@ -86,8 +86,6 @@ function Lobby() {
   const [gamesToday, setGamesToday] = useState<number>(0);
   const [inQueue, setInQueue] = useState<number>(0);
   const [online, setOnline] = useState<number>(() => computeOnline(0));
-  const avgQueue = Math.max(6, 22 - inQueue * 2);
-
   const cleanCode = useMemo(
     () => code.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5),
     [code],
@@ -169,19 +167,13 @@ function Lobby() {
           className="pointer-events-none absolute left-1/2 top-[16%] h-[340px] w-[620px] -translate-x-1/2"
           style={{ background: "radial-gradient(closest-side,rgba(245,165,36,0.14),transparent 68%)", opacity: 0.6 }}
         />
-        <div className="relative text-[11px] font-semibold uppercase tracking-[0.24em] text-[#f5a524]">
-          Ranked · Season 4 · Live
-        </div>
-        <h1 className="relative m-0 mt-3 text-[50px] font-bold leading-none tracking-[-0.035em] sm:text-[66px]">
+        <h1 className="relative m-0 text-[50px] font-bold leading-none tracking-[-0.035em] sm:text-[66px]">
           Play <span className="text-[#f5a524]">Quoridor</span>
         </h1>
-        <p className="relative mx-auto mt-4 font-[IBM_Plex_Mono,monospace] text-[13px] tracking-[0.02em] text-[#83838e]">
-          9×9 board · 10 walls each · first pawn across wins
-        </p>
         <div className="relative">
           <button
             onClick={onPlay}
-            className="mt-8 inline-flex items-center gap-3 rounded-[10px] border border-[rgba(47,213,117,0.6)] bg-gradient-to-b from-[#2bcb6f] to-[#1fb35f] px-[46px] py-4 text-[15.5px] font-bold uppercase tracking-[0.08em] text-[#04150b] transition-transform hover:-translate-y-0.5"
+            className="mt-10 inline-flex items-center gap-3 rounded-[10px] border border-[rgba(47,213,117,0.6)] bg-gradient-to-b from-[#2bcb6f] to-[#1fb35f] px-[46px] py-4 text-[15.5px] font-bold uppercase tracking-[0.08em] text-[#04150b] transition-transform hover:-translate-y-0.5"
             style={{ boxShadow: "0 4px 26px rgba(47,213,117,.2),inset 0 1px 0 rgba(255,255,255,.2)" }}
           >
             <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden>
@@ -190,12 +182,28 @@ function Lobby() {
             Play Now
           </button>
         </div>
-
-        <div className="relative mt-9 inline-flex items-stretch overflow-hidden rounded-[12px] border border-[#232329] bg-[rgba(14,14,17,0.8)] backdrop-blur">
-          <Stat label="Players Online" value={online} />
-          <Stat label="In Queue" value={inQueue} border />
-          <Stat label="Games Today" value={gamesToday.toLocaleString()} border />
-          <Stat label="Avg Queue" value={`${avgQueue}s`} border />
+        <div className="relative mt-4 text-[12px] text-[#83838e]">
+          Free — no account needed
+        </div>
+        <div className="relative mt-4 flex items-center justify-center gap-3 text-[11.5px] text-[#83838e]">
+          <span className="inline-flex items-center gap-2">
+            <span className="h-[7px] w-[7px] rounded-full bg-[#2fd575] shadow-[0_0_8px_#2fd575]" />
+            Matchmaking online
+          </span>
+          <span className="text-[#3d3d46]">·</span>
+          <span className="font-[IBM_Plex_Mono,monospace]">{online} players online</span>
+          {inQueue > 0 && (
+            <>
+              <span className="text-[#3d3d46]">·</span>
+              <span className="font-[IBM_Plex_Mono,monospace]">{inQueue} in queue</span>
+            </>
+          )}
+          {gamesToday > 0 && (
+            <>
+              <span className="hidden text-[#3d3d46] sm:inline">·</span>
+              <span className="hidden font-[IBM_Plex_Mono,monospace] sm:inline">{gamesToday.toLocaleString()} games today</span>
+            </>
+          )}
         </div>
       </section>
 
@@ -353,6 +361,7 @@ function Lobby() {
 
         {/* Right column */}
         <div className="flex flex-col gap-4">
+          <div className="px-1 pt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#5c5c66]">Quick play</div>
           <Card>
             <CardHeader eyebrow="CPU Practice" action={<span className="text-[11px] text-[#5c5c66]">choose difficulty</span>} />
             <div className="mt-3">
@@ -363,9 +372,9 @@ function Lobby() {
           </Card>
 
           <Link to="/puzzle"
-            className="block rounded-2xl border border-[#2b2412] bg-[linear-gradient(135deg,#17130a,#111114_60%)] p-5 transition-colors hover:border-[rgba(245,165,36,0.35)]">
+            className="block rounded-2xl border border-[#232329] bg-[#111114] p-5 transition-colors hover:border-[rgba(245,165,36,0.35)]">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#f5a524]">🧩 Daily puzzle</span>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#5c5c66]">🧩 Daily puzzle</span>
               {streak > 0 && (
                 <span className="rounded-md bg-[rgba(245,165,36,0.14)] px-2 py-[3px] font-[IBM_Plex_Mono,monospace] text-[11.5px] text-[#f5a524]">
                   🔥 {streak} win streak
@@ -373,17 +382,9 @@ function Lobby() {
               )}
             </div>
             <div className="mt-3 text-[15px] font-bold">Today's board</div>
-            <div className="mt-1 text-[12px] text-[#83838e]">Solve it in N moves</div>
+            <div className="mt-1 text-[12px] text-[#83838e]">Today's position</div>
             <div className="mt-3 text-[12px] font-semibold text-[#f5a524]">SOLVE TODAY'S →</div>
           </Link>
-
-          <Card>
-            <CardHeader eyebrow="Learn" />
-            <div className="mt-3">
-              <LearnRow to="/about" title="How to play" sub="Rules in 2 minutes" />
-              <LearnRow to="/about" title="Wall tactics 101" sub="Openings & traps" />
-            </div>
-          </Card>
         </div>
       </div>
 
@@ -399,14 +400,6 @@ function Lobby() {
   );
 }
 
-function Stat({ label, value, border }: { label: string; value: number | string; border?: boolean }) {
-  return (
-    <div className={"px-[26px] py-[13px] text-left " + (border ? "border-l border-[#1c1c22]" : "")}>
-      <div className="font-[IBM_Plex_Mono,monospace] text-[17px] font-semibold leading-none">{value}</div>
-      <div className="mt-[5px] text-[9.5px] font-semibold uppercase tracking-[0.14em] text-[#5c5c66]">{label}</div>
-    </div>
-  );
-}
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return <div className={"rounded-2xl border border-[#232329] bg-[#111114] " + className}>{children}</div>;
 }
@@ -429,17 +422,6 @@ function CpuRow({ onClick, color, lvl, name, desc }: { onClick: () => void; colo
       </div>
       <span className="text-[16px] text-[#3d3d46]">›</span>
     </button>
-  );
-}
-function LearnRow({ to, title, sub }: { to: string; title: string; sub: string }) {
-  return (
-    <Link to={to} className="flex items-center gap-3 border-t border-[#1a1a1f] px-5 py-[11px] transition-colors hover:bg-[#15151a]">
-      <div className="flex-1">
-        <div className="text-[13px] font-semibold">{title}</div>
-        <div className="text-[11px] text-[#5c5c66]">{sub}</div>
-      </div>
-      <span className="text-[16px] text-[#3d3d46]">›</span>
-    </Link>
   );
 }
 function Step({ n, title, desc }: { n: string; title: string; desc: string }) {
