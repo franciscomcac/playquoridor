@@ -679,7 +679,7 @@ function GameScreen({
   const hostApplyForfeit = useCallback((
     who: PlayerId,
     permanent = false,
-    reason: "time" | "forfeit" | "afk" = "forfeit",
+    reason: "time" | "forfeit" | "afk" | "left" = "forfeit",
   ) => {
     const ns = applyForfeit(stateRef.current, who, permanent);
     if (!ns) return;
@@ -760,7 +760,8 @@ function GameScreen({
           hostApplyForfeit(p.from, false, "forfeit");
         } else if (msg.type === "leave" && isHost) {
           const p = msg.payload as { slot: number };
-          hostApplyForfeit(p.slot as PlayerId, true, "forfeit");
+          pushLog(`${nameOf(p.slot as PlayerId)} left the match`);
+          hostApplyForfeit(p.slot as PlayerId, true, "left");
         } else if (msg.type === "nextRound" && isHost) {
           if (stateRef.current.matchWinner === null) hostStartRound();
         } else if (msg.type === "newMatch" && isHost) {
