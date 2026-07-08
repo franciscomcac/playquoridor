@@ -1,5 +1,5 @@
 // Web Audio SFX — synthesized, no assets. Lazy-init on first user gesture.
-type SfxName = "pop"|"wall"|"join"|"matchStart"|"roundWin"|"matchWin"|"afkWarn"|"click"|"lowTime"|"tick"|"denied"|"searchStart"|"searchPing"|"matchFound"|"clash"|"coinToss";
+type SfxName = "pop"|"wall"|"join"|"matchStart"|"roundWin"|"matchWin"|"afkWarn"|"click"|"lowTime"|"tick"|"denied"|"searchStart"|"searchPing"|"matchFound"|"clash"|"coinToss"|"pointScore"|"whooshEnd";
 const MUTE_KEY = "quoridor.mute";
 const VOL_KEY = "quoridor.volume";
 let ctx: AudioContext | null = null;
@@ -12,12 +12,16 @@ let initialized = false;
 import radarPingAsset from "@/assets/radar-ping.mp3.asset.json";
 import clashAsset from "@/assets/clash.mp3.asset.json";
 import coinTossAsset from "@/assets/coin-toss.mp3.asset.json";
+import pointScoreAsset from "@/assets/point-score.mp3.asset.json";
+import whooshEndAsset from "@/assets/whoosh-end.mp3.asset.json";
 const sampleBuffers: Partial<Record<SfxName, AudioBuffer>> = {};
 const sampleLoading: Partial<Record<SfxName, boolean>> = {};
 const sampleUrls: Partial<Record<SfxName, string>> = {
   searchPing: radarPingAsset.url,
   clash: clashAsset.url,
   coinToss: coinTossAsset.url,
+  pointScore: pointScoreAsset.url,
+  whooshEnd: whooshEndAsset.url,
 };
 function loadSample(name: SfxName, c: AudioContext) {
   if (sampleBuffers[name] || sampleLoading[name]) return;
@@ -105,7 +109,13 @@ export function initSoundOnGesture() {
   if (initialized) return;
   const c = ensureCtx();
   if (c && c.state === "suspended") void c.resume();
-  if (c) { loadSample("searchPing", c); loadSample("clash", c); loadSample("coinToss", c); }
+  if (c) {
+    loadSample("searchPing", c);
+    loadSample("clash", c);
+    loadSample("coinToss", c);
+    loadSample("pointScore", c);
+    loadSample("whooshEnd", c);
+  }
   initialized = true;
 }
 export function setMuted(m: boolean) {
@@ -206,7 +216,7 @@ function radarPing() {
 const MIN_GAP_MS: Partial<Record<SfxName, number>> = {
   pop: 60, wall: 60, click: 30, denied: 80, tick: 40,
   lowTime: 800, afkWarn: 400, searchPing: 900, searchStart: 400, matchFound: 400,
-  clash: 200, coinToss: 200,
+  clash: 200, coinToss: 200, pointScore: 200, whooshEnd: 200,
 };
 const lastPlayed: Partial<Record<SfxName, number>> = {};
 
@@ -325,6 +335,12 @@ export function play(name: SfxName) {
       break;
     case "coinToss":
       playSample("coinToss", 0.9);
+      break;
+    case "pointScore":
+      playSample("pointScore", 0.9);
+      break;
+    case "whooshEnd":
+      playSample("whooshEnd", 0.85);
       break;
     // Bright confirmation when an opponent is found.
     case "matchFound":
