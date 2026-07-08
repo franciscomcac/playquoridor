@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PLAYER_COLORS, QuoridorBoard } from "@/components/QuoridorBoard";
 import { MoveHistory, MoveHistoryPanel, type HistorySnapshot } from "@/components/MoveHistory";
+import { useMatchHistory, type MatchSnapshot } from "@/lib/matchHistory";
+import { renderMatchGif, downloadBlob } from "@/lib/gifExport";
 import { ChatPanel, type ChatEntry } from "@/components/ChatPanel";
 import { MobileAsideSheet } from "@/components/MobileAsideSheet";
 import { useServerFn } from "@tanstack/react-start";
