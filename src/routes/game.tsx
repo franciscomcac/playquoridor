@@ -198,7 +198,7 @@ function Home() {
                 ranked={!!view.ranked}
                 ident={ident}
                 onBack={goHome}
-                onJoin={(code) => setView({ name: "game", isHost: false, code, mode: view.mode, walls: defaultWallsFor(view.mode), rounds: 5, ranked: !!view.ranked })}
+                onJoin={(code) => setView({ name: "game", isHost: false, code, mode: view.mode, walls: defaultWallsFor(view.mode), rounds: 5, quickMatch: true, ranked: !!view.ranked })}
                 onHost={(code) => setView({ name: "game", isHost: true, code, mode: view.mode, walls: defaultWallsFor(view.mode), rounds: 5, quickMatch: true, ranked: !!view.ranked })}
               />
             )}
