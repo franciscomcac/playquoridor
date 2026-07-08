@@ -50,7 +50,7 @@ const SEO_OG_DESCRIPTION =
   "Move your piece, place walls, block your opponent. Free online Quoridor — the addictive strategy game anyone can learn in 2 minutes.";
 const SEO_KEYWORDS =
   "quoridor online, play quoridor, quoridor game free, wall blocking game, balls and walls game, block opponent with walls game, wall placement strategy game, pawn and walls board game, maze blocking game online, grid wall game, place walls to win game, quoridor multiplayer";
-const SITE_URL = "https://playquoridor.online/game";
+const SITE_URL = "https://playquoridor.online";
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -114,16 +114,12 @@ function Home() {
       stored = setStoredIdentity(randomGamerName());
     }
     setIdent(stored);
-    let hasPending = false;
     try {
       const j = sessionStorage.getItem("quoridor:pendingJoin");
       const a = sessionStorage.getItem("quoridor:pendingAction");
-      if (j) { sessionStorage.removeItem("quoridor:pendingJoin"); setPending(`join:${j}`); hasPending = true; }
-      else if (a) { sessionStorage.removeItem("quoridor:pendingAction"); setPending(a); hasPending = true; }
+      if (j) { sessionStorage.removeItem("quoridor:pendingJoin"); setPending(`join:${j}`); }
+      else if (a) { sessionStorage.removeItem("quoridor:pendingAction"); setPending(a); }
     } catch {}
-    // No lobby on /game — bounce back to the homepage lobby if the user
-    // navigated here directly without picking a mode.
-    if (!hasPending) void navigate({ to: "/", replace: true });
   }, [navigate]);
 
   useEffect(() => {
