@@ -1065,6 +1065,7 @@ function GameScreen({
   return (
     <div className="grid w-full max-w-6xl gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div className="order-1 flex min-w-0 flex-col gap-3">
+        {state.mode === 4 && <ChaosBanner />}
         <TurnBar state={state} you={you} status={status} presence={presence} coinAnimating={!!coinflip?.animating} nameOf={nameOf} />
         {afk && state.winner === null && state.matchWinner === null && (
           <AfkBanner slot={afk.slot} deadline={afk.deadline} name={nameOf(afk.slot)} />
