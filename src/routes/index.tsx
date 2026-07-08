@@ -1109,6 +1109,8 @@ function GameScreen({
 
         <ScoreCard state={state} you={you} nameOf={nameOf} />
         <PlayersCard state={state} you={you} nameOf={nameOf} />
+        <MoveHistoryPanel state={state} nameOf={nameOf} compact defaultOpen />
+        <ChatPanel entries={chat} onSend={sendChat} disabled={status !== "connected"} you={you} />
         <EventLog entries={log} />
 
         <div className="flex flex-col gap-2">
