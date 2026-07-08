@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PLAYER_COLORS, QuoridorBoard } from "@/components/QuoridorBoard";
+import { renderResultCard, shareResultCard } from "@/lib/result-card";
 
 // Warm palette for celebratory confetti — browns, creams, blues, yellows
 // pulled from the app's existing tokens (kept in-sync with styles.css).
