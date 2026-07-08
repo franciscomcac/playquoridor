@@ -147,6 +147,8 @@ function AnalyzePage() {
   const [idx, setIdx] = useState(0);
   useEffect(() => { setIdx(0); }, [snapshot]);
   const [playing, setPlaying] = useState(false);
+  const [speed, setSpeed] = useState<"slow" | "med" | "fast">("med");
+  const speedMs = speed === "slow" ? 1100 : speed === "fast" ? 220 : 550;
   useEffect(() => {
     if (!playing) return;
     const t = window.setInterval(() => {
@@ -154,9 +156,9 @@ function AnalyzePage() {
         if (i >= frames.length - 1) { setPlaying(false); return i; }
         return i + 1;
       });
-    }, 550);
+    }, speedMs);
     return () => window.clearInterval(t);
-  }, [playing, frames.length]);
+  }, [playing, frames.length, speedMs]);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -221,6 +223,18 @@ function AnalyzePage() {
             <span className="ml-auto text-[11px] text-zinc-500">
               {idx + 1} / {frames.length}
             </span>
+          </div>
+          <div className="mt-2 flex items-center gap-1 text-[10px] uppercase tracking-widest text-zinc-500">
+            <span className="mr-1">Speed</span>
+            {(["slow", "med", "fast"] as const).map((s) => (
+              <button key={s} onClick={() => setSpeed(s)}
+                className={"rounded-md border px-2 py-0.5 " +
+                  (speed === s
+                    ? "border-primary/60 bg-primary/15 text-primary"
+                    : "border-border text-zinc-400 hover:bg-secondary/40")}>
+                {s === "med" ? "medium" : s}
+              </button>
+            ))}
           </div>
           <input type="range" min={0} max={frames.length - 1} value={idx}
             onChange={(e) => setIdx(Number(e.target.value))}

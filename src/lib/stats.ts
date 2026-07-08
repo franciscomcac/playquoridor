@@ -7,6 +7,7 @@ export type MatchResult = {
   rounds: number;
   ranked?: boolean;
   winnerId: string | null;
+  snapshot?: unknown;
   players: Array<{
     id: string | null;
     slot: number;
@@ -35,7 +36,11 @@ export async function recordMatch(m: MatchResult) {
     const myLocalId = getStoredIdentity()?.id ?? null;
     const { data: match, error } = await supabase
       .from("matches")
-      .insert({ mode: m.mode, rounds: m.rounds, winner_player_id: m.winnerId, ranked: !!m.ranked })
+      .insert({
+        mode: m.mode, rounds: m.rounds,
+        winner_player_id: m.winnerId, ranked: !!m.ranked,
+        ...(m.snapshot ? { snapshot: m.snapshot as never } : {}),
+      })
       .select("id").single();
     if (error || !match) throw error;
     const rows = m.players.map((p) => ({
