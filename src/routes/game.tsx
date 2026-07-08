@@ -1439,7 +1439,7 @@ function GameScreen({
 
   return (
     <div className="grid w-full max-w-6xl gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="order-1 flex min-w-0 flex-col gap-3">
+      <div className="order-1 flex min-w-0 flex-col gap-3 pb-20 lg:pb-0">
         {state.mode === 4 && <ChaosBanner />}
         <TurnBar state={state} you={you} status={status} presence={presence} coinAnimating={!!coinflip?.animating} nameOf={nameOf} />
         {afk && state.winner === null && state.matchWinner === null && (
@@ -1472,7 +1472,9 @@ function GameScreen({
         </div>
       </div>
 
-      <aside className="order-2 flex min-w-0 flex-col gap-3">
+      <MobileAsideSheet
+        chat={<ChatPanel entries={chat} onSend={sendChat} disabled={status !== "connected" || matchMuted || !!chatBan} you={you} />}
+      >
         <div className="rounded-xl border border-border bg-card p-3 sm:p-4">
           <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Room code</p>
           <div className="mt-1 flex items-center justify-between gap-2">
@@ -1488,7 +1490,6 @@ function GameScreen({
         <ScoreCard state={state} you={you} nameOf={nameOf} />
         <PlayersCard state={state} you={you} nameOf={nameOf} />
         <MoveHistoryPanel state={state} nameOf={nameOf} compact defaultOpen onView={setReview} />
-        <ChatPanel entries={chat} onSend={sendChat} disabled={status !== "connected" || matchMuted || !!chatBan} you={you} />
         <EventLog entries={log} />
 
         <div className="flex flex-col gap-2">
@@ -1506,7 +1507,7 @@ function GameScreen({
             </button>
           </div>
         </div>
-      </aside>
+      </MobileAsideSheet>
     </div>
   );
 }
@@ -2460,7 +2461,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
 
   return (
     <div className="grid w-full max-w-6xl gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="order-1 flex min-w-0 flex-col gap-3">
+      <div className="order-1 flex min-w-0 flex-col gap-3 pb-20 lg:pb-0">
         <TurnBar
           state={state} you={YOU} status={"connected"}
           presence={{ count: mode, expected: mode }}
@@ -2488,11 +2489,10 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
         </div>
       </div>
 
-      <aside className="order-2 flex min-w-0 flex-col gap-3">
+      <MobileAsideSheet chat={<ChatPanel entries={chat} onSend={sendChat} you={YOU} />}>
         <ScoreCard state={state} you={YOU} nameOf={nameOf} />
         <PlayersCard state={state} you={YOU} nameOf={nameOf} />
         <MoveHistoryPanel state={state} nameOf={nameOf} compact defaultOpen onView={setReview} />
-        <ChatPanel entries={chat} onSend={sendChat} you={YOU} />
 
         {toast && (
           <div className="toast-in rounded-xl border border-border bg-card p-3 text-xs uppercase tracking-widest text-primary">
@@ -2517,7 +2517,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
             </button>
           </div>
         </div>
-      </aside>
+      </MobileAsideSheet>
     </div>
   );
 }
@@ -2658,7 +2658,7 @@ function SpectatorGame({ ident, code, onLeave }: {
 
   return (
     <div className="grid w-full max-w-6xl gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="order-1 flex min-w-0 flex-col gap-3">
+      <div className="order-1 flex min-w-0 flex-col gap-3 pb-20 lg:pb-0">
         <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 shadow-sm">
           <span className="grid h-9 w-9 place-items-center rounded-full text-[10px] font-semibold uppercase tracking-widest"
             style={{ background: "var(--secondary)", color: "var(--secondary-foreground)" }}>
