@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { LobbyChrome } from "@/components/LobbyChrome";
 import { supabase } from "@/integrations/supabase/client";
+import { getStoredIdentity } from "@/lib/identity";
 import {
   fetchGamesToday,
   fetchLeaderboard,
@@ -145,28 +146,41 @@ function Lobby() {
     void fetchGamesToday().then((n) => alive && setGamesToday(n)).catch(() => {});
     void fetchQueueCount().then((n) => alive && setInQueue(n)).catch(() => {});
     void (async () => {
-      // Don't gate on requireRealUser here — that only accepts players who
-      // completed onboarding, but plenty of accounts have onboarded_at=NULL
-      // yet still have real match history. Look up the player row directly.
-      const { data: auth } = await supabase.auth.getUser();
-      const u = auth.user;
+      // Match rows are keyed by player id. A user can have matches attached to
+      // the local player before/without a completed profile, so always include
+      // the browser's current player id before falling back to account rows.
+      const localPlayerId = getStoredIdentity()?.id ?? null;
+      const { data: auth } = await supabase.auth.getSession();
+      const u = auth.session?.user ?? null;
       const anon = !u || u.is_anonymous === true || (u.app_metadata?.provider ?? "") === "anonymous";
       if (!alive) return;
       setSignedIn(!!u && !anon);
-      if (!u || anon) { setRecent([]); return; }
-      const { data: p } = await supabase
-        .from("players").select("id")
-        .eq("auth_user_id", u.id)
-        .order("created_at", { ascending: false })
-        .limit(1).maybeSingle();
+      const playerIds = localPlayerId ? [localPlayerId] : [];
+      if (u && !anon) {
+        const { data: accountPlayers } = await supabase
+          .from("players").select("id")
+          .eq("auth_user_id", u.id)
+          .order("created_at", { ascending: false })
+          .limit(5);
+        for (const p of accountPlayers ?? []) if (!playerIds.includes(p.id)) playerIds.push(p.id);
+      }
       if (!alive) return;
-      if (!p) { setRecent([]); return; }
-      const [r, st] = await Promise.all([
-        fetchRecentMatches(p.id, 4).catch(() => []),
-        fetchMyWinStreak(p.id).catch(() => 0),
+      if (playerIds.length === 0) { setRecent([]); return; }
+      const [lists, st] = await Promise.all([
+        Promise.all(playerIds.map((id) => fetchRecentMatches(id, 4).catch(() => []))),
+        fetchMyWinStreak(playerIds[0]!).catch(() => 0),
       ]);
       if (!alive) return;
-      setRecent(r); setStreak(st);
+      const seen = new Set<string>();
+      const merged = lists.flat()
+        .sort((a, b) => new Date(b.endedAt).getTime() - new Date(a.endedAt).getTime())
+        .filter((m) => {
+          if (seen.has(m.matchId)) return false;
+          seen.add(m.matchId);
+          return true;
+        })
+        .slice(0, 4);
+      setRecent(merged); setStreak(st);
     })();
     return () => { alive = false; };
   }, []);
@@ -319,7 +333,7 @@ function Lobby() {
               ))}
               {recent?.length === 0 && (
                 <div className="border-t border-[#1a1a1f] px-5 py-4 text-[12.5px] text-[#83838e]">
-                  Sign in and play to see your history.
+                  No recent matches yet.
                 </div>
               )}
               {recent?.map((m) => {
