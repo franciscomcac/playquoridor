@@ -183,6 +183,7 @@ function Lobby() {
   }
 
   const queueLabel =
+    mode === "ranked" && !signedIn ? "SIGN IN TO PLAY RANKED" :
     mode === "2p" ? "FIND CASUAL MATCH" :
     mode === "4p" ? "FIND 4-PLAYER MATCH" :
     "QUEUE FOR RANKED";
