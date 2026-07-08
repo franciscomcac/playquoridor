@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PLAYER_COLORS, QuoridorBoard } from "@/components/QuoridorBoard";
 import { MoveHistory, MoveHistoryPanel, type HistorySnapshot } from "@/components/MoveHistory";
+import { useMatchHistory, type MatchSnapshot } from "@/lib/matchHistory";
+import { renderMatchGif, downloadBlob } from "@/lib/gifExport";
 import { ChatPanel, type ChatEntry } from "@/components/ChatPanel";
 import { MobileAsideSheet } from "@/components/MobileAsideSheet";
 import { useServerFn } from "@tanstack/react-start";
@@ -349,8 +351,9 @@ function ChaosBanner() {
   );
 }
 
-function SaveClipButton({ state, you, nameOf }: {
+function SaveClipButton({ state, you, nameOf, snapshot }: {
   state: GameState; you: PlayerId; nameOf: (s: PlayerId) => string;
+  snapshot: MatchSnapshot | null;
 }) {
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState<"idle" | "ok" | "err" | "nope">("idle");
@@ -371,13 +374,21 @@ function SaveClipButton({ state, you, nameOf }: {
         .not("onboarded_at", "is", null).order("onboarded_at", { ascending: false })
         .limit(1).maybeSingle();
       const winnerName = state.matchWinner !== null ? nameOf(state.matchWinner) : "clip";
+      const payload = snapshot ?? JSON.parse(JSON.stringify(state));
       const { error } = await supabase.from("saved_clips").insert({
         owner_auth: u.id, owner_player_id: p?.id ?? null,
         match_id: null, mode: state.mode,
         title: `${winnerName} · ${new Date().toLocaleDateString()}`,
-        snapshot: JSON.parse(JSON.stringify(state)),
+        snapshot: payload,
       });
-      setSaved(error ? "err" : "ok");
+      if (error) { setSaved("err"); return; }
+      const { data: all } = await supabase.from("saved_clips")
+        .select("id").eq("owner_auth", u.id).order("created_at", { ascending: false });
+      const extras = (all ?? []).slice(5).map((c) => c.id);
+      if (extras.length) {
+        await supabase.from("saved_clips").delete().in("id", extras);
+      }
+      setSaved("ok");
     } catch {
       setSaved("err");
     } finally {
@@ -390,6 +401,42 @@ function SaveClipButton({ state, you, nameOf }: {
     <button onClick={onClick} disabled={busy}
       className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary disabled:opacity-60">
       {label}
+    </button>
+  );
+}
+
+function DownloadGifButton({ snapshot }: { snapshot: MatchSnapshot | null }) {
+  const [busy, setBusy] = useState(false);
+  const onClick = async () => {
+    if (!snapshot || snapshot.rounds.length === 0) return;
+    setBusy(true);
+    try {
+      const blob = await renderMatchGif(snapshot);
+      const stamp = new Date().toISOString().slice(0, 10);
+      downloadBlob(blob, `quoridor-${stamp}.gif`);
+    } catch (e) {
+      console.warn("gif render failed", e);
+    } finally { setBusy(false); }
+  };
+  return (
+    <button onClick={onClick} disabled={busy || !snapshot || snapshot.rounds.length === 0}
+      className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary disabled:opacity-60">
+      {busy ? "Rendering…" : "Download GIF"}
+    </button>
+  );
+}
+
+function AnalyzeGameButton({ snapshot }: { snapshot: MatchSnapshot | null }) {
+  const nav = useNavigate();
+  const onClick = () => {
+    if (!snapshot) return;
+    try { sessionStorage.setItem("analyze:pending", JSON.stringify(snapshot)); } catch {}
+    void nav({ to: "/analyze/$clipId", params: { clipId: "local" } });
+  };
+  return (
+    <button onClick={onClick} disabled={!snapshot || snapshot.rounds.length === 0}
+      className="rounded-lg border border-primary/60 bg-primary/10 px-5 py-2 text-sm font-medium text-primary hover:bg-primary/20 disabled:opacity-60">
+      Analyze with engine
     </button>
   );
 }
@@ -521,6 +568,8 @@ function CreateRoom({ mode, walls, rounds, setMode, setWalls, setRounds, onBack,
     navigator.clipboard?.writeText(code).catch(() => {});
     setCopied(true); window.setTimeout(() => setCopied(false), 1400);
   };
+  // Series length is fixed for every match: best of 3, first to 2, max 3 rounds.
+  void rounds; void setRounds;
   return (
     <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl sm:p-8">
       <button onClick={onBack} className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground hover:text-foreground">← Back</button>
@@ -544,14 +593,9 @@ function CreateRoom({ mode, walls, rounds, setMode, setWalls, setRounds, onBack,
         <input type="range" min={0} max={20} step={1} value={walls} onChange={(e) => setWalls(Number(e.target.value))}
           className="mt-2 w-full accent-[color:var(--primary)]" />
       </div>
-      <div className="mt-6">
-        <label className="flex items-baseline justify-between text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-          Rounds <span className="text-base font-semibold text-foreground">
-            {rounds === 1 ? "single game" : `best of ${rounds} · first to ${winsNeeded(rounds)}`}
-          </span>
-        </label>
-        <input type="range" min={1} max={10} step={1} value={rounds} onChange={(e) => setRounds(Number(e.target.value))}
-          className="mt-2 w-full accent-[color:var(--primary)]" />
+      <div className="mt-6 rounded-lg border border-border bg-secondary/20 px-4 py-3 text-xs text-muted-foreground">
+        <p className="text-[10px] uppercase tracking-[0.2em]">Format</p>
+        <p className="mt-1 text-sm font-semibold text-foreground">Best of 3 · first to 2 · max 3 rounds</p>
       </div>
       <div className="mt-6 rounded-lg border border-dashed border-border bg-background/40 p-4">
         <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Room code</p>
@@ -775,6 +819,7 @@ function GameScreen({
 
   const [state, setState] = useState<GameState>(() => initialState(initialMode, initialWalls, initialRounds));
   const stateRef = useRef(state); stateRef.current = state;
+  const matchHistory = useMatchHistory(state, Array.from({ length: initialMode }, (_, i) => rosterRef.current.find((e) => e.slot === i)?.name ?? `Player ${i + 1}`));
 
   const [coinflip, setCoinflip] = useState<{ starter: PlayerId; animating: boolean } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -1465,6 +1510,7 @@ function GameScreen({
             )}
             {matchOver && (
               <EndScreen state={state} you={you} nameOf={nameOf}
+                snapshot={matchHistory.getSnapshot()}
                 onPrimary={newMatchAction} onLeave={onLeave} />
             )}
           </div>
@@ -2023,10 +2069,11 @@ function WinOverlay({ state, you, matchOver, onPrimary, primaryLabel, onLeave, n
   );
 }
 
-function EndScreen({ state, you, onPrimary, onLeave, nameOf }: {
+function EndScreen({ state, you, onPrimary, onLeave, nameOf, snapshot }: {
   state: GameState; you: PlayerId;
   onPrimary: () => void; onLeave: () => void;
   nameOf: (s: PlayerId) => string;
+  snapshot: MatchSnapshot | null;
 }) {
   const [analyzing, setAnalyzing] = useState(false);
   const winner = state.matchWinner as PlayerId;
@@ -2094,7 +2141,9 @@ function EndScreen({ state, you, onPrimary, onLeave, nameOf }: {
             {analyzing ? "Hide analysis" : "Analyze game"}
           </button>
           <ShareResultButton state={state} you={you} nameOf={nameOf} matchOver />
-          <SaveClipButton state={state} you={you} nameOf={nameOf} />
+          <SaveClipButton state={state} you={you} nameOf={nameOf} snapshot={snapshot} />
+          <DownloadGifButton snapshot={snapshot} />
+          <AnalyzeGameButton snapshot={snapshot} />
           <button onClick={onLeave} className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary">
             Leave
           </button>
@@ -2213,7 +2262,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
   );
 
   const initial = useCallback((): GameState => {
-    const s = initialState(mode, defaultWallsFor(mode), 5);
+    const s = initialState(mode, defaultWallsFor(mode), 3);
     return { ...s, clocks: initClocks(mode, DEFAULT_CLOCK_MS) };
   }, [mode]);
 
@@ -2222,6 +2271,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
   const [coinflip, setCoinflip] = useState<{ starter: PlayerId; animating: boolean } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [chat, setChat] = useState<ChatEntry[]>([]);
+  const botMatchHistory = useMatchHistory(state, Array.from({ length: mode }, (_, i) => (i === YOU ? ident.name : opponentNames[i - 1] ?? `Player ${i + 1}`)));
 
   const sendChat = useCallback((text: string) => {
     setChat((prev) => [
@@ -2482,6 +2532,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, onLeave }: {
             )}
             {matchOver && (
               <EndScreen state={state} you={YOU} nameOf={nameOf}
+                snapshot={botMatchHistory.getSnapshot()}
                 onPrimary={startMatch} onLeave={onLeave} />
             )}
           </div>

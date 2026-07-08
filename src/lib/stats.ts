@@ -228,21 +228,21 @@ export type RecentMatchRow = {
 
 /** Recent matches for a specific player, most-recent first. */
 export async function fetchRecentMatches(playerId: string, limit = 5): Promise<RecentMatchRow[]> {
+  // Join match_players -> matches so we can order by ended_at (match_id is a
+  // random UUID and ordering by it silently drops recent games).
   const { data: mine } = await supabase
     .from("match_players")
-    .select("match_id, result")
+    .select("match_id, result, match:matches!inner(id, mode, ranked, ended_at, winner_player_id)")
     .eq("player_id", playerId)
-    .order("match_id", { ascending: false })
-    .limit(limit * 2);
+    .order("ended_at", { referencedTable: "matches", ascending: false })
+    .limit(limit);
   const ids = Array.from(new Set((mine ?? []).map((r) => r.match_id)));
   if (ids.length === 0) return [];
-  const [{ data: matches }, { data: others }] = await Promise.all([
-    supabase.from("matches").select("id, mode, ranked, ended_at, winner_player_id")
-      .in("id", ids).order("ended_at", { ascending: false }),
-    supabase.from("match_players").select("match_id, player_id, name").in("match_id", ids),
-  ]);
+  const { data: others } = await supabase
+    .from("match_players").select("match_id, player_id, name").in("match_id", ids);
   const myResultByMatch = new Map((mine ?? []).map((r) => [r.match_id, r.result as RecentMatchRow["result"]]));
-  return (matches ?? []).slice(0, limit).map((m) => {
+  const matches = (mine ?? []).map((r) => (r as unknown as { match: { id: string; mode: number; ranked: boolean; ended_at: string; winner_player_id: string | null } }).match).filter(Boolean);
+  return matches.map((m) => {
     const opps = (others ?? []).filter((p) => p.match_id === m.id && p.player_id !== playerId);
     const opp = opps[0]?.name ?? "Opponent";
     return {

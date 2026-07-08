@@ -4,6 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { requireRealUser } from "@/lib/auth-gate";
 import { QuoridorBoard } from "@/components/QuoridorBoard";
 import type { GameState } from "@/lib/quoridor";
+import { isMatchSnapshot, type MatchSnapshot } from "@/lib/matchHistory";
+import { renderMatchGif, downloadBlob } from "@/lib/gifExport";
+import { drawState, replay } from "@/lib/matchReplay";
+import { useRef } from "react";
 
 export const Route = createFileRoute("/clips")({
   head: () => ({
@@ -32,7 +36,8 @@ function ClipsPage() {
       const { data } = await supabase
         .from("saved_clips")
         .select("id,title,mode,snapshot,created_at")
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(5);
       setClips((data ?? []) as Clip[]);
     })();
   }, [navigate]);
@@ -95,18 +100,61 @@ function ClipsPage() {
 }
 
 function ClipView({ clip }: { clip: Clip }) {
-  // Snapshot stored as full GameState; render read-only.
+  if (isMatchSnapshot(clip.snapshot)) {
+    return <MatchClipView clip={clip} snapshot={clip.snapshot} />;
+  }
+  // Legacy: single-state snapshot.
   try {
     const state = clip.snapshot as GameState;
     return (
       <div>
         <p className="mb-2 text-[10px] uppercase tracking-widest text-zinc-500">{clip.title}</p>
         <QuoridorBoard state={state} you={0} onMove={() => {}} interactive={false} />
+        <p className="mt-2 text-[11px] text-zinc-500">Old-format clip — analyze and GIF export unavailable.</p>
       </div>
     );
   } catch {
     return <p className="p-6 text-center text-xs text-rose-400">Clip data is invalid.</p>;
   }
+}
+
+function MatchClipView({ clip, snapshot }: { clip: Clip; snapshot: MatchSnapshot }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const frames = replay(snapshot);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    const c = canvasRef.current; if (!c) return;
+    const ctx = c.getContext("2d"); if (!ctx) return;
+    // Show the final position of the match.
+    drawState(ctx, frames[frames.length - 1].state, c.width, c.height);
+  }, [frames]);
+  const download = async () => {
+    setBusy(true);
+    try {
+      const blob = await renderMatchGif(snapshot);
+      downloadBlob(blob, `${clip.title.replace(/[^a-z0-9]+/gi, "-")}.gif`);
+    } finally { setBusy(false); }
+  };
+  return (
+    <div>
+      <p className="mb-2 text-[10px] uppercase tracking-widest text-zinc-500">{clip.title}</p>
+      <canvas ref={canvasRef} width={320} height={320} className="w-full max-w-[320px] rounded-lg" />
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button onClick={download} disabled={busy}
+          className="rounded-md border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs font-medium hover:bg-zinc-700 disabled:opacity-60">
+          {busy ? "Rendering…" : "Download GIF"}
+        </button>
+        <Link to="/analyze/$clipId" params={{ clipId: clip.id }}
+          className="rounded-md border border-emerald-500/60 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20">
+          Analyze
+        </Link>
+      </div>
+      <p className="mt-2 text-[11px] text-zinc-500">
+        {snapshot.rounds.length} round{snapshot.rounds.length === 1 ? "" : "s"} · winner:{" "}
+        {snapshot.matchWinner !== null ? snapshot.playerNames[snapshot.matchWinner] : "—"}
+      </p>
+    </div>
+  );
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
