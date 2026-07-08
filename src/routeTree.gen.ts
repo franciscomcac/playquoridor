@@ -15,6 +15,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as PuzzleRouteImport } from './routes/puzzle'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as HistoryRouteImport } from './routes/history'
+import { Route as GameRouteImport } from './routes/game'
 import { Route as FriendsRouteImport } from './routes/friends'
 import { Route as ClipsRouteImport } from './routes/clips'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -50,6 +51,11 @@ const OnboardingRoute = OnboardingRouteImport.update({
 const HistoryRoute = HistoryRouteImport.update({
   id: '/history',
   path: '/history',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GameRoute = GameRouteImport.update({
+  id: '/game',
+  path: '/game',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FriendsRoute = FriendsRouteImport.update({
@@ -89,6 +95,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/clips': typeof ClipsRoute
   '/friends': typeof FriendsRoute
+  '/game': typeof GameRoute
   '/history': typeof HistoryRoute
   '/onboarding': typeof OnboardingRoute
   '/puzzle': typeof PuzzleRouteWithChildren
@@ -103,6 +110,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/clips': typeof ClipsRoute
   '/friends': typeof FriendsRoute
+  '/game': typeof GameRoute
   '/history': typeof HistoryRoute
   '/onboarding': typeof OnboardingRoute
   '/puzzle': typeof PuzzleRouteWithChildren
@@ -118,6 +126,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/clips': typeof ClipsRoute
   '/friends': typeof FriendsRoute
+  '/game': typeof GameRoute
   '/history': typeof HistoryRoute
   '/onboarding': typeof OnboardingRoute
   '/puzzle': typeof PuzzleRouteWithChildren
@@ -134,6 +143,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/clips'
     | '/friends'
+    | '/game'
     | '/history'
     | '/onboarding'
     | '/puzzle'
@@ -148,6 +158,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/clips'
     | '/friends'
+    | '/game'
     | '/history'
     | '/onboarding'
     | '/puzzle'
@@ -162,6 +173,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/clips'
     | '/friends'
+    | '/game'
     | '/history'
     | '/onboarding'
     | '/puzzle'
@@ -177,6 +189,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ClipsRoute: typeof ClipsRoute
   FriendsRoute: typeof FriendsRoute
+  GameRoute: typeof GameRoute
   HistoryRoute: typeof HistoryRoute
   OnboardingRoute: typeof OnboardingRoute
   PuzzleRoute: typeof PuzzleRouteWithChildren
@@ -227,6 +240,13 @@ declare module '@tanstack/react-router' {
       path: '/history'
       fullPath: '/history'
       preLoaderRoute: typeof HistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/game': {
+      id: '/game'
+      path: '/game'
+      fullPath: '/game'
+      preLoaderRoute: typeof GameRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/friends': {
@@ -291,6 +311,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ClipsRoute: ClipsRoute,
   FriendsRoute: FriendsRoute,
+  GameRoute: GameRoute,
   HistoryRoute: HistoryRoute,
   OnboardingRoute: OnboardingRoute,
   PuzzleRoute: PuzzleRouteWithChildren,
