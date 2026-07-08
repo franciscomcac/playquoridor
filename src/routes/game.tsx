@@ -1162,7 +1162,7 @@ function GameScreen({
       roomRef.current?.close();
       roomRef.current = null;
       onBotFallback();
-    }, 10_000);
+  }, 30_000);
     return () => window.clearTimeout(t);
   }, [quickMatch, isHost, onBotFallback, onRankedTimeout, ranked, code]);
   const markActivity = useCallback((who: PlayerId) => {
