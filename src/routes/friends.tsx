@@ -33,6 +33,9 @@ function FriendsPage() {
   const [selected, setSelected] = useState<Selected | null>(null);
   const [q, setQ] = useState("");
   const [sent, setSent] = useState<Record<string, boolean>>({});
+  const [addName, setAddName] = useState("");
+  const [addMsg, setAddMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  const [adding, setAdding] = useState(false);
 
   const [h2hCounts, setH2hCounts] = useState<{ a: number; b: number } | null>(null);
   const [h2hHist, setH2hHist] = useState<Awaited<ReturnType<typeof fetchH2HHistory>> | null>(null);
@@ -91,6 +94,38 @@ function FriendsPage() {
     void navigate({ to: "/game" });
   }
 
+  async function addFriendByUsername() {
+    if (!me) return;
+    const name = addName.trim();
+    if (!name) return;
+    setAdding(true);
+    setAddMsg(null);
+    try {
+      const { data: p } = await supabase
+        .from("players")
+        .select("id, auth_user_id, name")
+        .ilike("name", name)
+        .maybeSingle();
+      const target = p as { id: string; auth_user_id: string | null; name: string } | null;
+      if (!target) { setAddMsg({ kind: "err", text: `No player named "${name}".` }); return; }
+      if (target.id === me.playerId) { setAddMsg({ kind: "err", text: "That's you." }); return; }
+      if (!target.auth_user_id) { setAddMsg({ kind: "err", text: "That player can't receive requests." }); return; }
+      const { error } = await supabase.from("friendships").insert({
+        requester_id: me.playerId, addressee_id: target.id,
+        requester_auth: me.authUserId, addressee_auth: target.auth_user_id, status: "pending",
+      });
+      if (error) {
+        const msg = /duplicate|unique/i.test(error.message) ? "Request already sent." : error.message;
+        setAddMsg({ kind: "err", text: msg });
+        return;
+      }
+      setAddMsg({ kind: "ok", text: `Request sent to ${target.name}.` });
+      setAddName("");
+    } finally {
+      setAdding(false);
+    }
+  }
+
   if (me === undefined) return <LobbyChrome><div className="mx-auto max-w-[1240px] px-8 py-16 text-sm text-[#5c5c66]">Loading…</div></LobbyChrome>;
 
   const selectedName = selected?.kind === "friend" ? selected.item.name : selected?.item.name ?? "—";
@@ -127,6 +162,32 @@ function FriendsPage() {
                 placeholder={tab === "recent" ? "Search recent players…" : "Search friends…"}
                 className="w-full rounded-[10px] border border-[#232329] bg-[#0d0d10] px-[14px] py-3 font-[IBM_Plex_Mono,monospace] text-[13px] text-[#ececf1] outline-none focus:border-[rgba(245,165,36,0.35)]" />
             </div>
+            {tab === "friends" && (
+              <div className="border-t border-[#1a1a1f] px-5 py-3">
+                <div className="mb-2 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-[#5c5c66]">Add by username</div>
+                <div className="flex gap-2">
+                  <input
+                    value={addName}
+                    onChange={(e) => { setAddName(e.target.value); setAddMsg(null); }}
+                    onKeyDown={(e) => { if (e.key === "Enter") void addFriendByUsername(); }}
+                    placeholder="username"
+                    className="min-w-0 flex-1 rounded-[10px] border border-[#232329] bg-[#0d0d10] px-[12px] py-[9px] font-[IBM_Plex_Mono,monospace] text-[13px] text-[#ececf1] outline-none focus:border-[rgba(245,165,36,0.35)]"
+                  />
+                  <button
+                    onClick={() => void addFriendByUsername()}
+                    disabled={adding || !addName.trim()}
+                    className="flex-none rounded-[9px] border border-[#2b2b33] bg-[#17171b] px-3 py-[9px] font-[IBM_Plex_Mono,monospace] text-[11px] font-semibold text-[#f5a524] hover:border-[rgba(245,165,36,0.35)] disabled:opacity-50"
+                  >
+                    {adding ? "…" : "+ ADD"}
+                  </button>
+                </div>
+                {addMsg && (
+                  <div className={"mt-2 text-[11.5px] " + (addMsg.kind === "ok" ? "text-[#2fd575]" : "text-[#ff7a7a]")}>
+                    {addMsg.text}
+                  </div>
+                )}
+              </div>
+            )}
             {tab === "friends" ? (
               <>
                 {filteredFriends.length === 0 && (
