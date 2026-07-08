@@ -1,8 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { AVATAR_SWATCHES, Avatar, LobbyChrome, tierFromRating } from "@/components/LobbyChrome";
 import { requireRealUser } from "@/lib/auth-gate";
 import { fetchProfile, fetchMyWinStreak, updateMyProfile } from "@/lib/stats";
+import { saveBio, saveAvatar } from "@/lib/moderation.functions";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
@@ -26,8 +28,15 @@ function ProfilePage() {
   const [pname, setPname] = useState("");
   const [pbio, setPbio] = useState("");
   const [avColor, setAvColor] = useState<string>(AVATAR_SWATCHES[0]!);
+  const [avUrl, setAvUrl] = useState<string | null>(null);
   const [saved, setSaved] = useState<null | "ok" | "err">(null);
   const [busy, setBusy] = useState(false);
+  const [modMsg, setModMsg] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement | null>(null);
+
+  const callSaveBio = useServerFn(saveBio);
+  const callSaveAvatar = useServerFn(saveAvatar);
 
   useEffect(() => {
     void requireRealUser().then((u) => {
@@ -40,10 +49,11 @@ function ProfilePage() {
     if (!me) return;
     void fetchProfile(me.playerId).then((p) => {
       setProfile(p);
-      const pl = p.player as { name?: string; bio?: string | null; avatar_color?: string | null } | null;
+      const pl = p.player as { name?: string; bio?: string | null; avatar_color?: string | null; avatar_url?: string | null } | null;
       setPname(pl?.name ?? me.username);
       setPbio(pl?.bio ?? "");
       setAvColor(pl?.avatar_color ?? AVATAR_SWATCHES[0]!);
+      setAvUrl(pl?.avatar_url ?? null);
     });
     void fetchMyWinStreak(me.playerId).then(setStreak);
   }, [me]);
@@ -71,13 +81,60 @@ function ProfilePage() {
   async function save() {
     if (!me) return;
     setBusy(true);
+    setModMsg(null);
+    // Save color + name directly; bio goes through moderation.
     const { error } = await updateMyProfile(me.playerId, {
-      bio: pbio, avatar_color: avColor,
+      avatar_color: avColor,
       ...(pname !== me.username ? { name: pname } : {}),
     });
+    let ok = !error;
+    try {
+      const bioRes = await callSaveBio({ data: { playerId: me.playerId, bio: pbio } });
+      if (!bioRes.allow) {
+        ok = false;
+        setModMsg(bioRes.senderMessage);
+      }
+    } catch (e: any) {
+      ok = false;
+      setModMsg(`Bio couldn't be checked: ${e?.message ?? "error"}`);
+    }
     setBusy(false);
-    setSaved(error ? "err" : "ok");
-    setTimeout(() => setSaved(null), 1800);
+    setSaved(ok ? "ok" : "err");
+    setTimeout(() => setSaved(null), 2400);
+  }
+
+  async function onPickAvatar(file: File) {
+    if (!me) return;
+    setUploading(true);
+    setModMsg(null);
+    try {
+      const dataUrl = await resizeToDataUrl(file, 256, 0.82);
+      const res = await callSaveAvatar({ data: { playerId: me.playerId, dataUrl } });
+      if (res.allow) {
+        setAvUrl(dataUrl);
+        setModMsg("Avatar updated.");
+      } else {
+        setModMsg(res.senderMessage);
+      }
+    } catch (e: any) {
+      setModMsg(`Upload failed: ${e?.message ?? "error"}`);
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+      setTimeout(() => setModMsg(null), 5000);
+    }
+  }
+
+  async function removeAvatar() {
+    if (!me) return;
+    setUploading(true);
+    const { error } = await updateMyProfile(me.playerId, { /* nothing */ });
+    // Direct remove via supabase client
+    await (await import("@/integrations/supabase/client")).supabase
+      .from("players").update({ avatar_url: null }).eq("id", me.playerId);
+    setAvUrl(null);
+    setUploading(false);
+    if (error) setModMsg("Couldn't remove avatar.");
   }
 
   if (me === undefined) return <LobbyChrome><div className="mx-auto max-w-[1240px] px-8 py-16 text-sm text-[#5c5c66]">Loading…</div></LobbyChrome>;
@@ -89,7 +146,7 @@ function ProfilePage() {
         <div className="mt-5 grid items-start gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
           {/* Preview card */}
           <div className="rounded-2xl border border-[#232329] bg-[#111114] px-6 pb-6 pt-8 text-center">
-            <div className="mx-auto"><Avatar name={pname} color={avColor} size={72} /></div>
+            <div className="mx-auto"><Avatar name={pname} color={avColor} size={72} imageUrl={avUrl} /></div>
             <div className="mt-4 text-[20px] font-bold">{pname || "—"}</div>
             <div className="mt-[6px] font-[IBM_Plex_Mono,monospace] text-[11px] tracking-[0.08em] text-[#5c5c66]">
               @{pname || "player"}{since ? ` · SINCE ${since}` : ""}
@@ -144,7 +201,38 @@ function ProfilePage() {
             <textarea rows={3} value={pbio} onChange={(e) => setPbio(e.target.value.slice(0, 120))}
               className="mt-2 block min-h-[90px] w-full resize-y rounded-[10px] border border-[#232329] bg-[#0d0d10] px-[14px] py-3 text-[13.5px] leading-[1.5] text-[#ececf1] outline-none focus:border-[rgba(245,165,36,0.35)]" />
 
-            <Label className="mt-4">Avatar</Label>
+            <Label className="mt-4">Avatar picture</Label>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void onPickAvatar(f);
+                }}
+              />
+              <button
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading}
+                className="rounded-[10px] border border-[#2b2b33] bg-[#17171b] px-4 py-2 text-[12.5px] font-semibold hover:border-[rgba(245,165,36,0.35)] disabled:opacity-60"
+              >
+                {uploading ? "SCANNING…" : avUrl ? "REPLACE IMAGE" : "UPLOAD IMAGE"}
+              </button>
+              {avUrl && (
+                <button
+                  onClick={removeAvatar}
+                  disabled={uploading}
+                  className="rounded-[10px] border border-[#2b2b33] bg-[#0d0d10] px-3 py-2 text-[12px] text-[#a4a4b0] hover:text-[#ececf1]"
+                >
+                  Remove
+                </button>
+              )}
+              <span className="text-[11px] text-[#5c5c66]">Auto-scanned for unsafe content.</span>
+            </div>
+
+            <Label className="mt-4">Avatar color (fallback)</Label>
             <div className="mt-2 flex items-center gap-[10px]">
               {AVATAR_SWATCHES.map((c) => (
                 <button key={c} onClick={() => setAvColor(c)} aria-label={"Pick " + c}
@@ -152,6 +240,12 @@ function ProfilePage() {
                   style={{ background: c }} />
               ))}
             </div>
+
+            {modMsg && (
+              <div className="mt-4 rounded-[10px] border border-[rgba(245,165,36,0.35)] bg-[rgba(245,165,36,0.08)] px-3 py-2 text-[12.5px] text-[#f5c542]">
+                {modMsg}
+              </div>
+            )}
 
             <button onClick={save} disabled={busy}
               className="mt-6 w-full rounded-[11px] bg-[#f5a524] px-4 py-[14px] text-[14.5px] font-bold tracking-[0.02em] text-[#160e00] transition-[filter] hover:brightness-110 disabled:opacity-60">
@@ -162,6 +256,30 @@ function ProfilePage() {
       </div>
     </LobbyChrome>
   );
+}
+
+async function resizeToDataUrl(file: File, max: number, quality: number): Promise<string> {
+  const dataUrl = await new Promise<string>((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(String(r.result));
+    r.onerror = () => rej(new Error("read failed"));
+    r.readAsDataURL(file);
+  });
+  const img = await new Promise<HTMLImageElement>((res, rej) => {
+    const i = new Image();
+    i.onload = () => res(i);
+    i.onerror = () => rej(new Error("decode failed"));
+    i.src = dataUrl;
+  });
+  const scale = Math.min(1, max / Math.max(img.width, img.height));
+  const w = Math.round(img.width * scale);
+  const h = Math.round(img.height * scale);
+  const canvas = document.createElement("canvas");
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("no canvas");
+  ctx.drawImage(img, 0, 0, w, h);
+  return canvas.toDataURL("image/jpeg", quality);
 }
 
 function Label({ children, className = "" }: { children: React.ReactNode; className?: string }) {

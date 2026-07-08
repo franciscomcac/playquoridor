@@ -156,13 +156,37 @@ export function Avatar({
   name,
   color,
   size = 34,
+  imageUrl,
 }: {
   name: string;
   color?: string | null;
   size?: number;
+  imageUrl?: string | null;
 }) {
   const bg = avatarColorFor(name, color);
   const fs = Math.max(10, Math.round(size * 0.34));
+  if (imageUrl) {
+    return (
+      <span
+        className="grid flex-none place-items-center overflow-hidden"
+        style={{
+          width: size,
+          height: size,
+          borderRadius: size >= 60 ? 22 : 999,
+          background: "#0d0d10",
+        }}
+      >
+        <img
+          src={imageUrl}
+          alt={name}
+          width={size}
+          height={size}
+          className="h-full w-full object-cover"
+          loading="lazy"
+        />
+      </span>
+    );
+  }
   return (
     <span
       className="grid flex-none place-items-center rounded-full font-bold text-[#0b0b0d]"

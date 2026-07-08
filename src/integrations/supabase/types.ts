@@ -151,6 +151,94 @@ export type Database = {
           },
         ]
       }
+      moderation_events: {
+        Row: {
+          auth_user_id: string | null
+          categories: string[]
+          content: string | null
+          created_at: string
+          id: string
+          match_id: string | null
+          player_id: string
+          severity: number
+          surface: string
+          verdict: string
+        }
+        Insert: {
+          auth_user_id?: string | null
+          categories?: string[]
+          content?: string | null
+          created_at?: string
+          id?: string
+          match_id?: string | null
+          player_id: string
+          severity?: number
+          surface: string
+          verdict: string
+        }
+        Update: {
+          auth_user_id?: string | null
+          categories?: string[]
+          content?: string | null
+          created_at?: string
+          id?: string
+          match_id?: string | null
+          player_id?: string
+          severity?: number
+          surface?: string
+          verdict?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "moderation_events_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      moderation_penalties: {
+        Row: {
+          active_until: string | null
+          auth_user_id: string | null
+          created_at: string
+          id: string
+          kind: string
+          match_id: string | null
+          player_id: string
+          reason: string | null
+        }
+        Insert: {
+          active_until?: string | null
+          auth_user_id?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          match_id?: string | null
+          player_id: string
+          reason?: string | null
+        }
+        Update: {
+          active_until?: string | null
+          auth_user_id?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          match_id?: string | null
+          player_id?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "moderation_penalties_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       open_rooms: {
         Row: {
           auth_user_id: string | null
@@ -247,6 +335,7 @@ export type Database = {
         Row: {
           auth_user_id: string | null
           avatar_color: string | null
+          avatar_url: string | null
           bio: string | null
           country: string | null
           created_at: string
@@ -258,6 +347,7 @@ export type Database = {
         Insert: {
           auth_user_id?: string | null
           avatar_color?: string | null
+          avatar_url?: string | null
           bio?: string | null
           country?: string | null
           created_at?: string
@@ -269,6 +359,7 @@ export type Database = {
         Update: {
           auth_user_id?: string | null
           avatar_color?: string | null
+          avatar_url?: string | null
           bio?: string | null
           country?: string | null
           created_at?: string
@@ -381,6 +472,14 @@ export type Database = {
       complete_onboarding: {
         Args: { _country: string; _name: string; _player_id: string }
         Returns: undefined
+      }
+      my_active_chat_ban: {
+        Args: never
+        Returns: {
+          active_until: string
+          kind: string
+          reason: string
+        }[]
       }
       search_players: {
         Args: { _limit?: number; _q: string }
