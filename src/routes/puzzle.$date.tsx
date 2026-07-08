@@ -25,10 +25,6 @@ type PuzzleRow = {
 };
 
 export const Route = createFileRoute("/puzzle/$date")({
-  parseParams: ({ date }) => {
-    if (!DATE_RX.test(date)) throw notFound();
-    return { date };
-  },
   head: ({ params }) => {
     const title = `Daily Quoridor Puzzle — ${params.date}`;
     const description =
