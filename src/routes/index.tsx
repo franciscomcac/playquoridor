@@ -250,8 +250,14 @@ function Lobby() {
           className="pointer-events-none absolute left-1/2 top-[16%] h-[340px] w-[620px] -translate-x-1/2"
           style={{ background: "radial-gradient(closest-side,rgba(245,165,36,0.14),transparent 68%)", opacity: 0.6 }}
         />
-        <h1 className="relative m-0 text-[44px] font-bold leading-none tracking-[-0.035em] sm:text-[66px]">
-          play<span className="text-[#f5a524]">quoridor</span>.online
+        <h1 className="relative m-0 inline-flex items-start gap-2 text-[44px] font-bold leading-none tracking-[-0.035em] sm:gap-4 sm:text-[66px]">
+          <span>play<span className="text-[#f5a524]">quoridor</span>.online</span>
+          <span
+            aria-label="Beta"
+            className="chaos-badge relative -top-1 inline-flex select-none items-center gap-1 rounded-md border border-emerald-300/70 bg-gradient-to-br from-emerald-400 via-emerald-500 to-teal-600 px-2 py-1 font-[IBM_Plex_Mono,monospace] text-[14px] font-black uppercase tracking-[0.22em] text-emerald-950 shadow-[0_6px_22px_rgba(16,185,129,0.55),inset_0_1px_0_rgba(255,255,255,0.45)] sm:-top-2 sm:px-3 sm:py-1.5 sm:text-[20px] sm:tracking-[0.28em]"
+          >
+            Beta
+          </span>
         </h1>
         {/* Desktop / signed-in mobile: green Play Now. Signed-out mobile gets a Sign in CTA instead. */}
         <div className={"relative " + (signedIn ? "" : "hidden sm:block")}>
