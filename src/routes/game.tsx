@@ -351,8 +351,9 @@ function ChaosBanner() {
   );
 }
 
-function SaveClipButton({ state, you, nameOf }: {
+function SaveClipButton({ state, you, nameOf, snapshot }: {
   state: GameState; you: PlayerId; nameOf: (s: PlayerId) => string;
+  snapshot: MatchSnapshot | null;
 }) {
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState<"idle" | "ok" | "err" | "nope">("idle");
@@ -373,13 +374,21 @@ function SaveClipButton({ state, you, nameOf }: {
         .not("onboarded_at", "is", null).order("onboarded_at", { ascending: false })
         .limit(1).maybeSingle();
       const winnerName = state.matchWinner !== null ? nameOf(state.matchWinner) : "clip";
+      const payload = snapshot ?? JSON.parse(JSON.stringify(state));
       const { error } = await supabase.from("saved_clips").insert({
         owner_auth: u.id, owner_player_id: p?.id ?? null,
         match_id: null, mode: state.mode,
         title: `${winnerName} · ${new Date().toLocaleDateString()}`,
-        snapshot: JSON.parse(JSON.stringify(state)),
+        snapshot: payload,
       });
-      setSaved(error ? "err" : "ok");
+      if (error) { setSaved("err"); return; }
+      const { data: all } = await supabase.from("saved_clips")
+        .select("id").eq("owner_auth", u.id).order("created_at", { ascending: false });
+      const extras = (all ?? []).slice(5).map((c) => c.id);
+      if (extras.length) {
+        await supabase.from("saved_clips").delete().in("id", extras);
+      }
+      setSaved("ok");
     } catch {
       setSaved("err");
     } finally {
@@ -392,6 +401,42 @@ function SaveClipButton({ state, you, nameOf }: {
     <button onClick={onClick} disabled={busy}
       className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary disabled:opacity-60">
       {label}
+    </button>
+  );
+}
+
+function DownloadGifButton({ snapshot }: { snapshot: MatchSnapshot | null }) {
+  const [busy, setBusy] = useState(false);
+  const onClick = async () => {
+    if (!snapshot || snapshot.rounds.length === 0) return;
+    setBusy(true);
+    try {
+      const blob = await renderMatchGif(snapshot);
+      const stamp = new Date().toISOString().slice(0, 10);
+      downloadBlob(blob, `quoridor-${stamp}.gif`);
+    } catch (e) {
+      console.warn("gif render failed", e);
+    } finally { setBusy(false); }
+  };
+  return (
+    <button onClick={onClick} disabled={busy || !snapshot || snapshot.rounds.length === 0}
+      className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary disabled:opacity-60">
+      {busy ? "Rendering…" : "Download GIF"}
+    </button>
+  );
+}
+
+function AnalyzeGameButton({ snapshot }: { snapshot: MatchSnapshot | null }) {
+  const nav = useNavigate();
+  const onClick = () => {
+    if (!snapshot) return;
+    try { sessionStorage.setItem("analyze:pending", JSON.stringify(snapshot)); } catch {}
+    void nav({ to: "/analyze/$clipId", params: { clipId: "local" } });
+  };
+  return (
+    <button onClick={onClick} disabled={!snapshot || snapshot.rounds.length === 0}
+      className="rounded-lg border border-primary/60 bg-primary/10 px-5 py-2 text-sm font-medium text-primary hover:bg-primary/20 disabled:opacity-60">
+      Analyze with engine
     </button>
   );
 }
