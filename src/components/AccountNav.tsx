@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -91,7 +91,6 @@ export function AccountNav({ compact = false }: { compact?: boolean }) {
 
 function AccountMenu({ username, country, compact }: { username: string; country: string | null; compact: boolean }) {
   const [open, setOpen] = useState(false);
-  const navigate = useNavigate();
   const flag = country ? (COUNTRY_BY_ISO[country]?.flag ?? "🌐") : "🌐";
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
