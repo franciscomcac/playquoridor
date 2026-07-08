@@ -931,6 +931,7 @@ function GameScreen({
     void recordMatch({
       mode: state.mode as 2 | 4,
       rounds: state.totalRounds,
+      ranked: !!ranked,
       winnerId: winnerEntry?.playerId ?? null,
       players: Array.from({ length: state.mode }, (_, i) => {
         const entry = r.find((e) => e.slot === i);
@@ -945,6 +946,15 @@ function GameScreen({
         };
       }),
     });
+
+    // Ranked 1v1 → apply ELO once (host only) using both players' identities.
+    if (ranked && state.mode === 2) {
+      const winner = r.find((e) => e.slot === state.matchWinner);
+      const loser = r.find((e) => e.slot !== state.matchWinner);
+      if (winner?.playerId && loser?.playerId && winner.playerId !== loser.playerId) {
+        void applyElo1v1(winner.playerId, winner.name, loser.playerId, loser.name);
+      }
+    }
   }, [isHost, state]);
 
   // ---------- Bump my personal stats (every client) ----------
