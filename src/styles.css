@@ -129,6 +129,24 @@
 }
 .lose-fade { animation: lose-fade 0.5s ease-out forwards; }
 
+/* Game-aborted overlay */
+@keyframes aborted-fade-in {
+  0%   { opacity: 0; backdrop-filter: blur(0px); }
+  100% { opacity: 1; backdrop-filter: blur(6px); }
+}
+@keyframes aborted-ring-in {
+  0%   { transform: scale(0.4) rotate(-90deg); opacity: 0; box-shadow: 0 0 0 0 rgba(244,63,94,0.55); }
+  60%  { transform: scale(1.1) rotate(0deg);   opacity: 1; box-shadow: 0 0 0 18px rgba(244,63,94,0); }
+  100% { transform: scale(1)   rotate(0deg);   opacity: 1; box-shadow: 0 0 0 0 rgba(244,63,94,0); }
+}
+@keyframes aborted-text-in {
+  0%   { transform: translateY(12px); opacity: 0; letter-spacing: -0.02em; }
+  100% { transform: translateY(0);    opacity: 1; letter-spacing: normal; }
+}
+.aborted-fade { animation: aborted-fade-in 220ms ease-out forwards; }
+.aborted-ring { animation: aborted-ring-in 650ms cubic-bezier(.2,.9,.3,1.2) forwards; }
+.aborted-text { animation: aborted-text-in 500ms cubic-bezier(.2,.7,.2,1) 180ms both; }
+
 /* Pawn glide */
 .pawn-glide { transition: left 200ms cubic-bezier(.2,.7,.3,1), top 200ms cubic-bezier(.2,.7,.3,1); }
 
