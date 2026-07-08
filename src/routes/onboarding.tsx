@@ -89,14 +89,11 @@ function OnboardingPage() {
     try {
       const clean = sanitizeName(name);
       const ident = setStoredIdentity(clean);
-      const uid = await ensureAuthSession();
-      const { error: err } = await supabase.from("players").upsert({
-        id: ident.id,
-        name: ident.name,
-        auth_user_id: uid,
-        country,
-        onboarded_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+      await ensureAuthSession();
+      const { error: err } = await supabase.rpc("complete_onboarding", {
+        _player_id: ident.id,
+        _name: ident.name,
+        _country: country,
       });
       if (err) throw err;
       navigate({ to: "/" });
