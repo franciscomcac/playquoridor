@@ -25,6 +25,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PuzzleIndexRouteImport } from './routes/puzzle.index'
 import { Route as PuzzleDateRouteImport } from './routes/puzzle.$date'
+import { Route as AnalyzeClipIdRouteImport } from './routes/analyze.$clipId'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -106,6 +107,11 @@ const PuzzleDateRoute = PuzzleDateRouteImport.update({
   path: '/puzzle/$date',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AnalyzeClipIdRoute = AnalyzeClipIdRouteImport.update({
+  id: '/analyze/$clipId',
+  path: '/analyze/$clipId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -122,6 +128,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
   '/terms': typeof TermsRoute
+  '/analyze/$clipId': typeof AnalyzeClipIdRoute
   '/puzzle/$date': typeof PuzzleDateRoute
   '/puzzle/': typeof PuzzleIndexRoute
 }
@@ -140,6 +147,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
   '/terms': typeof TermsRoute
+  '/analyze/$clipId': typeof AnalyzeClipIdRoute
   '/puzzle/$date': typeof PuzzleDateRoute
   '/puzzle': typeof PuzzleIndexRoute
 }
@@ -159,6 +167,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
   '/terms': typeof TermsRoute
+  '/analyze/$clipId': typeof AnalyzeClipIdRoute
   '/puzzle/$date': typeof PuzzleDateRoute
   '/puzzle/': typeof PuzzleIndexRoute
 }
@@ -179,6 +188,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/stats'
     | '/terms'
+    | '/analyze/$clipId'
     | '/puzzle/$date'
     | '/puzzle/'
   fileRoutesByTo: FileRoutesByTo
@@ -197,6 +207,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/stats'
     | '/terms'
+    | '/analyze/$clipId'
     | '/puzzle/$date'
     | '/puzzle'
   id:
@@ -215,6 +226,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/stats'
     | '/terms'
+    | '/analyze/$clipId'
     | '/puzzle/$date'
     | '/puzzle/'
   fileRoutesById: FileRoutesById
@@ -234,6 +246,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StatsRoute: typeof StatsRoute
   TermsRoute: typeof TermsRoute
+  AnalyzeClipIdRoute: typeof AnalyzeClipIdRoute
   PuzzleDateRoute: typeof PuzzleDateRoute
   PuzzleIndexRoute: typeof PuzzleIndexRoute
 }
@@ -352,6 +365,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PuzzleDateRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/analyze/$clipId': {
+      id: '/analyze/$clipId'
+      path: '/analyze/$clipId'
+      fullPath: '/analyze/$clipId'
+      preLoaderRoute: typeof AnalyzeClipIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -370,6 +390,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StatsRoute: StatsRoute,
   TermsRoute: TermsRoute,
+  AnalyzeClipIdRoute: AnalyzeClipIdRoute,
   PuzzleDateRoute: PuzzleDateRoute,
   PuzzleIndexRoute: PuzzleIndexRoute,
 }
