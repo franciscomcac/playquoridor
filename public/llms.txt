@@ -1,0 +1,12 @@
+# playquoridor.online
+
+> Free online Quoridor — the 2- or 4-player abstract strategy board game where you race pawns across a 9×9 grid and place walls to block opponents. Play in your browser, no download, no signup.
+
+## Pages
+
+- [Play](/): Lobby with Quick Match, ranked, private rooms, bot practice, and the live 4-player free-for-all mode.
+- [About Quoridor](/about): Full rules, history, strategy tips, glossary and FAQ for the wall blocking board game.
+- [Stats & leaderboard](/stats): Global ELO leaderboard and player standings.
+- [Daily puzzle](/puzzle): Today's Quoridor tactics puzzle.
+- [Privacy](/privacy): Privacy policy.
+- [Terms](/terms): Terms of service.
