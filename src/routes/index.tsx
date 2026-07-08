@@ -1586,6 +1586,7 @@ function WinOverlay({ state, you, matchOver, onPrimary, primaryLabel, onLeave, n
             Leave
           </button>
         </div>
+        <MoveHistory state={state} nameOf={nameOf} />
       </div>
     </div>
   );
@@ -1661,6 +1662,7 @@ function EndScreen({ state, you, onPrimary, onLeave, nameOf }: {
             Leave
           </button>
         </div>
+        <MoveHistory state={state} nameOf={nameOf} />
       </div>
     </div>
   );
