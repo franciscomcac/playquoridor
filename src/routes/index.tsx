@@ -158,7 +158,7 @@ function LobbyInner() {
                   className="flex items-center justify-between rounded-lg p-2 transition-colors hover:bg-zinc-800/50"
                 >
                   <div className="flex min-w-0 items-center gap-3">
-                    <span className={"w-4 text-xs font-bold " + (i === 0 ? "text-amber-500" : "text-zinc-600")}>
+                    <span className={"w-4 text-xs font-bold " + (i === 0 ? "text-amber-500" : "text-zinc-300")}>
                       {i + 1}
                     </span>
                     <span className="truncate text-sm font-medium">{r.name}</span>
