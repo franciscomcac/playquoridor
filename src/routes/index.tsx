@@ -823,6 +823,17 @@ function GameScreen({
 
   const you = slot;
 
+  const sendChat = useCallback((text: string) => {
+    const s = slotRef.current;
+    const name = rosterRef.current.find((e) => e.slot === s)?.name ?? `Player ${s + 1}`;
+    const entry = { slot: s as number, name, text, ts: Date.now() };
+    setChat((prev) => [
+      ...prev.slice(-99),
+      { key: `${entry.ts}-${s}-me-${Math.random()}`, ...entry },
+    ]);
+    roomRef.current?.send({ type: "chat", payload: entry });
+  }, []);
+
   // ---------- Activity + AFK (host authoritative) ----------
   const lastInputRef = useRef<number[]>(Array.from({ length: initialMode }, () => Date.now()));
 
