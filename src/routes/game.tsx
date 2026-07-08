@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PLAYER_COLORS, QuoridorBoard } from "@/components/QuoridorBoard";
-import { MoveHistory, MoveHistoryPanel } from "@/components/MoveHistory";
+import { MoveHistory, MoveHistoryPanel, type HistorySnapshot } from "@/components/MoveHistory";
 import { ChatPanel, type ChatEntry } from "@/components/ChatPanel";
 import { renderResultCard, shareResultCard } from "@/lib/result-card";
 import { supabase } from "@/integrations/supabase/client";
@@ -974,7 +974,11 @@ function GameScreen({
 
   const roundOver = state.winner !== null;
   const matchOver = state.matchWinner !== null;
-  const boardInteractive = status === "connected" && state.winner === null && !coinflip?.animating;
+  const [review, setReview] = useState<HistorySnapshot | null>(null);
+  const displayState = review
+    ? { ...state, pawns: review.pawns, walls: review.walls, lastWall: review.lastWall }
+    : state;
+  const boardInteractive = status === "connected" && state.winner === null && !coinflip?.animating && !review;
 
   return (
     <div className="grid w-full max-w-6xl gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -985,7 +989,7 @@ function GameScreen({
         )}
         <div className="flex gap-2 sm:gap-3">
           <div className="relative min-w-0 flex-1">
-            <QuoridorBoard state={state} you={you} onMove={handleMove} interactive={boardInteractive} onActivity={() => markActivity(you)} />
+            <QuoridorBoard state={displayState} you={you} onMove={handleMove} interactive={boardInteractive} onActivity={() => markActivity(you)} />
             {coinflip?.animating && <CoinflipOverlay starter={coinflip.starter} you={you} mode={state.mode as Mode} name={nameOf(coinflip.starter)} />}
             {status === "waiting" && presence.count < presence.expected && (
               <WaitingOverlay count={presence.count} expected={presence.expected} isHost={isHost} onStart={hostStartMatch} />
@@ -1025,7 +1029,7 @@ function GameScreen({
 
         <ScoreCard state={state} you={you} nameOf={nameOf} />
         <PlayersCard state={state} you={you} nameOf={nameOf} />
-        <MoveHistoryPanel state={state} nameOf={nameOf} compact defaultOpen />
+        <MoveHistoryPanel state={state} nameOf={nameOf} compact defaultOpen onView={setReview} />
         <ChatPanel entries={chat} onSend={sendChat} disabled={status !== "connected"} you={you} />
         <EventLog entries={log} />
 
@@ -1942,7 +1946,11 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
 
   const roundOver = state.winner !== null;
   const matchOver = state.matchWinner !== null;
-  const boardInteractive = state.winner === null && !coinflip?.animating && state.turn === YOU;
+  const [review, setReview] = useState<HistorySnapshot | null>(null);
+  const displayState = review
+    ? { ...state, pawns: review.pawns, walls: review.walls, lastWall: review.lastWall }
+    : state;
+  const boardInteractive = state.winner === null && !coinflip?.animating && state.turn === YOU && !review;
 
   return (
     <div className="grid w-full max-w-6xl gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -1954,7 +1962,7 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
         />
         <div className="flex gap-2 sm:gap-3">
           <div className="relative min-w-0 flex-1">
-            <QuoridorBoard state={state} you={YOU} onMove={handleMove} interactive={boardInteractive} />
+            <QuoridorBoard state={displayState} you={YOU} onMove={handleMove} interactive={boardInteractive} />
             {coinflip?.animating && (
               <CoinflipOverlay starter={coinflip.starter} you={YOU} mode={2 as Mode} name={nameOf(coinflip.starter)} />
             )}
@@ -1977,7 +1985,7 @@ function BotGame({ ident, difficulty, opponentName, onLeave }: {
       <aside className="order-2 flex min-w-0 flex-col gap-3">
         <ScoreCard state={state} you={YOU} nameOf={nameOf} />
         <PlayersCard state={state} you={YOU} nameOf={nameOf} />
-        <MoveHistoryPanel state={state} nameOf={nameOf} compact defaultOpen />
+        <MoveHistoryPanel state={state} nameOf={nameOf} compact defaultOpen onView={setReview} />
 
         {toast && (
           <div className="toast-in rounded-xl border border-border bg-card p-3 text-xs uppercase tracking-widest text-primary">

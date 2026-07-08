@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   BOARD, goalsFor, startsFor,
   type GameState, type MoveRecord, type PlayerId, type Pos, type Wall,
@@ -16,25 +16,28 @@ function notate(rec: MoveRecord): string {
   return `${FILES[c]}${9 - r}${o}`;
 }
 
-type Snapshot = { pawns: Pos[]; walls: Wall[] };
+export type HistorySnapshot = { pawns: Pos[]; walls: Wall[]; lastWall: Wall | null };
 
-function reconstruct(state: GameState, upto: number): Snapshot {
+function reconstruct(state: GameState, upto: number): HistorySnapshot {
   const pawns: Pos[] = startsFor(state.mode);
   const walls: Wall[] = [];
+  let lastWall: Wall | null = null;
   const history = state.moves ?? [];
   for (let i = 0; i < upto && i < history.length; i++) {
     const rec = history[i];
     if (rec.move.kind === "pawn") {
       pawns[rec.by] = [rec.move.to[0], rec.move.to[1]];
     } else {
-      walls.push({ ...rec.move.wall, by: rec.by });
+      const w: Wall = { ...rec.move.wall, by: rec.by };
+      walls.push(w);
+      lastWall = w;
     }
   }
-  return { pawns, walls };
+  return { pawns, walls, lastWall };
 }
 
 function MiniBoard({ state, snapshot, highlight }: {
-  state: GameState; snapshot: Snapshot; highlight: MoveRecord | null;
+  state: GameState; snapshot: HistorySnapshot; highlight: MoveRecord | null;
 }) {
   const goals = goalsFor(state.mode);
   const cells: ReactNode[] = [];
@@ -143,9 +146,10 @@ export function MoveHistory({ state, nameOf }: {
   return <MoveHistoryPanel state={state} nameOf={nameOf} defaultOpen={false} />;
 }
 
-export function MoveHistoryPanel({ state, nameOf, defaultOpen = false, compact = false }: {
+export function MoveHistoryPanel({ state, nameOf, defaultOpen = false, compact = false, onView }: {
   state: GameState; nameOf: (p: PlayerId) => string;
   defaultOpen?: boolean; compact?: boolean;
+  onView?: (view: HistorySnapshot | null) => void;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const history = state.moves ?? [];
@@ -158,6 +162,16 @@ export function MoveHistoryPanel({ state, nameOf, defaultOpen = false, compact =
   }
   const snapshot = useMemo(() => reconstruct(state, step), [state, step]);
   const highlight = step > 0 ? history[step - 1] ?? null : null;
+
+  // Broadcast the currently-reviewed board so a parent can mirror it on the
+  // main game board. Emit null when the panel is closed or pinned to the
+  // latest move — that way live opponent moves snap the board back.
+  const reviewing = open && step < history.length;
+  useEffect(() => {
+    if (!onView) return;
+    onView(reviewing ? snapshot : null);
+    return () => { onView(null); };
+  }, [reviewing, snapshot, onView]);
 
   if (history.length === 0) return null;
 
