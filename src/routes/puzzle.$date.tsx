@@ -15,12 +15,12 @@ const DATE_RX = /^\d{4}-\d{2}-\d{2}$/;
 
 type PuzzleEntry = GeneratedPuzzle & { difficulty: 1 | 2 | 3; label: string };
 
-// Pool of 100 puzzles — roughly 34 easy / 33 medium / 33 hard.
+// Pool of 300 puzzles — 100 easy / 100 medium / 100 hard.
 // Each date deterministically pulls one of each so daily sets rotate
-// through the whole library over ~a month.
-const POOL_EASY = 34;
-const POOL_MED = 33;
-const POOL_HARD = 33;
+// through the whole library over ~a hundred days.
+const POOL_EASY = 100;
+const POOL_MED = 100;
+const POOL_HARD = 100;
 
 function daysSinceEpoch(dateISO: string): number {
   const t = Date.parse(dateISO + "T00:00:00Z");
