@@ -172,6 +172,7 @@ function Home() {
     setIdent(stored);
     try {
       const saved = loadInterruptedGame();
+      if (typeof window !== "undefined") { (window as any).__bootTrace = [ ...((window as any).__bootTrace ?? []), { t: Date.now(), saved, raw: localStorage.getItem("quoridor:activeGame") } ]; }
       if (saved) { setView({ name: "resume", game: saved }); return; }
       const j = sessionStorage.getItem("quoridor:pendingJoin");
       const a = sessionStorage.getItem("quoridor:pendingAction");
