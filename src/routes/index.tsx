@@ -119,7 +119,8 @@ function Lobby() {
   const [streak, setStreak] = useState<number>(0);
   const [gamesToday, setGamesToday] = useState<number>(0);
   const [inQueue, setInQueue] = useState<number>(0);
-  const [online, setOnline] = useState<number>(() => computeOnline(0));
+  const [online, setOnline] = useState<number>(180);
+  const [signedIn, setSignedIn] = useState<boolean>(false);
   const cleanCode = useMemo(
     () => code.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5),
     [code],
@@ -134,6 +135,7 @@ function Lobby() {
     void (async () => {
       const me = await requireRealUser();
       if (!alive) return;
+      setSignedIn(!!me);
       if (!me) { setRecent([]); return; }
       const [r, st] = await Promise.all([
         fetchRecentMatches(me.playerId, 4).catch(() => []),
@@ -162,6 +164,10 @@ function Lobby() {
   }, [navigate]);
 
   function onPlay() {
+    if (mode === "ranked" && !signedIn) {
+      void navigate({ to: "/auth" });
+      return;
+    }
     if (mode === "2p") go("quick2");
     else if (mode === "4p") go("quick4");
     else go("ranked2");
@@ -177,6 +183,7 @@ function Lobby() {
   }
 
   const queueLabel =
+    mode === "ranked" && !signedIn ? "SIGN IN TO PLAY RANKED" :
     mode === "2p" ? "FIND CASUAL MATCH" :
     mode === "4p" ? "FIND 4-PLAYER MATCH" :
     "QUEUE FOR RANKED";
@@ -324,9 +331,10 @@ function Lobby() {
                 { id: "ranked", title: "Ranked", sub: "ELO 1v1" },
               ] as { id: Mode; title: string; sub: string }[]).map((m) => {
                 const on = mode === m.id;
+                const locked = m.id === "ranked" && !signedIn;
                 return (
                   <button key={m.id} onClick={() => setMode(m.id)}
-                    className={"flex-1 rounded-[12px] border p-4 text-left transition-colors " +
+                    className={"relative flex-1 rounded-[12px] border p-4 text-left transition-colors " +
                       (on
                         ? "border-[rgba(245,165,36,0.35)] bg-[rgba(245,165,36,0.14)] shadow-[0_0_24px_rgba(245,165,36,0.14)]"
                         : "border-[#232329] bg-[#17171b] hover:border-[#34343e]")}>
@@ -334,6 +342,18 @@ function Lobby() {
                     <div className={"mt-[5px] text-[10.5px] font-semibold uppercase tracking-[0.13em] " + (on ? "text-[#f5a524]" : "text-[#5c5c66]")}>
                       {m.sub}
                     </div>
+                    {locked && (
+                      <span
+                        title="Sign in to play ranked"
+                        className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full border border-[#3a3a44]/70 bg-[#0d0d10]/60 px-1.5 py-[2px] font-[IBM_Plex_Mono,monospace] text-[9px] font-semibold uppercase tracking-[0.14em] text-[#a4a4b0]/80 backdrop-blur-[2px]"
+                      >
+                        <svg width="8" height="9" viewBox="0 0 10 12" aria-hidden fill="none">
+                          <path d="M2 5V3.5a3 3 0 016 0V5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                          <rect x="1.2" y="5" width="7.6" height="6" rx="1.2" stroke="currentColor" strokeWidth="1.2"/>
+                        </svg>
+                        Locked
+                      </span>
+                    )}
                   </button>
                 );
               })}
