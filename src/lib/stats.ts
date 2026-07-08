@@ -30,7 +30,7 @@ export type LeaderRow = {
   pawns_eliminated: number;
 };
 
-export async function recordMatch(m: MatchResult) {
+export async function recordMatch(m: MatchResult): Promise<string | null> {
   try {
     const uid = await ensureAuthSession();
     const myLocalId = getStoredIdentity()?.id ?? null;
@@ -53,27 +53,40 @@ export async function recordMatch(m: MatchResult) {
       auth_user_id: uid && p.id && p.id === myLocalId ? uid : null,
     }));
     await supabase.from("match_players").insert(rows);
-  } catch (err) { console.warn("recordMatch failed", err); }
+    return match.id as string;
+  } catch (err) { console.warn("recordMatch failed", err); return null; }
 }
 
 /**
  * Apply an ELO update for a completed ranked 1v1. Both stats rows are
  * updated atomically server-side so it doesn't matter which client calls
  * it — but call from ONE peer only (host) to avoid double-applying.
+ * Returns the number of rating points transferred (positive integer), or
+ * null on failure.
  */
 export async function applyElo1v1(
   winnerPlayerId: string, winnerName: string,
   loserPlayerId: string, loserName: string,
-) {
+): Promise<number | null> {
   try {
     await ensureAuthSession();
-    await supabase.rpc("apply_elo_1v1", {
+    const { data, error } = await supabase.rpc("apply_elo_1v1", {
       _winner_player_id: winnerPlayerId,
       _winner_name: winnerName,
       _loser_player_id: loserPlayerId,
       _loser_name: loserName,
     });
-  } catch (err) { console.warn("applyElo1v1 failed", err); }
+    if (error) throw error;
+    return typeof data === "number" ? data : null;
+  } catch (err) { console.warn("applyElo1v1 failed", err); return null; }
+}
+
+/** Stamp a match row with the ELO delta transferred for that ranked game. */
+export async function setMatchEloDelta(matchId: string, delta: number) {
+  try {
+    await ensureAuthSession();
+    await supabase.from("matches").update({ elo_delta: delta }).eq("id", matchId);
+  } catch (err) { console.warn("setMatchEloDelta failed", err); }
 }
 
 export async function bumpMyStats(playerId: string, delta: Partial<{
