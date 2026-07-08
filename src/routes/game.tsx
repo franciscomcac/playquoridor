@@ -846,6 +846,13 @@ type AfkState = { slot: PlayerId; deadline: number } | null;
 const AFK_IDLE_MS = 45_000;
 const AFK_COUNTDOWN_MS = 15_000;
 
+// Total round-start intro duration (including out animation) per mode. Used
+// by the parent to keep the CoinflipOverlay / FourPlayerRoundStart mounted
+// until the fade-out finishes, and to offset the first turn's clock start.
+function introDurationMs(mode: Mode): number {
+  return mode === 4 ? 7300 : 5400;
+}
+
 function GameScreen({
   ident, code, isHost, mode: initialMode, initialWalls, initialRounds, onLeave,
   quickMatch, ranked, onBotFallback, onRankedTimeout, onRequeue,
