@@ -801,6 +801,14 @@ function GameScreen({
     matchRecordedRef.current = false;
     const { totalWalls, totalRounds, mode } = stateRef.current;
     hostStartRound(initialState(mode, totalWalls, totalRounds));
+    // Kick every match off with a friendly reminder. Host is the source of
+    // truth so the message shows up once for everyone.
+    const sys = { slot: -1, name: "System", text: "Be respectful 🙌 — good luck & have fun.", ts: Date.now() };
+    setChat((prev) => [
+      ...prev.slice(-99),
+      { key: `sys-${sys.ts}-${Math.random()}`, slot: null, name: sys.name, text: sys.text, ts: sys.ts },
+    ]);
+    roomRef.current?.send({ type: "chat", payload: sys });
   }, [hostStartRound]);
 
   const hostApplyForfeit = useCallback((
@@ -931,11 +939,16 @@ function GameScreen({
           setReadySlots(p.slots as PlayerId[]);
         } else if (msg.type === "chat") {
           const p = msg.payload as { slot: number; name: string; text: string; ts: number };
+          const isSystem = (p.slot as number) < 0;
           setChat((prev) => [
             ...prev.slice(-99),
-            { key: `${p.ts}-${p.slot}-${Math.random()}`, slot: p.slot, name: p.name, text: p.text, ts: p.ts },
+            {
+              key: `${p.ts}-${p.slot}-${Math.random()}`,
+              slot: isSystem ? null : p.slot,
+              name: p.name, text: p.text, ts: p.ts,
+            },
           ]);
-          play("click");
+          if (!isSystem) play("click");
         }
       },
       onError: (err: Error) => {
