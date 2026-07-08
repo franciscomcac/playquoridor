@@ -689,6 +689,25 @@ function GameScreen({
     play("pop");
   }, []);
 
+  // Explicit leave: notify other players so they get "X left the match" and
+  // (in 2-player rooms) an immediate win, instead of a generic disconnect.
+  const handleLeave = useCallback(() => {
+    const s = stateRef.current;
+    const inMatch = s.matchWinner === null && (status === "connected" || status === "waiting");
+    if (inMatch) {
+      try {
+        if (isHost) {
+          hostApplyForfeit(slotRef.current, true, "left");
+        } else {
+          roomRef.current?.send({ type: "leave", payload: { slot: slotRef.current } });
+        }
+      } catch { /* best-effort */ }
+    }
+    // Small delay so the leave/state message actually flushes over the wire
+    // before we tear the peer connection down.
+    window.setTimeout(() => { onLeave(); }, 120);
+  }, [status, isHost, hostApplyForfeit, onLeave]);
+
   // Host-authoritative ready tracking. Guest clicks send a "ready" message;
   // host writes to local state and broadcasts the canonical list.
   const markSlotReady = useCallback((slot: PlayerId) => {
