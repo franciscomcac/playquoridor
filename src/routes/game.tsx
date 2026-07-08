@@ -72,7 +72,7 @@ export const Route = createFileRoute("/game")({
 });
 
 type View =
-  | { name: "menu" }
+  | { name: "boot" }
   | { name: "create"; mode: Mode; walls: number; rounds: number }
   | { name: "join" }
   | { name: "quick"; mode: Mode; ranked?: boolean }
@@ -83,13 +83,12 @@ type View =
 
 function Home() {
   const [ident, setIdent] = useState<Identity | null>(null);
-  const [view, setView] = useState<View>({ name: "menu" });
+  const [view, setView] = useState<View>({ name: "boot" });
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [pending, setPending] = useState<string | null>(null);
   const navigate = useNavigate();
   const bootRan = useRef(false);
   const [aborting, setAborting] = useState(false);
-  const [rankedTimedOut, setRankedTimedOut] = useState(false);
   const goHome = () => {
     // Only show the aborted animation if we're leaving mid-game.
     if (view.name === "game" || view.name === "bot" || view.name === "spectating") {
@@ -119,6 +118,7 @@ function Home() {
       const a = sessionStorage.getItem("quoridor:pendingAction");
       if (j) { sessionStorage.removeItem("quoridor:pendingJoin"); setPending(`join:${j}`); }
       else if (a) { sessionStorage.removeItem("quoridor:pendingAction"); setPending(a); }
+      else { void navigate({ to: "/" }); }
     } catch {}
   }, [navigate]);
 
@@ -162,10 +162,8 @@ function Home() {
           </div>
         ) : (
           <div key={view.name} className="view-fade flex flex-1 items-center justify-center py-4 sm:py-6">
-            {view.name === "menu" && (
-              rankedTimedOut
-                ? <SearchExpired onBack={() => setRankedTimedOut(false)} />
-                : <Menu ident={ident} onChoose={setView} onEditName={() => setIdent(null)} />
+            {view.name === "boot" && (
+              <div className="text-sm text-muted-foreground">Opening table…</div>
             )}
             {view.name === "create" && (
               <CreateRoom
@@ -223,7 +221,7 @@ function Home() {
                   difficulty: randomDifficulty().value,
                   opponentName: randomGamerName(),
                 })}
-                onRankedTimeout={view.ranked ? () => { setView({ name: "menu" }); setRankedTimedOut(true); } : undefined}
+                onRankedTimeout={view.ranked ? () => { void navigate({ to: "/" }); } : undefined}
                 onLeave={goHome}
               />
             )}
@@ -448,74 +446,6 @@ function NamePrompt({ onSubmit, initial = "" }: { onSubmit: (n: string) => void;
   );
 }
 
-function Menu({ ident, onChoose, onEditName }: {
-  ident: Identity;
-  onChoose: (v: View) => void;
-  onEditName: () => void;
-}) {
-  const [quickMode, setQuickMode] = useState<Mode>(2);
-  return (
-    <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-2xl">
-      <h1 className="text-4xl">A quiet game of Quoridor.</h1>
-      <p className="mt-3 text-sm text-muted-foreground">
-        Playing as <span className="font-semibold text-foreground">{ident.name}</span>{" "}
-        <button onClick={onEditName} className="text-primary underline underline-offset-2">edit</button>
-      </p>
-
-      <div className="mt-6 rounded-lg border border-dashed border-border bg-background/40 p-3">
-        <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Quick Match</p>
-        <div className="mt-2 flex gap-2">
-          {[2, 4].map((m) => (
-            <button key={m} onClick={() => setQuickMode(m as Mode)}
-              className={"flex-1 rounded-md border px-2 py-1.5 text-xs font-medium " +
-                (quickMode === m ? "border-primary bg-primary/10" : "border-border bg-secondary/30 text-muted-foreground")}>
-              {m}p
-            </button>
-          ))}
-        </div>
-        <button
-          onClick={() => { play("click"); onChoose({ name: "quick", mode: quickMode }); }}
-          className="mt-3 w-full rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
-        >
-          Find a match →
-        </button>
-      </div>
-
-      <div className="mt-4 flex flex-col gap-2">
-        <button
-          onClick={() => { play("click"); onChoose({ name: "create", mode: 2, walls: 10, rounds: 5 }); }}
-          className="rounded-lg border border-border bg-secondary/40 px-5 py-2.5 text-sm font-medium hover:bg-secondary"
-        >
-          Create a private room
-        </button>
-        <button
-          onClick={() => { play("click"); onChoose({ name: "join" }); }}
-          className="rounded-lg border border-border bg-secondary/40 px-5 py-2.5 text-sm font-medium hover:bg-secondary"
-        >
-          Join with code
-        </button>
-        <button
-          onClick={() => { play("click"); onChoose({ name: "spectate" }); }}
-          className="rounded-lg border border-border bg-secondary/40 px-5 py-2.5 text-sm font-medium hover:bg-secondary"
-        >
-          Spectate a match
-        </button>
-      </div>
-
-      <Link
-        to="/puzzle"
-        onClick={() => play("click")}
-        className="mt-4 flex items-center justify-between rounded-lg border border-dashed border-accent/60 bg-accent/10 px-4 py-3 text-sm hover:bg-accent/20"
-      >
-        <span className="flex flex-col">
-          <span className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Daily Puzzle</span>
-          <span className="font-semibold text-foreground">Today's board · solve it in N moves →</span>
-        </span>
-      </Link>
-    </div>
-  );
-}
-
 function CreateRoom({ mode, walls, rounds, setMode, setWalls, setRounds, onBack, onStart }: {
   mode: Mode; walls: number; rounds: number;
   setMode: (m: Mode) => void; setWalls: (n: number) => void; setRounds: (n: number) => void;
@@ -693,29 +623,6 @@ function SearchingAnimation({ status, ranked, mode, onBack }: {
           animation: qm-dot 1.4s steps(3, end) infinite;
         }
       `}</style>
-    </div>
-  );
-}
-
-function SearchExpired({ onBack }: { onBack: () => void }) {
-  return (
-    <div className="w-full max-w-lg overflow-hidden rounded-3xl border border-rose-500/20 bg-gradient-to-br from-zinc-950 via-zinc-950 to-rose-950/30 p-10 text-center shadow-[0_30px_80px_-20px_rgba(244,63,94,0.35)]">
-      <div className="relative mx-auto grid h-32 w-32 place-items-center">
-        <span className="absolute inset-0 rounded-full border border-rose-500/40 animate-[qm-ping_2s_ease-out_infinite]" />
-        <svg viewBox="0 0 48 48" className="h-16 w-16 text-rose-400" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="24" cy="24" r="20" opacity="0.4" />
-          <path d="M24 12v12l8 4" />
-        </svg>
-      </div>
-      <p className="mt-6 text-xs font-semibold uppercase tracking-[0.4em] text-rose-400">Timed out</p>
-      <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-50">Search time exceeded</h2>
-      <p className="mt-2 text-sm text-zinc-400">No opponents found. Please try again.</p>
-      <button
-        onClick={onBack}
-        className="mt-8 rounded-xl bg-emerald-500 px-6 py-3 text-xs font-semibold uppercase tracking-widest text-emerald-950 shadow-[0_15px_40px_-15px_rgba(16,185,129,0.7)] transition-transform hover:-translate-y-0.5"
-      >
-        ← Back to lobby
-      </button>
     </div>
   );
 }
