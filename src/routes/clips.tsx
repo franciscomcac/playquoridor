@@ -156,8 +156,6 @@ function MatchClipView({ clip, snapshot }: { clip: Clip; snapshot: MatchSnapshot
     </div>
   );
 }
-  }
-}
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
