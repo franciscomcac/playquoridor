@@ -299,9 +299,9 @@ function PuzzleBoard({ puzzle, onSolved }: { puzzle: PuzzleEntry; onSolved: () =
 
       <div className="wood-frame relative">
         <QuoridorBoard state={state} you={you} onMove={onMove} interactive={status === "playing" && state.turn === you} />
-        {status !== "playing" && (
+        {status === "failed" && (
           <PuzzleOverlay
-            solved={status === "solved"}
+            solved={false}
             you={you}
             onReset={reset}
           />
