@@ -1,34 +1,25 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PLAYER_COLORS, QuoridorBoard } from "@/components/QuoridorBoard";
 import {
-  applyMove, defaultWallsFor, goalsFor, reachedGoal,
+  applyMove, goalsFor, reachedGoal,
   type GameState, type Move, type Pos, type Wall,
 } from "@/lib/quoridor";
+import { pickBotMove } from "@/lib/bot";
 import { play } from "@/lib/sound";
-import { generatePuzzle, seedFromString } from "@/lib/puzzleGen";
+import { buildPuzzleGameState, generatePuzzle, seedFromString, type GeneratedPuzzle } from "@/lib/puzzleGen";
 
 const SITE_URL = "https://playquoridor.online";
 const DATE_RX = /^\d{4}-\d{2}-\d{2}$/;
 
-type PuzzleRow = {
-  id: string;
-  puzzle_date: string;
-  title: string;
-  mode: number;
-  pawns: Pos[];
-  walls: Wall[];
-  active_player: number;
-  goal_moves: number;
-  difficulty: 1 | 2 | 3;
-};
+type PuzzleEntry = GeneratedPuzzle & { difficulty: 1 | 2 | 3; label: string };
 
 export const Route = createFileRoute("/puzzle/$date")({
   head: ({ params }) => {
-    const title = `Daily Quoridor Puzzle — ${params.date}`;
+    const title = `Daily Quoridor Race Puzzles — ${params.date}`;
     const description =
-      `Solve today's daily Quoridor puzzle. A fixed board position with a target number of moves. Play free at playquoridor.online — no login required.`;
+      `Three daily Quoridor race puzzles: place walls to slow your opponent and win the race to the far row. Play free at playquoridor.online — no login required.`;
     const url = `${SITE_URL}/puzzle/${params.date}`;
     return {
       meta: [
@@ -52,7 +43,7 @@ function PuzzlePage() {
   const { date } = Route.useParams();
   if (!DATE_RX.test(date)) throw notFound();
 
-  const puzzles = useMemo<PuzzleRow[]>(() => {
+  const puzzles = useMemo<PuzzleEntry[]>(() => {
     const diffs: Array<{ label: string; d: 1 | 2 | 3 }> = [
       { label: "Easy", d: 1 },
       { label: "Medium", d: 2 },
@@ -60,17 +51,7 @@ function PuzzlePage() {
     ];
     return diffs.map(({ label, d }, i) => {
       const gen = generatePuzzle(seedFromString(`quoridor:${date}:${i}`), d);
-      return {
-        id: `${date}-${i}`,
-        puzzle_date: date,
-        title: `${label} — Puzzle ${i + 1}`,
-        mode: gen.mode,
-        pawns: gen.pawns,
-        walls: gen.walls,
-        active_player: gen.active_player,
-        goal_moves: gen.goal_moves,
-        difficulty: d,
-      };
+      return { ...gen, id: `${date}-${i}`, title: `${label} — Puzzle ${i + 1}`, difficulty: d, label };
     });
   }, [date]);
 
@@ -85,14 +66,14 @@ function PuzzlePage() {
     <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6">
       <nav className="flex items-center justify-between text-xs text-muted-foreground">
         <Link to="/" className="hover:text-foreground">← Back to game</Link>
-        <span className="tracking-widest uppercase">Daily Puzzles</span>
+        <span className="tracking-widest uppercase">Daily Race Puzzles</span>
       </nav>
 
       <header className="space-y-1">
         <p className="text-[11px] uppercase tracking-[0.3em] text-muted-foreground">{date}</p>
         <h1 className="text-3xl sm:text-4xl">{puzzle.title}</h1>
         <p className="text-sm text-muted-foreground">
-          Reach your goal row in <span className="font-semibold text-foreground">{puzzle.goal_moves}</span> moves or fewer.
+          Race your opponent to the far row. You have <span className="font-semibold text-foreground">{puzzle.playerWalls}</span> wall{puzzle.playerWalls === 1 ? "" : "s"} to slow them down. Reach row 1 before they reach row 9.
         </p>
       </header>
 
@@ -115,9 +96,9 @@ function PuzzlePage() {
                 {solved[i] && <span className="text-emerald-500">✓ Solved</span>}
               </div>
               <div className="mt-0.5 text-sm font-semibold">
-                {["Easy", "Medium", "Hard"][i]}
+                {p.label}
               </div>
-              <div className="text-[11px] text-muted-foreground">{p.goal_moves} moves</div>
+              <div className="text-[11px] text-muted-foreground">{p.playerWalls} wall{p.playerWalls === 1 ? "" : "s"}</div>
             </button>
           );
         })}
@@ -128,75 +109,75 @@ function PuzzlePage() {
   );
 }
 
-function buildPuzzleState(p: PuzzleRow): GameState {
-  const mode = (p.mode === 4 ? 4 : 2) as 2 | 4;
-  const pawns = p.pawns.map((pp) => [pp[0], pp[1]] as Pos);
-  return {
-    mode,
-    pawns,
-    active: Array.from({ length: mode }, () => true),
-    leftMatch: Array.from({ length: mode }, () => false),
-    wallsLeft: Array.from({ length: mode }, () => 0), // no wall placement in puzzles
-    walls: p.walls.map((w) => ({ r: w.r, c: w.c, o: w.o, by: (w.by ?? 1) as 0 | 1 | 2 | 3 })),
-    lastWall: null,
-    turn: (p.active_player as 0 | 1 | 2 | 3) ?? 0,
-    winner: null,
-    totalWalls: defaultWallsFor(mode),
-    score: Array.from({ length: mode }, () => 0),
-    totalRounds: 1,
-    matchWinner: null,
-    wallsPlacedByPlayer: Array.from({ length: mode }, () => 0),
-    pawnsEliminatedByPlayer: Array.from({ length: mode }, () => 0),
-    moveCount: 0,
-  };
-}
-
-function PuzzleBoard({ puzzle, onSolved }: { puzzle: PuzzleRow; onSolved: () => void }) {
-  const you = (puzzle.active_player as 0 | 1 | 2 | 3) ?? 0;
-  const [initial] = useState<GameState>(() => buildPuzzleState(puzzle));
+function PuzzleBoard({ puzzle, onSolved }: { puzzle: PuzzleEntry; onSolved: () => void }) {
+  const you = 0 as const;
+  const opp = 1 as const;
+  const [initial] = useState<GameState>(() => buildPuzzleGameState(puzzle));
   const [state, setState] = useState<GameState>(initial);
-  const [moves, setMoves] = useState(0);
   const [status, setStatus] = useState<"playing" | "solved" | "failed">("playing");
+  const busy = useRef(false);
 
-  const goal = goalsFor(state.mode)[you];
+  const goals = goalsFor(state.mode);
+  const yourGoal = goals[you];
+  const oppGoal = goals[opp];
+
+  // Opponent auto-plays whenever it's their turn.
+  useEffect(() => {
+    if (status !== "playing") return;
+    if (state.turn !== opp) return;
+    if (busy.current) return;
+    busy.current = true;
+    const t = window.setTimeout(() => {
+      const bot = pickBotMove(state, opp, 1); // pure shortest-path (no walls left)
+      busy.current = false;
+      if (!bot) return;
+      const next = applyMove(state, opp, bot);
+      if (!next) return;
+      setState(next);
+      play("pop");
+      if (bot.kind === "pawn" && reachedGoal(bot.to, oppGoal)) {
+        setStatus("failed");
+        window.setTimeout(() => play("denied"), 120);
+      }
+    }, 550);
+    return () => { window.clearTimeout(t); busy.current = false; };
+  }, [state, status, oppGoal]);
 
   const onMove = useCallback((m: Move) => {
     if (status !== "playing") return;
-    if (m.kind !== "pawn") { play("denied"); return; }
+    if (state.turn !== you) return;
     const next = applyMove(state, you, m);
     if (!next) { play("denied"); return; }
-    // Puzzle: only the player moves — force turn back to them and clear any
-    // engine-set winner (we track puzzle completion ourselves).
-    const forced: GameState = { ...next, turn: you, winner: null, active: state.active };
-    const newMoves = moves + 1;
-    setMoves(newMoves);
-    setState(forced);
-    play("pop");
-    if (reachedGoal(m.to, goal)) {
+    setState(next);
+    play(m.kind === "wall" ? "pop" : "pop");
+    if (m.kind === "pawn" && reachedGoal(m.to, yourGoal)) {
       setStatus("solved");
       onSolved();
       window.setTimeout(() => play("roundWin"), 120);
-    } else if (newMoves >= puzzle.goal_moves) {
-      setStatus("failed");
     }
-  }, [state, you, moves, puzzle.goal_moves, goal, status, onSolved]);
+  }, [state, status, yourGoal, onSolved]);
 
   const reset = () => {
-    setState(initial); setMoves(0); setStatus("playing");
+    setState(initial); setStatus("playing"); busy.current = false;
   };
 
-  const movesLeft = Math.max(0, puzzle.goal_moves - moves);
-  const dangerMoves = movesLeft <= 2 && status === "playing";
+  const wallsLeft = state.wallsLeft[you] ?? 0;
+  const oppTurn = state.turn === opp && status === "playing";
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3">
-        <div className="flex items-baseline gap-2">
-          <span className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Moves</span>
-          <span className={"text-2xl font-semibold " + (dangerMoves ? "text-destructive" : "text-foreground")}>
-            {moves}
-          </span>
-          <span className="text-sm text-muted-foreground">/ {puzzle.goal_moves}</span>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3">
+        <div className="flex items-center gap-4">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Your walls</p>
+            <p className="text-2xl font-semibold">{wallsLeft}</p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Turn</p>
+            <p className={"text-sm font-semibold " + (oppTurn ? "text-destructive" : "text-emerald-500")}>
+              {oppTurn ? "Opponent…" : "You"}
+            </p>
+          </div>
         </div>
         <button
           onClick={reset}
@@ -207,12 +188,10 @@ function PuzzleBoard({ puzzle, onSolved }: { puzzle: PuzzleRow; onSolved: () => 
       </div>
 
       <div className="wood-frame relative">
-        <QuoridorBoard state={state} you={you} onMove={onMove} interactive={status === "playing"} />
+        <QuoridorBoard state={state} you={you} onMove={onMove} interactive={status === "playing" && state.turn === you} />
         {status !== "playing" && (
           <PuzzleOverlay
             solved={status === "solved"}
-            moves={moves}
-            goal={puzzle.goal_moves}
             you={you}
             onReset={reset}
           />
@@ -220,20 +199,20 @@ function PuzzleBoard({ puzzle, onSolved }: { puzzle: PuzzleRow; onSolved: () => 
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Puzzle rules: you control the highlighted pawn. Reach your goal row in the target number of moves. Walls are fixed for this puzzle.
+        You are player 1 (bottom). Place walls to slow the opponent and race them to your goal row. Opponent auto-plays the shortest path — they cannot place walls.
       </p>
     </div>
   );
 }
 
-function PuzzleOverlay({ solved, moves, goal, you, onReset }: {
-  solved: boolean; moves: number; goal: number; you: number; onReset: () => void;
+function PuzzleOverlay({ solved, you, onReset }: {
+  solved: boolean; you: number; onReset: () => void;
 }) {
   const color = PLAYER_COLORS[you];
-  const title = solved ? "Puzzle solved" : "Out of moves";
+  const title = solved ? "You won the race" : "Opponent got there first";
   const sub = solved
-    ? `Reached the goal in ${moves} move${moves === 1 ? "" : "s"} (target ${goal}).`
-    : `You ran out of moves before reaching the goal. Try a different route.`;
+    ? "Your wall timing paid off. Try the next difficulty."
+    : "Try placing walls earlier — force the opponent onto a longer path.";
   const shareUrl = typeof window !== "undefined" ? window.location.href : "";
   const share = async () => {
     const nav = navigator as Navigator & { share?: (d: ShareData) => Promise<void> };
