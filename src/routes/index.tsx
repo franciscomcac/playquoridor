@@ -121,8 +121,8 @@ function LobbyInner() {
             <svg className="h-5 w-5 transition-transform group-hover:scale-110" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M8 5v14l11-7z" /></svg>
             Play Now
           </button>
-          <p className="mt-3 text-xs text-zinc-500">Free — no account needed</p>
-          <div className="mt-4 flex items-center gap-3 text-[11px] text-zinc-500">
+          <p className="mt-3 text-sm text-zinc-300">Free — no account needed</p>
+          <div className="mt-4 flex items-center gap-3 text-xs text-zinc-300">
             <span className="inline-flex items-center gap-1.5">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
               Matchmaking online
@@ -150,7 +150,7 @@ function LobbyInner() {
                 </li>
               ))}
               {board?.length === 0 && (
-                <li className="p-2 text-xs text-zinc-500">No ranked matches yet. Be the first.</li>
+                <li className="p-2 text-sm text-zinc-300">No ranked matches yet. Be the first.</li>
               )}
               {board?.map((r, i) => (
                 <li
@@ -158,7 +158,7 @@ function LobbyInner() {
                   className="flex items-center justify-between rounded-lg p-2 transition-colors hover:bg-zinc-800/50"
                 >
                   <div className="flex min-w-0 items-center gap-3">
-                    <span className={"w-4 text-xs font-bold " + (i === 0 ? "text-amber-500" : "text-zinc-600")}>
+                    <span className={"w-4 text-xs font-bold " + (i === 0 ? "text-amber-500" : "text-zinc-300")}>
                       {i + 1}
                     </span>
                     <span className="truncate text-sm font-medium">{r.name}</span>
@@ -178,7 +178,7 @@ function LobbyInner() {
               </span>
             </div>
 
-            <div className="mt-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">Find Match</div>
+            <div className="mt-4 text-[10px] font-bold uppercase tracking-widest text-zinc-300">Find Match</div>
             <div className="mt-3 grid grid-cols-3 gap-3">
               <ModeButton label="2 Players" sub="Casual" onClick={() => goPlay("quick2")} />
               <ModeButton label="4 Players" sub="Free-for-all" onClick={() => goPlay("quick4")} />
@@ -186,7 +186,7 @@ function LobbyInner() {
             </div>
 
             <div className="mt-6 border-t border-zinc-800 pt-5">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Play With Friends</div>
+              <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-300">Play With Friends</div>
               <div className="mt-3 flex gap-2">
                 <button
                   onClick={() => goPlay("create")}
@@ -219,7 +219,7 @@ function LobbyInner() {
 
           {/* Right: Quick Play */}
           <div className="space-y-3 lg:col-span-3">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Quick Play</div>
+            <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-300">Quick Play</div>
             <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-3">
               <div className="flex items-center gap-2 px-1 pb-2">
                 <span className="grid h-8 w-8 place-items-center rounded-lg bg-zinc-800 text-zinc-300">
@@ -227,7 +227,7 @@ function LobbyInner() {
                 </span>
                 <div>
                   <div className="text-sm font-semibold text-zinc-100">CPU Practice</div>
-                  <div className="text-[10px] uppercase tracking-widest text-zinc-500">Choose difficulty</div>
+                  <div className="text-[10px] uppercase tracking-widest text-zinc-300">Choose difficulty</div>
                 </div>
               </div>
               <div className="space-y-1.5">
@@ -245,7 +245,7 @@ function LobbyInner() {
           </div>
         </section>
 
-        <footer className="mt-10 flex flex-wrap justify-center gap-8 pt-6 text-[10px] font-semibold uppercase tracking-[0.3em] text-zinc-600">
+        <footer className="mt-10 flex flex-wrap justify-center gap-8 pt-6 text-[10px] font-semibold uppercase tracking-[0.3em] text-zinc-300">
           <Link to="/about" className="hover:text-zinc-300">About</Link>
           <Link to="/stats" className="hover:text-zinc-300">Leaderboard</Link>
           <Link to="/puzzle" className="hover:text-zinc-300">Puzzles</Link>
@@ -297,7 +297,7 @@ function ModeButton({
         {label}
       </span>
       {sub && (
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-zinc-500">{sub}</span>
+        <span className="text-[10px] font-semibold uppercase tracking-widest text-zinc-300">{sub}</span>
       )}
     </button>
   );
@@ -352,7 +352,7 @@ function QuickTile({
       </span>
       <span className="min-w-0">
         <span className="block text-sm font-bold text-zinc-100">{label}</span>
-        <span className="block text-[10px] text-zinc-500">{sub}</span>
+        <span className="block text-xs text-zinc-300">{sub}</span>
       </span>
     </Link>
   );
@@ -377,7 +377,7 @@ function CpuBtn({
       <span className="flex items-center gap-2.5">
         <span className={`h-2 w-2 rounded-full ${dot} shadow-[0_0_8px_currentColor]`} aria-hidden />
         <span className="text-sm font-bold text-zinc-100">{tier}</span>
-        <span className="text-[11px] text-zinc-500">— {name}</span>
+        <span className="text-xs text-zinc-300">— {name}</span>
       </span>
       <svg className="h-4 w-4 text-zinc-600 transition-transform group-hover:translate-x-0.5 group-hover:text-zinc-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
