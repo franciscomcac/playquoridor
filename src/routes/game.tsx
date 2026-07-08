@@ -946,8 +946,6 @@ function GameScreen({
     if (status !== "connected") return;
     if (state.winner !== null || state.matchWinner !== null) return;
     if (!state.active[you]) return;
-    const ok = window.confirm("Forfeit this round?");
-    if (!ok) return;
     if (isHost) { pushLog(`${ident.name} forfeited the round`); hostApplyForfeit(0, false, "forfeit"); }
     else roomRef.current?.send({ type: "forfeit", payload: { from: slotRef.current } });
   }, [isHost, status, state, you, hostApplyForfeit, pushLog, ident.name]);
