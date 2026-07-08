@@ -222,7 +222,7 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
                 left: `${(p[1] / BOARD) * 100}%`, top: `${(p[0] / BOARD) * 100}%`,
                 width: `${(1 / BOARD) * 100}%`, height: `${(1 / BOARD) * 100}%`, zIndex: 3,
               }}>
-              <Pawn key={`${p[0]}-${p[1]}`} player={i as PlayerId} you={you} active={state.turn === i && state.winner === null} />
+              <Pawn key={`${p[0]}-${p[1]}`} player={i as PlayerId} you={you} active={state.turn === i && state.winner === null} counterRotate={rotation} />
             </div>
           ) : null,
         )}
@@ -293,7 +293,7 @@ function WallView({ wall, tone, latest }: { wall: Wall; tone: "solid" | "ghost" 
   );
 }
 
-function Pawn({ player, you, active }: { player: PlayerId; you: PlayerId; active: boolean; }) {
+function Pawn({ player, you, active, counterRotate = 0 }: { player: PlayerId; you: PlayerId; active: boolean; counterRotate?: number; }) {
   const color = PLAYER_COLORS[player];
   const isYou = player === you;
   return (
@@ -306,7 +306,9 @@ function Pawn({ player, you, active }: { player: PlayerId; you: PlayerId; active
           (active ? `, 0 0 16px color-mix(in oklab, ${color} 65%, transparent)` : ""),
         color: "oklch(0.15 0.02 55)",
       }}>
-      {player + 1}
+      <span style={{ display: "inline-block", transform: counterRotate ? `rotate(${-counterRotate}deg)` : undefined }}>
+        {player + 1}
+      </span>
     </span>
   );
 }
