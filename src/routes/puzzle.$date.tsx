@@ -1,4 +1,4 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PLAYER_COLORS, QuoridorBoard } from "@/components/QuoridorBoard";
@@ -42,6 +42,7 @@ export const Route = createFileRoute("/puzzle/$date")({
 function PuzzlePage() {
   const { date } = Route.useParams();
   if (!DATE_RX.test(date)) throw notFound();
+  const navigate = useNavigate();
 
   const puzzles = useMemo<PuzzleEntry[]>(() => {
     const diffs: Array<{ label: string; d: 1 | 2 | 3 }> = [
@@ -57,35 +58,60 @@ function PuzzlePage() {
 
   const [activeIdx, setActiveIdx] = useState(0);
   const [solved, setSolved] = useState<boolean[]>(() => [false, false, false]);
+  const [transition, setTransition] = useState<null | "solved-flash" | "advancing" | "all-done">(null);
   const puzzle = puzzles[activeIdx];
   const markSolved = useCallback((i: number) => {
-    setSolved((s) => { if (s[i]) return s; const n = [...s]; n[i] = true; return n; });
+    setSolved((s) => {
+      if (s[i]) return s;
+      const n = [...s]; n[i] = true;
+      const isLast = i === 2 || n.every(Boolean);
+      // Flash "solved" then either advance or show completion.
+      setTransition("solved-flash");
+      window.setTimeout(() => {
+        if (isLast) {
+          setTransition("all-done");
+        } else {
+          setTransition("advancing");
+          window.setTimeout(() => {
+            setActiveIdx((idx) => Math.min(2, idx + 1));
+            setTransition(null);
+          }, 550);
+        }
+      }, 900);
+      return n;
+    });
   }, []);
 
+  const allDone = transition === "all-done";
+  const solvedCount = solved.filter(Boolean).length;
+
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6">
-      <nav className="flex items-center justify-between text-xs text-muted-foreground">
+    <main className="mx-auto flex h-[100dvh] w-full max-w-3xl flex-col gap-3 overflow-hidden px-4 py-3 sm:gap-4 sm:px-6 sm:py-5">
+      <nav className="flex flex-none items-center justify-between text-xs text-muted-foreground">
         <Link to="/" className="hover:text-foreground">← Back to game</Link>
         <span className="tracking-widest uppercase">Daily Race Puzzles</span>
       </nav>
 
-      <header className="space-y-1">
-        <p className="text-[11px] uppercase tracking-[0.3em] text-muted-foreground">{date}</p>
-        <h1 className="text-3xl sm:text-4xl">{puzzle.title}</h1>
-        <p className="text-sm text-muted-foreground">
-          Race your opponent to the far row. You have <span className="font-semibold text-foreground">{puzzle.playerWalls}</span> wall{puzzle.playerWalls === 1 ? "" : "s"} to slow them down. Reach row 1 before they reach row 9.
-        </p>
+      <header className="flex-none">
+        <div className="flex items-baseline justify-between gap-3">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">{date}</p>
+            <h1 className="text-lg font-semibold sm:text-2xl">{puzzle.title}</h1>
+          </div>
+          <ProgressPips solved={solved} active={activeIdx} />
+        </div>
       </header>
 
-      <div className="flex gap-2">
+      <div className="flex flex-none gap-2">
         {puzzles.map((p, i) => {
           const active = i === activeIdx;
           return (
             <button
               key={p.id}
-              onClick={() => setActiveIdx(i)}
+              onClick={() => { if (!transition) setActiveIdx(i); }}
+              disabled={!!transition}
               className={
-                "flex-1 rounded-xl border px-3 py-2 text-left transition " +
+                "flex-1 rounded-xl border px-3 py-1.5 text-left transition disabled:opacity-60 " +
                 (active
                   ? "border-primary bg-primary/10"
                   : "border-border bg-card hover:bg-secondary/40")
@@ -95,17 +121,101 @@ function PuzzlePage() {
                 <span>Puzzle {i + 1}</span>
                 {solved[i] && <span className="text-emerald-500">✓ Solved</span>}
               </div>
-              <div className="mt-0.5 text-sm font-semibold">
-                {p.label}
-              </div>
-              <div className="text-[11px] text-muted-foreground">{p.playerWalls} wall{p.playerWalls === 1 ? "" : "s"}</div>
+              <div className="text-sm font-semibold">{p.label}</div>
             </button>
           );
         })}
       </div>
 
-      <PuzzleBoard puzzle={puzzle} key={puzzle.id} onSolved={() => markSolved(activeIdx)} />
+      <div className="relative min-h-0 flex-1">
+        <div className={"h-full transition-all duration-500 " + (transition === "advancing" ? "-translate-x-6 opacity-0" : "opacity-100")}>
+          <PuzzleBoard puzzle={puzzle} key={puzzle.id} onSolved={() => markSolved(activeIdx)} />
+        </div>
+        {transition === "solved-flash" && (
+          <SolvedFlash index={activeIdx + 1} total={3} />
+        )}
+        {allDone && (
+          <AllDoneOverlay
+            solvedCount={solvedCount}
+            onLobby={() => navigate({ to: "/" })}
+            onCasual={() => {
+              try { sessionStorage.setItem("quoridor:pendingAction", "quick2"); } catch { /* noop */ }
+              void navigate({ to: "/game" });
+            }}
+          />
+        )}
+      </div>
     </main>
+  );
+}
+
+function ProgressPips({ solved, active }: { solved: boolean[]; active: number }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      {solved.map((s, i) => (
+        <span key={i}
+          className={
+            "h-2.5 w-2.5 rounded-full transition-all " +
+            (s
+              ? "bg-emerald-500 shadow-[0_0_10px_rgba(47,213,117,0.6)]"
+              : i === active
+                ? "bg-primary/70 scale-125"
+                : "bg-border")
+          }
+          aria-label={s ? "solved" : i === active ? "current" : "todo"}
+        />
+      ))}
+      <span className="ml-1 font-mono text-[11px] text-muted-foreground">
+        {solved.filter(Boolean).length}/3
+      </span>
+    </div>
+  );
+}
+
+function SolvedFlash({ index, total }: { index: number; total: number }) {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
+      <div className="animate-scale-in rounded-2xl border border-emerald-500/50 bg-emerald-500/15 px-8 py-6 text-center shadow-[0_0_60px_rgba(47,213,117,0.35)] backdrop-blur-sm">
+        <div className="font-mono text-[11px] uppercase tracking-[0.3em] text-emerald-300">
+          {index}/{total} solved
+        </div>
+        <div className="mt-1 text-3xl font-bold text-emerald-300">
+          {index < total ? "Nice — next puzzle" : "All three solved"}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AllDoneOverlay({ solvedCount, onLobby, onCasual }: {
+  solvedCount: number; onLobby: () => void; onCasual: () => void;
+}) {
+  return (
+    <div className="absolute inset-0 z-30 flex items-center justify-center rounded-lg bg-background/85 backdrop-blur-sm animate-fade-in">
+      <div className="animate-scale-in mx-4 flex max-w-md flex-col items-center gap-3 rounded-2xl border border-emerald-500/40 bg-card px-8 py-7 text-center shadow-2xl">
+        <div className="grid h-16 w-16 place-items-center rounded-full bg-emerald-500/15 text-3xl">
+          🏆
+        </div>
+        <p className="text-2xl font-bold">Daily set complete</p>
+        <p className="text-sm text-muted-foreground">
+          You cleared {solvedCount}/3 puzzles today. Come back tomorrow for a new set.
+        </p>
+        <div className="mt-2 flex flex-wrap justify-center gap-2">
+          <button
+            onClick={onCasual}
+            className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground hover:-translate-y-0.5 transition-transform"
+          >
+            Play a casual 1v1
+          </button>
+          <button
+            onClick={onLobby}
+            className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary"
+          >
+            Back to lobby
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
