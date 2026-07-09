@@ -3926,6 +3926,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
               <RoundEndScoreAnim
                 state={state}
                 nameOf={nameOf}
+                playerIdOf={playerIdOf}
                 onDone={() => { setRoundEndAnim(false); requestReady(); }}
               />
             )}
