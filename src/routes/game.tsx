@@ -47,6 +47,8 @@ import {
 } from "@/lib/sound";
 import { humanThinkTimeMs, pickBotMove, pickRankedBotForRating, randomDifficulty, difficultyForRating, type RankedBot } from "@/lib/bot";
 import { randomGamerName } from "@/lib/names";
+import { PlayerBanner } from "@/components/PlayerBanner";
+import { fetchBannerDataMany, fetchAchievementMeta, type BannerData } from "@/lib/stats";
 import {
   DEFAULT_CLOCK_MS, endTurn, formatClock, initClocks, liveRemaining,
   type ClockState,
@@ -946,6 +948,11 @@ function GameScreen({
   const nameOf = useCallback((s: PlayerId): string => {
     const r = rosterRef.current.find((e) => e.slot === s);
     return r?.name ?? `Player ${s + 1}`;
+  }, []);
+
+  const playerIdOf = useCallback((s: PlayerId): string | null => {
+    const r = rosterRef.current.find((e) => e.slot === s);
+    return r?.playerId ?? null;
   }, []);
 
   const pushLog = useCallback((text: string) => {
