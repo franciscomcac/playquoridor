@@ -1,69 +1,64 @@
-# Server-rendered replay clips (WebM via WASM)
+# Ranked bot pool: 100 bots with dynamic ELO, fixed strength
 
-## What changes for the user
-- The current "Download GIF / Download Clip" buttons on the game end, history, and clips pages are replaced by a single **Download Clip** button that opens a new **Export Clip** modal.
-- Modal has:
-  - Live client-side board preview that scrubs the replay locally (no network calls) with **Speed** (0.5x / 1x / 2x), **POV** (bottom / top), **Sound** (on / off), and 9:16 aspect frame.
-  - **Download** button → transitions to "Rendering on server…" with copy "You can close this and keep playing — your clip will finish downloading in the background."
-  - Final WebM file is delivered as a direct browser download once ready.
-- The existing "Share result" PNG card is untouched.
+## What's broken today
 
-## Architecture
+- Only **6 hard-coded bot rows** exist in the DB (ratings 700, 900, 1100, 1300, 1500, 1700). Ranked fallback picks whichever of those 6 is closest to your ELO — so you keep meeting the same handful.
+- Bot difficulty currently comes from a hardcoded number attached to each of the 6 tiers, so if a bot's rating drifted from wins/losses there'd be no separation between "who they are" and "how they play."
+- No mechanism to pick from a large pool by *current* rating.
 
-Two server routes (TanStack, run on Cloudflare Worker; same-origin, no CORS):
+## Goal
 
-1. `POST /api/clip/sign` — validates the move list + render options, mints a short-lived signed token (HMAC-SHA256, 5 min expiry) containing `{ moves, options, exp, nonce }`. Rate-limited per IP via KV-less in-memory heuristic + payload size cap (moves ≤ 200).
-2. `GET /api/clip/render?token=…` — verifies token, renders the replay to WebM, streams the response with `Content-Disposition: attachment; filename="quoridor-clip.webm"`.
+- **100 unique ranked bots** with gamertag-style names, seeded across the ladder.
+- Each bot has an **initial_rating** (locked forever, drives difficulty) and a **current rating** (updates like a human's after every ranked match, via existing `apply_elo_1v1`).
+- Ranked matchmaking timeout picks the bot whose **current rating** is closest to yours (with tiny jitter so it isn't always the same one).
+- Bots keep playing at the strength implied by their **initial_rating**, no matter how far their current rating drifts.
+- Bots stay hidden from the leaderboard.
 
-Signing secret: `CLIP_SIGNING_SECRET`, generated via `generate_secret` (no user interaction).
+## Plan
 
-## Rendering approach (server-side, Worker-compatible)
+### 1. Database migration
 
-Frame generation: pure-TS canvas draw against a lightweight raster buffer (`Uint8ClampedArray` RGBA) — no `node-canvas`, no `OffscreenCanvas` (not available in Workers). The board is trivial geometry (9x9 grid, pawns, walls) so we draw directly into pixel buffers with a small custom rasterizer (rects, circles, text via bitmap font). Frame size 540x960 (9:16), ~2 fps effective playback at 1x speed (one frame per half-move + brief hold frames).
+- Add `is_bot boolean not null default false` and `initial_rating int` to `public.players`.
+- Backfill the existing 6 bots: `is_bot = true`, `initial_rating = current rating`.
+- Seed **94 new bot rows** so total = 100, with:
+  - Unique UUIDs, unique gamertag-style names (curated list — no "bot" / "novice" / numeric suffixes look).
+  - `initial_rating` spread across 400–2200 (roughly matches the ladder curve, denser around 900–1500 where real players cluster).
+  - Matching `player_stats` row with `rating = initial_rating`, `ranked_matches = 0`.
+- Add index on `player_stats.rating` for fast nearest-neighbor lookup.
+- Update `search_players` to exclude `is_bot = true` so bots don't appear in friend search.
 
-Encoding: `@jsquash/webp` for animated WebP is the safest Worker-native option, but user chose WebM/VP8. Options in decreasing feasibility:
-- **`webm-wasm`** (Google, ~2MB WASM, libvpx-based). Works in Workers if we load the `.wasm` via `import wasm from './encoder.wasm'` (Vite treats it as an asset URL and Wrangler bundles it). CPU-heavy: ~40-frame clip is expected to fit in the Worker CPU budget but is the main risk.
-- If webm-wasm exceeds CPU/memory, **fallback to animated WebP** via `@jsquash/webp` (fast, tiny, wide support) with the same UX — we'll wire the endpoint so the file extension/mime is decided server-side and the client just downloads whatever comes back.
+### 2. Server function: pick bot by current rating
 
-We'll implement webm-wasm first, keep the encoder behind an interface, and ship the WebP fallback in the same PR so a runtime failure falls back gracefully.
+New `pickRankedBotForRating` server fn (public, no auth needed — reads bot rows only):
+- Query bots ordered by `abs(current_rating − player_rating)`, limit 5.
+- Pick one at random from those 5 (so the same rating band doesn't always yield the same bot).
+- Return `{ playerId, name, initialRating, currentRating }`.
 
-## Files
+### 3. Client wiring
 
-**Delete**
-- `src/lib/gifExport.ts`
-- `src/types/gifenc.d.ts`
-- `gifenc` from `package.json`
+- Replace the hardcoded `RANKED_BOTS` array in `src/lib/bot.ts` with:
+  - A `difficultyForRating(rating)` helper that maps `initial_rating` → difficulty value (piecewise: 400→0.30, 700→0.45, 1000→0.60, 1300→0.78, 1600→0.90, 2000+→0.98).
+  - Keep `RankedBot` type but source it from the server fn.
+- In `game.tsx` `onBotFallback`: call `pickRankedBotForRating(myRating)` instead of the local `rankedBotForRating`. Compute difficulty from `bot.initialRating`.
 
-**Add**
-- `src/lib/clipRender/frames.ts` — pure fn `renderFrames(snapshot, options): Uint8ClampedArray[]` (shared client preview + server render input model).
-- `src/lib/clipRender/rasterizer.server.ts` — Worker-side pixel-buffer drawing (rects/circles/text).
-- `src/lib/clipRender/encoder.server.ts` — WebM encoder wrapper (webm-wasm) with WebP fallback.
-- `src/routes/api/clip/sign.ts` — POST, mints signed token.
-- `src/routes/api/clip/render.ts` — GET, verifies token, renders + streams.
-- `src/lib/clipRender/token.server.ts` — HMAC sign/verify helpers.
-- `src/lib/clipRender/schema.ts` — Zod schema for options + moves (shared).
-- `src/components/ExportClipModal.tsx` — modal with client preview canvas + controls + download flow.
-- `public/wasm/webm.wasm` — encoder binary (copied at build time or fetched from npm package).
+### 4. Leaderboard / stats filtering
 
-**Edit**
-- `src/routes/game.tsx` — replace `DownloadGifButton` with `<ExportClipButton snapshot={…} />` opening the modal. Remove `renderMatchGif` import.
-- `src/routes/history.tsx` — same swap.
-- `src/routes/clips.tsx` — same swap.
+- Replace `RANKED_BOT_PLAYER_IDS` static list with a `is_bot = false` filter in:
+  - `fetchLeaderboard` (`src/lib/stats.ts`)
+  - Anywhere else the constant is used.
+- `apply_elo_1v1` updates: switch the "skip counter increment" check from the hardcoded UUID list to a lookup on `players.is_bot`.
 
-## Security
+### 5. Timing tweak
 
-- Token expiry: 5 min. Nonce prevents replay for caching layers.
-- Payload cap: moves ≤ 200, options whitelisted via Zod enum.
-- HMAC-SHA256 with `CLIP_SIGNING_SECRET` (generated, never exposed to client).
-- Render endpoint refuses without valid token; sign endpoint only checks payload validity, no auth required (matches barricade.gg pattern — the token IS the auth).
+- The ranked→bot fallback fires after 5s of no opponent. Keep as-is unless you want it faster.
 
-## Risks & mitigations
+## What stays the same
 
-1. **Worker CPU limit exceeded by libvpx**: mitigated by low fps, small resolution, and WebP fallback path shipped together.
-2. **WASM bundling in the TanStack Worker build**: if `import wasm from '…?url'` doesn't work in this template, we host the `.wasm` in `public/wasm/` and `fetch()` it from the render route at request time (same origin, cached).
-3. **Sound**: no server-side audio in WebM output — sound toggle only affects the client preview (UI move-click sound). This matches the "sound on/off" being a preview control; we'll label it clearly.
+- ELO math (`apply_elo_1v1`).
+- Rank overlays, bot AI engine, wall/pawn animations.
+- Bot names are still random gamertags per match display-wise — but now the underlying `player_id` and stored name are one of 100 real DB identities, so match history / rating drift is coherent.
 
-## Out of scope
-- Server-rendered audio track in the exported file.
-- MP4/H.264 output (not feasible in Worker without native binaries).
-- Persisting rendered clips to storage (each render is one-shot).
+## Open questions
+
+1. **Bot's displayed name in-match**: Keep showing a fresh `randomGamerName()` each match (current behavior), or show the bot's actual stored name (e.g. "phaseShift") so repeat matches feel like recurring rivals? I'd recommend **the actual stored name** now that there are 100 of them — makes ranked feel populated.
+2. Any specific rating spread you want (e.g. more bots at 1000–1400 where most players sit), or leave it roughly uniform 400–2200?
