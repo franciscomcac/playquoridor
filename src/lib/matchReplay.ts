@@ -120,4 +120,23 @@ export function drawState(
     ctx.lineWidth = 2;
     ctx.stroke();
   }
+
+  // Board notation: a-i columns along the bottom, 1-9 rows along the left.
+  // Row 1 sits at the bottom (r = 8), row 9 at the top (r = 0).
+  const labelSize = Math.max(9, Math.round(cell * 0.28));
+  ctx.fillStyle = "#6b7280";
+  ctx.font = `600 ${labelSize}px ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto`;
+  ctx.textBaseline = "middle";
+  ctx.textAlign = "center";
+  for (let c = 0; c < N; c++) {
+    const x = ox + c * cell + cell / 2;
+    const y = oy + size + pad / 2;
+    ctx.fillText(String.fromCharCode(97 + c), x, y);
+  }
+  ctx.textAlign = "right";
+  for (let r = 0; r < N; r++) {
+    const x = ox - pad * 0.25;
+    const y = oy + r * cell + cell / 2;
+    ctx.fillText(String(N - r), x, y);
+  }
 }
