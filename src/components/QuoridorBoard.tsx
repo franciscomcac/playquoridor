@@ -15,6 +15,11 @@ type Props = {
   /** Optional Fog-of-Walls filter: keys of walls that should be rendered.
    *  When provided, walls not in the set are hidden from view. */
   visibleWallKeys?: Set<string>;
+  /** Fog of Walls mode is active. Enables themed arena + fog overlay. */
+  fog?: boolean;
+  /** Cells currently visible to the viewer (BOARD*r + c). Cells not in
+   *  this set get an animated fog overlay when `fog` is true. */
+  visibleCells?: Set<number>;
 };
 
 export const PLAYER_COLORS = [
@@ -32,7 +37,7 @@ type Pop = { key: number; player: PlayerId; r: number; c: number };
 
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h", "i"];
 
-export function QuoridorBoard({ state, you, onMove, interactive, onActivity, visibleWallKeys }: Props) {
+export function QuoridorBoard({ state, you, onMove, interactive, onActivity, visibleWallKeys, fog, visibleCells }: Props) {
   const [hover, setHover] = useState<HoverTarget | null>(null);
   // Touch users get a two-tap flow: first tap arms a ghost wall; second tap
   // in the same spot places it. The armed spec also drives an on-board
