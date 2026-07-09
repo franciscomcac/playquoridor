@@ -3558,6 +3558,16 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave }:
     [ident.name, opponentNames],
   );
 
+  const playerIdOf = useCallback(
+    (s: PlayerId): string | null => {
+      if (s === YOU) return ident.id;
+      // Ranked bots have a stable players row; casual bots don't.
+      if (rankedBot && (s as number) === 1) return rankedBot.playerId;
+      return null;
+    },
+    [ident.id, rankedBot],
+  );
+
   const startCoinflip = useCallback((starter: PlayerId) => {
     setCoinflip({ starter, animating: true });
     play("matchStart");
