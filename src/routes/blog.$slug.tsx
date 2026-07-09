@@ -1,6 +1,6 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { LobbyChrome } from "@/components/LobbyChrome";
-import { BLOG_POSTS, getPost, type BlogBlock } from "@/lib/blog-posts";
+import { BLOG_POSTS, getPost, type BlogBlock, type BlogPost } from "@/lib/blog-posts";
 
 const SITE_URL = "https://playquoridor.online";
 
@@ -70,7 +70,7 @@ function PostNotFound() {
 }
 
 function PostPage() {
-  const p = Route.useLoaderData();
+  const p = Route.useLoaderData() as BlogPost;
   const related = BLOG_POSTS.filter((x) => x.slug !== p.slug).slice(0, 3);
   return (
     <LobbyChrome>
@@ -94,7 +94,7 @@ function PostPage() {
           </div>
         </header>
         <div className="mt-6 space-y-4 text-[15.5px] leading-[1.75] text-[#c8c8d0]">
-          {p.body.map((b, i) => <Block key={i} block={b} />)}
+          {p.body.map((b: BlogBlock, i: number) => <Block key={i} block={b} />)}
         </div>
 
         <section className="mt-12 rounded-2xl border border-[#232329] bg-[#0e0e11] p-6">

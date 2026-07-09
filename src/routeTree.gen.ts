@@ -28,6 +28,7 @@ import { Route as PuzzleIndexRouteImport } from './routes/puzzle.index'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as PuzzleDateRouteImport } from './routes/puzzle.$date'
 import { Route as PlayerPlayerIdRouteImport } from './routes/player.$playerId'
+import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as AnalyzeClipIdRouteImport } from './routes/analyze.$clipId'
 import { Route as ApiClipSignRouteImport } from './routes/api/clip/sign'
 import { Route as ApiClipRenderRouteImport } from './routes/api/clip/render'
@@ -127,6 +128,11 @@ const PlayerPlayerIdRoute = PlayerPlayerIdRouteImport.update({
   path: '/player/$playerId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BlogSlugRoute = BlogSlugRouteImport.update({
+  id: '/blog/$slug',
+  path: '/blog/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AnalyzeClipIdRoute = AnalyzeClipIdRouteImport.update({
   id: '/analyze/$clipId',
   path: '/analyze/$clipId',
@@ -160,6 +166,7 @@ export interface FileRoutesByFullPath {
   '/stats': typeof StatsRoute
   '/terms': typeof TermsRoute
   '/analyze/$clipId': typeof AnalyzeClipIdRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/player/$playerId': typeof PlayerPlayerIdRoute
   '/puzzle/$date': typeof PuzzleDateRoute
   '/blog/': typeof BlogIndexRoute
@@ -184,6 +191,7 @@ export interface FileRoutesByTo {
   '/stats': typeof StatsRoute
   '/terms': typeof TermsRoute
   '/analyze/$clipId': typeof AnalyzeClipIdRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/player/$playerId': typeof PlayerPlayerIdRoute
   '/puzzle/$date': typeof PuzzleDateRoute
   '/blog': typeof BlogIndexRoute
@@ -209,6 +217,7 @@ export interface FileRoutesById {
   '/stats': typeof StatsRoute
   '/terms': typeof TermsRoute
   '/analyze/$clipId': typeof AnalyzeClipIdRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/player/$playerId': typeof PlayerPlayerIdRoute
   '/puzzle/$date': typeof PuzzleDateRoute
   '/blog/': typeof BlogIndexRoute
@@ -235,6 +244,7 @@ export interface FileRouteTypes {
     | '/stats'
     | '/terms'
     | '/analyze/$clipId'
+    | '/blog/$slug'
     | '/player/$playerId'
     | '/puzzle/$date'
     | '/blog/'
@@ -259,6 +269,7 @@ export interface FileRouteTypes {
     | '/stats'
     | '/terms'
     | '/analyze/$clipId'
+    | '/blog/$slug'
     | '/player/$playerId'
     | '/puzzle/$date'
     | '/blog'
@@ -283,6 +294,7 @@ export interface FileRouteTypes {
     | '/stats'
     | '/terms'
     | '/analyze/$clipId'
+    | '/blog/$slug'
     | '/player/$playerId'
     | '/puzzle/$date'
     | '/blog/'
@@ -308,6 +320,7 @@ export interface RootRouteChildren {
   StatsRoute: typeof StatsRoute
   TermsRoute: typeof TermsRoute
   AnalyzeClipIdRoute: typeof AnalyzeClipIdRoute
+  BlogSlugRoute: typeof BlogSlugRoute
   PlayerPlayerIdRoute: typeof PlayerPlayerIdRoute
   PuzzleDateRoute: typeof PuzzleDateRoute
   BlogIndexRoute: typeof BlogIndexRoute
@@ -451,6 +464,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlayerPlayerIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/blog/$slug': {
+      id: '/blog/$slug'
+      path: '/blog/$slug'
+      fullPath: '/blog/$slug'
+      preLoaderRoute: typeof BlogSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/analyze/$clipId': {
       id: '/analyze/$clipId'
       path: '/analyze/$clipId'
@@ -492,6 +512,7 @@ const rootRouteChildren: RootRouteChildren = {
   StatsRoute: StatsRoute,
   TermsRoute: TermsRoute,
   AnalyzeClipIdRoute: AnalyzeClipIdRoute,
+  BlogSlugRoute: BlogSlugRoute,
   PlayerPlayerIdRoute: PlayerPlayerIdRoute,
   PuzzleDateRoute: PuzzleDateRoute,
   BlogIndexRoute: BlogIndexRoute,
