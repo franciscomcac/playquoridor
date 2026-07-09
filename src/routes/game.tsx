@@ -46,7 +46,7 @@ import {
   getVolume, initSoundOnGesture, isMuted, play, playWheelSpin, setMuted, setVolume, startSampleLoop,
 } from "@/lib/sound";
 import { humanThinkTimeMs, pickBotMove, pickRankedBotForRating, randomDifficulty, difficultyForRating, type RankedBot } from "@/lib/bot";
-import { computeVisibleWalls } from "@/lib/fog";
+import { computeVisibleWalls, computeVisibleCells } from "@/lib/fog";
 import { randomGamerName } from "@/lib/names";
 import { PlayerBanner } from "@/components/PlayerBanner";
 import { fetchBannerDataMany, fetchAchievementMeta, type BannerData } from "@/lib/stats";
@@ -1599,6 +1599,7 @@ function GameScreen({
   });
   const revealedRef = useRef<Set<string>>(new Set());
   const [visibleWallKeys, setVisibleWallKeys] = useState<Set<string> | undefined>(undefined);
+  const [visibleCells, setVisibleCells] = useState<Set<number> | undefined>(undefined);
   useEffect(() => {
     try { localStorage.setItem("quoridor:fogOfWalls", fogOn ? "1" : "0"); } catch { /* ignore */ }
   }, [fogOn]);
@@ -1608,10 +1609,11 @@ function GameScreen({
   }, [state.moveCount]);
   // Recompute visibility whenever the board changes.
   useEffect(() => {
-    if (!fogOn) { setVisibleWallKeys(undefined); return; }
+    if (!fogOn) { setVisibleWallKeys(undefined); setVisibleCells(undefined); return; }
     const next = computeVisibleWalls(state, you, revealedRef.current);
     revealedRef.current = next;
     setVisibleWallKeys(next);
+    setVisibleCells(computeVisibleCells(state, you));
   }, [state.walls, state.pawns, fogOn, you]);
   useEffect(() => {
     if (state.winner !== null && prevWinnerRef.current === null) {
@@ -1840,7 +1842,7 @@ function GameScreen({
         <PlayerBanners state={state} you={you} nameOf={nameOf} playerIdOf={playerIdOf} placement="top" />
         <div className="flex">
           <div className="relative min-w-0 flex-1">
-            <QuoridorBoard state={displayState} you={you} onMove={handleMove} interactive={boardInteractive} onActivity={() => markActivity(you)} visibleWallKeys={visibleWallKeys} />
+            <QuoridorBoard state={displayState} you={you} onMove={handleMove} interactive={boardInteractive} onActivity={() => markActivity(you)} visibleWallKeys={visibleWallKeys} fog={fogOn} visibleCells={visibleCells} />
             {coinflip?.animating && <CoinflipOverlay starter={coinflip.starter} you={you} mode={state.mode as Mode} nameOf={nameOf} playerIdOf={playerIdOf} />}
             {!usesRadar && status === "waiting" && presence.count < presence.expected && (
               <WaitingOverlay count={presence.count} expected={presence.expected} isHost={isHost} onStart={hostStartMatch} />
@@ -3705,6 +3707,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
   });
   const revealedRef = useRef<Set<string>>(new Set());
   const [visibleWallKeys, setVisibleWallKeys] = useState<Set<string> | undefined>(undefined);
+  const [visibleCells, setVisibleCells] = useState<Set<number> | undefined>(undefined);
   useEffect(() => {
     try { localStorage.setItem("quoridor:fogOfWalls", fogOn ? "1" : "0"); } catch { /* ignore */ }
   }, [fogOn]);
@@ -3712,10 +3715,11 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
     if ((state.moveCount ?? 0) === 0) revealedRef.current = new Set();
   }, [state.moveCount]);
   useEffect(() => {
-    if (!fogOn) { setVisibleWallKeys(undefined); return; }
+    if (!fogOn) { setVisibleWallKeys(undefined); setVisibleCells(undefined); return; }
     const next = computeVisibleWalls(state, YOU, revealedRef.current);
     revealedRef.current = next;
     setVisibleWallKeys(next);
+    setVisibleCells(computeVisibleCells(state, YOU));
   }, [state.walls, state.pawns, fogOn]);
 
   // Helper: apply a move and roll the clock over to the next player.
@@ -3887,7 +3891,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
         <PlayerBanners state={state} you={YOU} nameOf={nameOf} playerIdOf={playerIdOf} placement="top" />
         <div className="flex">
           <div className="relative min-w-0 flex-1">
-            <QuoridorBoard state={displayState} you={YOU} onMove={handleMove} interactive={boardInteractive} visibleWallKeys={visibleWallKeys} />
+            <QuoridorBoard state={displayState} you={YOU} onMove={handleMove} interactive={boardInteractive} visibleWallKeys={visibleWallKeys} fog={fogOn} visibleCells={visibleCells} />
             {coinflip?.animating && (
               <CoinflipOverlay starter={coinflip.starter} you={YOU} mode={mode} nameOf={nameOf} playerIdOf={playerIdOf} />
             )}

@@ -15,6 +15,11 @@ type Props = {
   /** Optional Fog-of-Walls filter: keys of walls that should be rendered.
    *  When provided, walls not in the set are hidden from view. */
   visibleWallKeys?: Set<string>;
+  /** Fog of Walls mode is active. Enables themed arena + fog overlay. */
+  fog?: boolean;
+  /** Cells currently visible to the viewer (BOARD*r + c). Cells not in
+   *  this set get an animated fog overlay when `fog` is true. */
+  visibleCells?: Set<number>;
 };
 
 export const PLAYER_COLORS = [
@@ -32,7 +37,7 @@ type Pop = { key: number; player: PlayerId; r: number; c: number };
 
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h", "i"];
 
-export function QuoridorBoard({ state, you, onMove, interactive, onActivity, visibleWallKeys }: Props) {
+export function QuoridorBoard({ state, you, onMove, interactive, onActivity, visibleWallKeys, fog, visibleCells }: Props) {
   const [hover, setHover] = useState<HoverTarget | null>(null);
   // Touch users get a two-tap flow: first tap arms a ghost wall; second tap
   // in the same spot places it. The armed spec also drives an on-board
@@ -328,7 +333,7 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity, vis
           <span key={i} className="text-center leading-none">{BOARD - i}</span>
         ))}
       </div>
-      <div className="wood-frame aspect-square w-full min-w-0">
+      <div className={"aspect-square w-full min-w-0 " + (fog ? "fog-frame" : "wood-frame")}>
       <div ref={boardRef}
         onPointerMove={handlePointerMove}
         onPointerLeave={() => setHover(null)}
@@ -336,7 +341,7 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity, vis
         className="relative h-full w-full select-none overflow-hidden rounded-md"
         style={{
           cursor,
-          background: "var(--board-bg)",
+          background: fog ? "var(--fog-board-bg, #0a0616)" : "var(--board-bg)",
           transform: rotation ? `rotate(${rotation}deg)` : undefined,
           transition: "transform 240ms ease",
           touchAction: "manipulation",
@@ -372,6 +377,28 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity, vis
         {pops.map((p) => (
           <PopFX key={p.key} r={p.r} c={p.c} color={PLAYER_COLORS[p.player]} />
         ))}
+
+        {fog && (
+          <div className="pointer-events-none absolute inset-0 z-[4]">
+            {Array.from({ length: BOARD * BOARD }, (_, i) => {
+              const r = Math.floor(i / BOARD), c = i % BOARD;
+              if (visibleCells && visibleCells.has(i)) return null;
+              const delay = ((r * 7 + c * 11) % 13) * -0.9;
+              const drift = ((r * 3 + c * 5) % 5) * -1.3;
+              return (
+                <div key={`fog-${i}`} className="fog-cell"
+                  style={{
+                    left: `${(c / BOARD) * 100}%`,
+                    top: `${(r / BOARD) * 100}%`,
+                    width: `${(1 / BOARD) * 100}%`,
+                    height: `${(1 / BOARD) * 100}%`,
+                    animationDelay: `${delay}s, ${drift}s`,
+                  }} />
+              );
+            })}
+            <div className="fog-vignette" />
+          </div>
+        )}
       </div>
       </div>
       <div />
