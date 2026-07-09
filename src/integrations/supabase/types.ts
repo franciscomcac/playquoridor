@@ -56,6 +56,135 @@ export type Database = {
         }
         Relationships: []
       }
+      forum_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          name: string
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          name: string
+          slug: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          name?: string
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      forum_posts: {
+        Row: {
+          author_id: string
+          author_player_id: string | null
+          body: string
+          created_at: string
+          id: string
+          thread_id: string
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          author_player_id?: string | null
+          body: string
+          created_at?: string
+          id?: string
+          thread_id: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          author_player_id?: string | null
+          body?: string
+          created_at?: string
+          id?: string
+          thread_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_posts_author_player_id_fkey"
+            columns: ["author_player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_posts_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "forum_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      forum_threads: {
+        Row: {
+          author_id: string
+          author_player_id: string | null
+          body: string
+          category_slug: string
+          created_at: string
+          id: string
+          last_activity_at: string
+          locked: boolean
+          pinned: boolean
+          reply_count: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          author_player_id?: string | null
+          body: string
+          category_slug: string
+          created_at?: string
+          id?: string
+          last_activity_at?: string
+          locked?: boolean
+          pinned?: boolean
+          reply_count?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          author_player_id?: string | null
+          body?: string
+          category_slug?: string
+          created_at?: string
+          id?: string
+          last_activity_at?: string
+          locked?: boolean
+          pinned?: boolean
+          reply_count?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_threads_author_player_id_fkey"
+            columns: ["author_player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_threads_category_slug_fkey"
+            columns: ["category_slug"]
+            isOneToOne: false
+            referencedRelation: "forum_categories"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
       friendships: {
         Row: {
           addressee_auth: string
@@ -553,6 +682,27 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -591,6 +741,14 @@ export type Database = {
         Args: { _player_id: string; _progress?: Json; _slug: string }
         Returns: boolean
       }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_chat_banned: { Args: never; Returns: boolean }
       my_active_chat_ban: {
         Args: never
         Returns: {
@@ -632,6 +790,7 @@ export type Database = {
     }
     Enums: {
       achievement_tier: "bronze" | "silver" | "gold" | "platinum" | "mythic"
+      app_role: "admin" | "moderator" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -760,6 +919,7 @@ export const Constants = {
   public: {
     Enums: {
       achievement_tier: ["bronze", "silver", "gold", "platinum", "mythic"],
+      app_role: ["admin", "moderator", "user"],
     },
   },
 } as const
