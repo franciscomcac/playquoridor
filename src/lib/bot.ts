@@ -10,37 +10,57 @@ import {
 
 export type BotDifficulty = { label: "Medium" | "Hard"; value: number };
 
-// ---------- Ranked bot tiers ----------
-// Fixed player rows exist in the DB for each of these UUIDs (seeded by
-// migration). ELO transfers between the caller and the chosen bot the
-// same way it would against a human of the bot's stored rating.
+// ---------- Ranked bots ----------
+// The DB holds 100 bot player rows. Each has a locked `initial_rating`
+// (drives play strength) and a `current_rating` that drifts like a human's
+// after every ranked match. Matchmaking picks the bot whose CURRENT rating
+// is closest to the caller's, with light jitter server-side. Difficulty
+// is derived from the bot's INITIAL rating so its play strength never
+// changes even as its ELO drifts.
+import { supabase } from "@/integrations/supabase/client";
+
 export type RankedBot = {
   playerId: string;
   name: string;
-  targetRating: number;
+  /** Locked at creation — drives play strength forever. */
+  initialRating: number;
+  /** Drifts with wins/losses; used for matchmaking proximity only. */
+  currentRating: number;
+  /** Difficulty derived from initialRating (0..1). */
   difficulty: number;
 };
 
-export const RANKED_BOTS: RankedBot[] = [
-  { playerId: "b0700000-0000-4000-8000-000000000700", name: "zephyr77",     targetRating: 700,  difficulty: 0.42 },
-  { playerId: "b0900000-0000-4000-8000-000000000900", name: "voidwalker",   targetRating: 900,  difficulty: 0.58 },
-  { playerId: "b1100000-0000-4000-8000-000000001100", name: "kingslayer",   targetRating: 1100, difficulty: 0.72 },
-  { playerId: "b1300000-0000-4000-8000-000000001300", name: "neonPulse",    targetRating: 1300, difficulty: 0.84 },
-  { playerId: "b1500000-0000-4000-8000-000000001500", name: "phaseShift",   targetRating: 1500, difficulty: 0.92 },
-  { playerId: "b1700000-0000-4000-8000-000000001700", name: "wraithkin",    targetRating: 1700, difficulty: 0.98 },
-];
-
-export const RANKED_BOT_PLAYER_IDS = RANKED_BOTS.map((bot) => bot.playerId);
-
-/** Pick the ranked bot whose target rating is closest to the player's. */
-export function rankedBotForRating(rating: number): RankedBot {
-  let best = RANKED_BOTS[0];
-  let bestGap = Math.abs(rating - best.targetRating);
-  for (const b of RANKED_BOTS) {
-    const gap = Math.abs(rating - b.targetRating);
-    if (gap < bestGap) { bestGap = gap; best = b; }
+/** Piecewise mapping of a locked initial rating to bot difficulty (0..1). */
+export function difficultyForRating(rating: number): number {
+  const points: Array<[number, number]> = [
+    [400, 0.30], [700, 0.45], [1000, 0.60],
+    [1300, 0.78], [1600, 0.90], [2000, 0.98],
+  ];
+  if (rating <= points[0][0]) return points[0][1];
+  if (rating >= points[points.length - 1][0]) return points[points.length - 1][1];
+  for (let i = 0; i < points.length - 1; i++) {
+    const [r1, d1] = points[i];
+    const [r2, d2] = points[i + 1];
+    if (rating >= r1 && rating <= r2) {
+      const t = (rating - r1) / (r2 - r1);
+      return d1 + (d2 - d1) * t;
+    }
   }
-  return best;
+  return 0.6;
+}
+
+/** Pick a ranked bot near the caller's rating via the server. */
+export async function pickRankedBotForRating(rating: number): Promise<RankedBot | null> {
+  const { data, error } = await supabase.rpc("pick_ranked_bot", { _rating: Math.round(rating) });
+  if (error || !data || !Array.isArray(data) || data.length === 0) return null;
+  const row = data[0] as { player_id: string; name: string; initial_rating: number; current_rating: number };
+  return {
+    playerId: row.player_id,
+    name: row.name,
+    initialRating: row.initial_rating,
+    currentRating: row.current_rating,
+    difficulty: difficultyForRating(row.initial_rating),
+  };
 }
 
 export function randomDifficulty(): BotDifficulty {

@@ -43,7 +43,7 @@ import {
 import {
   getVolume, initSoundOnGesture, isMuted, play, playWheelSpin, setMuted, setVolume, startSampleLoop,
 } from "@/lib/sound";
-import { humanThinkTimeMs, pickBotMove, randomDifficulty, rankedBotForRating, type RankedBot } from "@/lib/bot";
+import { humanThinkTimeMs, pickBotMove, pickRankedBotForRating, randomDifficulty, difficultyForRating, type RankedBot } from "@/lib/bot";
 import { randomGamerName } from "@/lib/names";
 import {
   DEFAULT_CLOCK_MS, endTurn, formatClock, initClocks, liveRemaining,
@@ -290,14 +290,18 @@ function Home() {
                   // difficulty and stored ELO match the player's rating.
                   const stats = await fetchMyStats(ident.id).catch(() => null);
                   const rating = (stats as { rating?: number } | null)?.rating ?? 1000;
-                  const bot = rankedBotForRating(rating);
+                  const bot = await pickRankedBotForRating(rating);
+                  if (!bot) {
+                    // Extremely defensive fallback — should never happen with 100 seeded bots.
+                    setView({ name: "bot", mode: 2, difficulty: difficultyForRating(rating), opponentNames: [randomGamerName()] });
+                    return;
+                  }
                   setView({
                     name: "bot",
                     mode: 2,
                     difficulty: bot.difficulty,
-                    // Display a fresh random gamertag each ranked fallback match.
-                    // The bot's stable player_id still drives ELO.
-                    opponentNames: [randomGamerName()],
+                    // Show the bot's actual stored gamertag so repeat encounters feel real.
+                    opponentNames: [bot.name],
                     rankedBot: bot,
                   });
                 } : view.ranked ? undefined : () => setView({
