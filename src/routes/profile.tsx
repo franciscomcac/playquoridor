@@ -8,6 +8,7 @@ import { fetchProfile, fetchMyWinStreak, updateMyProfile, renameMyPlayer, fetchR
 import { saveBio, saveAvatar, moderateUsername } from "@/lib/moderation.functions";
 import { ConstellationSigil, type SigilTier } from "@/components/ConstellationSigil";
 import { supabase } from "@/integrations/supabase/client";
+import { partitionCatalog, type SlugMeta } from "@/lib/achievement-families";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
@@ -30,6 +31,8 @@ function ProfilePage() {
   const [recent, setRecent] = useState<RecentMatchRow[]>([]);
   const [badges, setBadges] = useState<Array<{ slug: string; name: string; tier: SigilTier; sigil_key: string; unlocked_at: string | null; description: string }>>([]);
   const [badgeCounts, setBadgeCounts] = useState<{ unlocked: number; total: number }>({ unlocked: 0, total: 0 });
+  const [catalog, setCatalog] = useState<SlugMeta[]>([]);
+  const [unlockedSet, setUnlockedSet] = useState<Set<string>>(new Set());
 
   const [pname, setPname] = useState("");
   const [pbio, setPbio] = useState("");
@@ -86,6 +89,8 @@ function ProfilePage() {
       });
       setBadges(withState);
       setBadgeCounts({ unlocked: unlockedMap.size, total: catalog.length });
+      setCatalog(catalog.map((c) => ({ slug: c.slug, name: c.name, description: c.description, tier: c.tier, sigil_key: c.sigil_key })));
+      setUnlockedSet(new Set(unlockedMap.keys()));
     })();
   }, [me]);
 
@@ -365,24 +370,7 @@ function ProfilePage() {
               <div className="h-full rounded-full bg-[linear-gradient(90deg,#f5a524,#f5c542)]" style={{ width: `${Math.round((badgeCounts.unlocked / badgeCounts.total) * 100)}%` }} />
             </div>
           )}
-          <div className="mt-5 grid grid-cols-3 gap-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8">
-            {badges.slice(0, 16).map((b) => (
-              <Link
-                key={b.slug}
-                to="/achievements"
-                title={`${b.name} — ${b.description}${b.unlocked_at ? "" : " (locked)"}`}
-                className="group flex flex-col items-center rounded-[12px] border border-[#1f1f25] bg-[#0d0d10] px-2 py-3 transition hover:border-[rgba(245,165,36,0.35)]"
-              >
-                <ConstellationSigil sigilKey={b.sigil_key} tier={b.tier} size={54} locked={!b.unlocked_at} />
-                <div className={"mt-2 line-clamp-1 text-[10.5px] font-semibold uppercase tracking-[0.06em] " + (b.unlocked_at ? "text-[#ececf1]" : "text-[#5c5c66]")}>
-                  {b.name}
-                </div>
-              </Link>
-            ))}
-            {badges.length === 0 && (
-              <div className="col-span-full text-[12.5px] text-[#5c5c66]">Play a ranked or casual match to start unlocking badges.</div>
-            )}
-          </div>
+          <BadgesGrid catalog={catalog} unlocked={unlockedSet} />
         </section>
 
         {/* Match history */}
@@ -457,6 +445,65 @@ function StatBox({ v, l }: { v: React.ReactNode; l: string }) {
     <div className="rounded-[12px] border border-[#232329] bg-[#17171b] px-4 py-[14px] text-center">
       <div className="font-[IBM_Plex_Mono,monospace] text-[20px] font-semibold">{v}</div>
       <div className="mt-[5px] text-[10.5px] font-semibold uppercase tracking-[0.12em] text-[#5c5c66]">{l}</div>
+    </div>
+  );
+}
+
+// Badges grid — collapses same-family tiered slugs (win_10..win_1000) into
+// one card that shows a "Lv N / M" level pip below the sigil.
+function BadgesGrid({ catalog, unlocked }: { catalog: SlugMeta[]; unlocked: Set<string> }) {
+  if (catalog.length === 0) {
+    return <div className="mt-5 text-[12.5px] text-[#5c5c66]">Play a ranked or casual match to start unlocking badges.</div>;
+  }
+  const { families, singles } = partitionCatalog(catalog, unlocked);
+  type Cell = {
+    key: string; sigil_key: string; tier: SigilTier; name: string; unlocked: boolean;
+    level?: { cur: number; max: number };
+  };
+  const familyCells: Cell[] = families.map((f) => ({
+    key: `fam-${f.family.id}`,
+    sigil_key: f.sigilKey,
+    tier: f.tier,
+    name: f.family.name,
+    unlocked: f.currentLevel > 0,
+    level: { cur: f.currentLevel, max: f.family.slugs.length },
+  }));
+  const singleCells: Cell[] = singles.map((s) => ({
+    key: `slug-${s.slug}`,
+    sigil_key: s.sigil_key,
+    tier: s.tier,
+    name: s.name,
+    unlocked: unlocked.has(s.slug),
+  }));
+  const cells = [...familyCells, ...singleCells];
+  cells.sort((a, b) => (a.unlocked === b.unlocked ? 0 : a.unlocked ? -1 : 1));
+  return (
+    <div className="mt-5 grid grid-cols-3 gap-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8">
+      {cells.slice(0, 20).map((c) => (
+        <Link
+          key={c.key}
+          to="/achievements"
+          title={c.name}
+          className="group flex flex-col items-center rounded-[12px] border border-[#1f1f25] bg-[#0d0d10] px-2 py-3 transition hover:border-[rgba(245,165,36,0.35)]"
+        >
+          <ConstellationSigil sigilKey={c.sigil_key} tier={c.tier} size={54} locked={!c.unlocked} />
+          <div className={"mt-2 line-clamp-1 text-[10.5px] font-semibold uppercase tracking-[0.06em] " + (c.unlocked ? "text-[#ececf1]" : "text-[#5c5c66]")}>
+            {c.name}
+          </div>
+          {c.level && (
+            <div className="mt-1 flex items-center gap-[3px]">
+              {Array.from({ length: c.level.max }).map((_, i) => (
+                <span
+                  key={i}
+                  className="block h-[3px] w-[6px] rounded-full"
+                  style={{ background: i < c.level!.cur ? "#f5a524" : "#2a2a34" }}
+                />
+              ))}
+              <span className="ml-1 text-[9px] font-mono tabular-nums text-[#a4a4b0]">Lv {c.level.cur}</span>
+            </div>
+          )}
+        </Link>
+      ))}
     </div>
   );
 }

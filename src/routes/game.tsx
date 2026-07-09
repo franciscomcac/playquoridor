@@ -47,6 +47,9 @@ import {
 } from "@/lib/sound";
 import { humanThinkTimeMs, pickBotMove, pickRankedBotForRating, randomDifficulty, difficultyForRating, type RankedBot } from "@/lib/bot";
 import { randomGamerName } from "@/lib/names";
+import { PlayerBanner } from "@/components/PlayerBanner";
+import { fetchBannerDataMany, fetchAchievementMeta, type BannerData } from "@/lib/stats";
+import { ConstellationSigil, type SigilTier } from "@/components/ConstellationSigil";
 import {
   DEFAULT_CLOCK_MS, endTurn, formatClock, initClocks, liveRemaining,
   type ClockState,
@@ -948,6 +951,11 @@ function GameScreen({
     return r?.name ?? `Player ${s + 1}`;
   }, []);
 
+  const playerIdOf = useCallback((s: PlayerId): string | null => {
+    const r = rosterRef.current.find((e) => e.slot === s);
+    return r?.playerId ?? null;
+  }, []);
+
   const pushLog = useCallback((text: string) => {
     setLog((prev) => [...prev.slice(-30), { key: Date.now() + Math.random(), text }]);
   }, []);
@@ -1792,11 +1800,11 @@ function GameScreen({
         {afk && state.winner === null && state.matchWinner === null && (
           <AfkBanner slot={afk.slot} deadline={afk.deadline} name={nameOf(afk.slot)} />
         )}
-        <MobileMatchStrip state={state} you={you} nameOf={nameOf} />
+        <PlayerBanners state={state} you={you} nameOf={nameOf} playerIdOf={playerIdOf} placement="top" />
         <div className="flex gap-2 sm:gap-3">
           <div className="relative min-w-0 flex-1">
             <QuoridorBoard state={displayState} you={you} onMove={handleMove} interactive={boardInteractive} onActivity={() => markActivity(you)} />
-            {coinflip?.animating && <CoinflipOverlay starter={coinflip.starter} you={you} mode={state.mode as Mode} nameOf={nameOf} />}
+            {coinflip?.animating && <CoinflipOverlay starter={coinflip.starter} you={you} mode={state.mode as Mode} nameOf={nameOf} playerIdOf={playerIdOf} />}
             {!usesRadar && status === "waiting" && presence.count < presence.expected && (
               <WaitingOverlay count={presence.count} expected={presence.expected} isHost={isHost} onStart={hostStartMatch} />
             )}
@@ -1819,6 +1827,7 @@ function GameScreen({
             <BoardSideClocks state={state} you={you} nameOf={nameOf} />
           </div>
         </div>
+        <PlayerBanners state={state} you={you} nameOf={nameOf} playerIdOf={playerIdOf} placement="bottom" />
       </div>
 
       {matchOver && (
@@ -2033,6 +2042,41 @@ function WallCounter({ count, color }: { count: number; color: string }) {
   );
 }
 
+// ================ In-game top/bottom player banners =================
+// Opponent banners render above the board; the local player's banner
+// renders below. In 4P mode the top row shows all 3 opponents side by side.
+function PlayerBanners({ state, you, nameOf, playerIdOf, placement }: {
+  state: GameState; you: PlayerId;
+  nameOf: (s: PlayerId) => string;
+  playerIdOf: (s: PlayerId) => string | null;
+  placement: "top" | "bottom";
+}) {
+  const seats: PlayerId[] = [];
+  for (let i = 0; i < state.mode; i++) seats.push(i as PlayerId);
+  const relevant = placement === "top" ? seats.filter((s) => s !== you) : [you];
+  if (relevant.length === 0) return null;
+  return (
+    <div className={"grid gap-2 sm:gap-3 " + (relevant.length === 1 ? "grid-cols-1" : relevant.length === 2 ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-3")}>
+      {relevant.map((s) => {
+        const isTurn = state.turn === s && state.winner === null && state.matchWinner === null && state.active[s];
+        return (
+          <PlayerBanner
+            key={s}
+            slot={s as number}
+            color={PLAYER_COLORS[s]}
+            name={nameOf(s)}
+            isYou={s === you}
+            isTurn={isTurn}
+            wallsLeft={state.wallsLeft[s] ?? 0}
+            playerId={playerIdOf(s)}
+            align={placement}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 function EventLog({ entries }: { entries: EventEntry[] }) {
   if (entries.length === 0) return null;
   return (
@@ -2061,9 +2105,10 @@ function titleFor(name: string): string {
   return TITLE_POOL[Math.abs(h) % TITLE_POOL.length];
 }
 
-function RoundStartBanner({ slot, name, side, phase, isWinner, isLoser }: {
+function RoundStartBanner({ slot, name, side, phase, isWinner, isLoser, playerId }: {
   slot: PlayerId; name: string; side: "left" | "right"; phase: number;
   isWinner: boolean; isLoser: boolean;
+  playerId: string | null;
 }) {
   const color = PLAYER_COLORS[slot];
   const landed = phase >= 1;
@@ -2073,7 +2118,7 @@ function RoundStartBanner({ slot, name, side, phase, isWinner, isLoser }: {
     : "0 20px 50px rgba(0,0,0,.45)";
   return (
     <div
-      className="relative flex items-center gap-4 rounded-2xl border px-4 py-3 sm:gap-5 sm:px-5 sm:py-4"
+      className="relative flex items-center gap-5 rounded-2xl border px-5 py-4 sm:gap-6 sm:px-7 sm:py-6"
       style={{
         borderColor: "color-mix(in oklab, var(--border) 70%, transparent)",
         background: "color-mix(in oklab, var(--card) 92%, black 8%)",
@@ -2100,10 +2145,10 @@ function RoundStartBanner({ slot, name, side, phase, isWinner, isLoser }: {
       </div>
       {/* Avatar */}
       <div
-        className="grid h-14 w-14 flex-none place-items-center rounded-full text-lg font-extrabold sm:h-16 sm:w-16 sm:text-xl"
+        className="grid h-20 w-20 flex-none place-items-center rounded-full text-2xl font-extrabold sm:h-24 sm:w-24 sm:text-3xl"
         style={{
           background: `radial-gradient(circle at 32% 28%, color-mix(in oklab, ${color} 55%, white 50%), ${color} 55%, color-mix(in oklab, ${color} 60%, black 40%) 100%)`,
-          border: `3px solid ${color}`,
+          border: `4px solid ${color}`,
           color: "oklch(0.15 0.02 55)",
         }}
       >
@@ -2111,25 +2156,61 @@ function RoundStartBanner({ slot, name, side, phase, isWinner, isLoser }: {
       </div>
       {/* Name + title */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <p className="truncate text-base font-extrabold text-foreground sm:text-lg" style={{ color: "var(--foreground)" }}>
+        <p className="truncate text-xl font-extrabold text-foreground sm:text-2xl" style={{ color: "var(--foreground)" }}>
           {name}
         </p>
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+        <p className="text-[11.5px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
           {titleFor(name)}
         </p>
       </div>
-      {/* Badge slots (3) */}
-      <div className="hidden flex-none gap-1.5 sm:flex">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="h-7 w-7 rounded-full border border-dashed" style={{ borderColor: "color-mix(in oklab, var(--foreground) 18%, transparent)" }} />
-        ))}
-      </div>
+      {/* Showcased badges */}
+      <IntroBadgeSlots playerId={playerId} size={44} count={3} />
     </div>
   );
 }
 
-function CoinflipOverlay({ starter, you, mode, nameOf }: {
+// Small helper: fetches showcased achievements for a player and renders up
+// to `count` constellation sigils. Used on the round-start intro banners.
+function IntroBadgeSlots({ playerId, size, count }: { playerId: string | null; size: number; count: number }) {
+  const [banner, setBanner] = useState<BannerData | null>(null);
+  const [meta, setMeta] = useState<Map<string, { sigil_key: string; tier: string }>>(new Map());
+  useEffect(() => {
+    if (!playerId) { setBanner(null); return; }
+    let cancel = false;
+    void fetchBannerDataMany([playerId]).then((m) => { if (!cancel) setBanner(m.get(playerId) ?? null); });
+    return () => { cancel = true; };
+  }, [playerId]);
+  useEffect(() => {
+    const slugs = banner?.showcased ?? [];
+    if (slugs.length === 0) { setMeta(new Map()); return; }
+    let cancel = false;
+    void fetchAchievementMeta(slugs).then((m) => {
+      if (cancel) return;
+      const out = new Map<string, { sigil_key: string; tier: string }>();
+      for (const [k, v] of m.entries()) out.set(k, { sigil_key: v.sigil_key, tier: v.tier });
+      setMeta(out);
+    });
+    return () => { cancel = true; };
+  }, [banner?.showcased?.join(",")]);
+  const showcased = banner?.showcased ?? [];
+  return (
+    <div className="hidden flex-none items-center gap-2 sm:flex">
+      {Array.from({ length: count }).map((_, i) => {
+        const slug = showcased[i];
+        const m = slug ? meta.get(slug) : null;
+        if (!m) {
+          return <div key={i} className="rounded-full border border-dashed"
+            style={{ width: size, height: size, borderColor: "color-mix(in oklab, var(--foreground) 18%, transparent)" }} />;
+        }
+        return <ConstellationSigil key={i} sigilKey={m.sigil_key} tier={m.tier as SigilTier} size={size} />;
+      })}
+    </div>
+  );
+}
+
+function CoinflipOverlay({ starter, you, mode, nameOf, playerIdOf }: {
   starter: PlayerId; you: PlayerId; mode: Mode; nameOf: (s: PlayerId) => string;
+  playerIdOf?: (s: PlayerId) => string | null;
 }) {
   // Phase machine driven by mount-time timers.
   //  0 idle → 1 banners land → 2 impact/flash+shake → 3 coin shows → 4 coin spins → 5 reveal
@@ -2175,7 +2256,7 @@ function CoinflipOverlay({ starter, you, mode, nameOf }: {
 
   // 4-player mode gets its own multi-banner intro with a spinning selector.
   if (mode === 4) {
-    return <FourPlayerRoundStart starter={starter} you={you} nameOf={nameOf} />;
+    return <FourPlayerRoundStart starter={starter} you={you} nameOf={nameOf} playerIdOf={playerIdOf} />;
   }
 
   const exiting = phase >= 6;
@@ -2230,11 +2311,13 @@ function CoinflipOverlay({ starter, you, mode, nameOf }: {
             slot={p1} name={p1Name} side="left" phase={phase}
             isWinner={phase === 5 && starter === p1}
             isLoser={phase === 5 && starter !== p1}
+            playerId={playerIdOf?.(p1) ?? null}
           />
           <RoundStartBanner
             slot={p2} name={p2Name} side="right" phase={phase}
             isWinner={phase === 5 && starter === p2}
             isLoser={phase === 5 && starter !== p2}
+            playerId={playerIdOf?.(p2) ?? null}
           />
         </div>
 
@@ -2300,8 +2383,9 @@ function CoinflipOverlay({ starter, you, mode, nameOf }: {
 // in the middle, then a spinning selector cycles around all four cards
 // (decelerating) before landing on the winner. Ranks 2-4 reveal in slot
 // order afterwards. Purely cosmetic — the winner is whatever `starter` is.
-function FourPlayerRoundStart({ starter, you, nameOf }: {
+function FourPlayerRoundStart({ starter, you, nameOf, playerIdOf }: {
   starter: PlayerId; you: PlayerId; nameOf: (s: PlayerId) => string;
+  playerIdOf?: (s: PlayerId) => string | null;
 }) {
   const [phase, setPhase] = useState(0); // 0 idle → 1 slide → 2 impact → 3 spin → 4 reveal → 5 exit → 6 gone
   const [shakeKey, setShakeKey] = useState(0);
@@ -2408,7 +2492,7 @@ function FourPlayerRoundStart({ starter, you, nameOf }: {
           transition: "transform .55s ease, opacity .55s ease",
         }}
       >
-        <div className="grid w-full max-w-3xl grid-cols-2 gap-3 sm:gap-4">
+        <div className="grid w-full max-w-4xl grid-cols-2 gap-3 sm:gap-5">
           {([0, 1, 2, 3] as PlayerId[]).map((slot) => {
             const pos = positions[slot];
             const landed = phase >= 1;
@@ -2422,7 +2506,7 @@ function FourPlayerRoundStart({ starter, you, nameOf }: {
             return (
               <div
                 key={slot}
-                className="relative flex items-center gap-3 rounded-2xl border px-3 py-2.5 sm:gap-4 sm:px-4 sm:py-3"
+                className="relative flex items-center gap-4 rounded-2xl border px-4 py-3.5 sm:gap-5 sm:px-5 sm:py-4.5"
                 style={{
                   gridRow: pos.row + 1, gridColumn: pos.col + 1,
                   borderColor: "color-mix(in oklab, var(--border) 70%, transparent)",
@@ -2475,10 +2559,10 @@ function FourPlayerRoundStart({ starter, you, nameOf }: {
                 </div>
                 {/* Avatar */}
                 <div
-                  className="grid h-11 w-11 flex-none place-items-center rounded-full text-sm font-extrabold sm:h-12 sm:w-12 sm:text-base"
+                  className="grid h-16 w-16 flex-none place-items-center rounded-full text-lg font-extrabold sm:h-20 sm:w-20 sm:text-xl"
                   style={{
                     background: `radial-gradient(circle at 32% 28%, color-mix(in oklab, ${color} 55%, white 50%), ${color} 55%, color-mix(in oklab, ${color} 60%, black 40%) 100%)`,
-                    border: `2.5px solid ${color}`,
+                    border: `3.5px solid ${color}`,
                     color: "oklch(0.15 0.02 55)",
                   }}
                 >
@@ -2486,18 +2570,13 @@ function FourPlayerRoundStart({ starter, you, nameOf }: {
                 </div>
                 {/* Name + title */}
                 <div className="flex min-w-0 flex-1 flex-col">
-                  <p className="truncate text-sm font-extrabold text-foreground sm:text-base">{name}</p>
-                  <p className="text-[9.5px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  <p className="truncate text-base font-extrabold text-foreground sm:text-lg">{name}</p>
+                  <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                     {titleFor(name)}
                   </p>
                 </div>
-                {/* Badge slots (3) */}
-                <div className="hidden flex-none gap-1 sm:flex">
-                  {[0, 1, 2].map((i) => (
-                    <div key={i} className="h-5 w-5 rounded-full border border-dashed"
-                      style={{ borderColor: "color-mix(in oklab, var(--foreground) 18%, transparent)" }} />
-                  ))}
-                </div>
+                {/* Showcased badges */}
+                <IntroBadgeSlots playerId={playerIdOf?.(slot) ?? null} size={32} count={3} />
               </div>
             );
           })}
@@ -3479,6 +3558,16 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave }:
     [ident.name, opponentNames],
   );
 
+  const playerIdOf = useCallback(
+    (s: PlayerId): string | null => {
+      if (s === YOU) return ident.id;
+      // Ranked bots have a stable players row; casual bots don't.
+      if (rankedBot && (s as number) === 1) return rankedBot.playerId;
+      return null;
+    },
+    [ident.id, rankedBot],
+  );
+
   const startCoinflip = useCallback((starter: PlayerId) => {
     setCoinflip({ starter, animating: true });
     play("matchStart");
@@ -3705,11 +3794,12 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave }:
           presence={{ count: mode, expected: mode }}
           coinAnimating={!!coinflip?.animating} nameOf={nameOf}
         />
+        <PlayerBanners state={state} you={YOU} nameOf={nameOf} playerIdOf={playerIdOf} placement="top" />
         <div className="flex gap-2 sm:gap-3">
           <div className="relative min-w-0 flex-1">
             <QuoridorBoard state={displayState} you={YOU} onMove={handleMove} interactive={boardInteractive} />
             {coinflip?.animating && (
-              <CoinflipOverlay starter={coinflip.starter} you={YOU} mode={mode} nameOf={nameOf} />
+              <CoinflipOverlay starter={coinflip.starter} you={YOU} mode={mode} nameOf={nameOf} playerIdOf={playerIdOf} />
             )}
             {roundOver && !matchOver && !coinflip?.animating && roundEndAnim && (
               <RoundEndScoreAnim
@@ -3724,6 +3814,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave }:
           </div>
           <BoardSideClocks state={state} you={YOU} nameOf={nameOf} />
         </div>
+        <PlayerBanners state={state} you={YOU} nameOf={nameOf} playerIdOf={playerIdOf} placement="bottom" />
       </div>
 
       {matchOver && (

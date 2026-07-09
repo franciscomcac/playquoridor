@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ConstellationSigil, type SigilTier } from "@/components/ConstellationSigil";
+import { familyOf } from "@/lib/achievement-families";
 
 // Full-screen cinematic reveal for a queue of newly-unlocked badges. Each
 // badge sits on screen ~2.6s (enter → hold → exit), then the next one takes
@@ -46,6 +47,8 @@ export function AchievementUnlockOverlay({ items, onDone }: { items: UnlockItem[
   const accent = useMemo(() => (item ? TIER_ACCENT[item.tier] : TIER_ACCENT.bronze), [item]);
   if (!item) return null;
 
+  const fam = familyOf(item.slug);
+
   const cardCls =
     phase === "enter" ? "opacity-0 translate-y-4 scale-[0.94]" :
     phase === "hold"  ? "opacity-100 translate-y-0 scale-100" :
@@ -73,7 +76,14 @@ export function AchievementUnlockOverlay({ items, onDone }: { items: UnlockItem[
         <div className="mt-5">
           <ConstellationSigil sigilKey={item.sigil_key} tier={item.tier} size={140} />
         </div>
-        <div className="mt-5 text-[22px] font-bold tracking-[-0.01em] text-white">{item.name}</div>
+        {fam && (
+          <div className="mt-4 inline-flex items-center gap-2 rounded-full border px-2.5 py-0.5 text-[10.5px] font-extrabold uppercase tracking-[0.14em]"
+            style={{ borderColor: `rgba(${accent.glow},0.45)`, color: accent.c2, background: `rgba(${accent.glow},0.10)` }}>
+            <span>Level {fam.level}</span>
+            <span className="opacity-60">/ {fam.maxLevel}</span>
+          </div>
+        )}
+        <div className="mt-3 text-[22px] font-bold tracking-[-0.01em] text-white">{item.name}</div>
         <div className="mt-1 font-[IBM_Plex_Mono,monospace] text-[10.5px] uppercase tracking-[0.16em]" style={{ color: accent.c1 }}>
           {accent.label} tier
         </div>

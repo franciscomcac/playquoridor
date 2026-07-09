@@ -4,6 +4,7 @@ import { LobbyChrome } from "@/components/LobbyChrome";
 import { ConstellationSigil, type SigilTier } from "@/components/ConstellationSigil";
 import { supabase } from "@/integrations/supabase/client";
 import { requireRealUser } from "@/lib/auth-gate";
+import { FAMILIES, familyOf, type Family } from "@/lib/achievement-families";
 
 type Achievement = {
   slug: string;
@@ -88,7 +89,10 @@ function AchievementsPage() {
   const grouped = useMemo(() => {
     if (!catalog) return null;
     const g = new Map<string, Achievement[]>();
+    // Skip slugs that belong to a family; families are rendered as their
+    // own consolidated cards below.
     for (const a of catalog) {
+      if (familyOf(a.slug)) continue;
       const isUnlocked = unlocks.has(a.slug);
       if (filter === "unlocked" && !isUnlocked) continue;
       if (filter === "locked" && isUnlocked) continue;
@@ -103,6 +107,31 @@ function AchievementsPage() {
     return CATEGORY_ORDER
       .map((k) => ({ key: k, items: g.get(k) ?? [] }))
       .filter((c) => c.items.length > 0);
+  }, [catalog, unlocks, filter]);
+
+  // Consolidated family cards, filtered by the same locked/unlocked toggle.
+  const familyCards = useMemo(() => {
+    if (!catalog) return null;
+    const byId = new Map<string, Achievement>();
+    for (const a of catalog) byId.set(a.slug, a);
+    return FAMILIES
+      .map((fam) => {
+        const slugs = fam.slugs.filter((s) => byId.has(s));
+        if (slugs.length === 0) return null;
+        let currentLevel = 0;
+        let currentSlug: string | null = null;
+        for (let i = slugs.length - 1; i >= 0; i--) {
+          if (unlocks.has(slugs[i])) { currentLevel = i + 1; currentSlug = slugs[i]; break; }
+        }
+        const nextSlug = currentLevel < slugs.length ? slugs[currentLevel] : null;
+        const source = currentSlug ?? nextSlug ?? slugs[0];
+        const src = byId.get(source)!;
+        const unlocked = currentLevel > 0;
+        if (filter === "unlocked" && !unlocked) return null;
+        if (filter === "locked" && currentLevel === slugs.length) return null;
+        return { fam, src, currentLevel, maxLevel: slugs.length, nextSlug };
+      })
+      .filter((x): x is { fam: Family; src: Achievement; currentLevel: number; maxLevel: number; nextSlug: string | null } => !!x);
   }, [catalog, unlocks, filter]);
 
   const unlockedCount = unlocks.size;
@@ -159,6 +188,51 @@ function AchievementsPage() {
               <div key={i} className="aspect-square animate-pulse rounded-2xl bg-zinc-900/60" />
             ))}
           </div>
+        )}
+
+        {familyCards && familyCards.length > 0 && (
+          <section className="mb-10">
+            <h2 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.3em] text-zinc-500">Tiered Badges
+              <span className="ml-2 text-zinc-700">{familyCards.filter((c) => c.currentLevel > 0).length}/{familyCards.length}</span>
+            </h2>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+              {familyCards.map(({ fam, src, currentLevel, maxLevel, nextSlug }) => {
+                const unlocked = currentLevel > 0;
+                const nextMeta = nextSlug ? (catalog!.find((c) => c.slug === nextSlug) ?? null) : null;
+                return (
+                  <div
+                    key={fam.id}
+                    className={
+                      "group relative flex flex-col items-center rounded-2xl border p-4 text-center transition " +
+                      (unlocked
+                        ? "border-white/10 bg-gradient-to-b from-white/[0.04] to-white/[0.01] hover:border-white/20"
+                        : "border-white/5 bg-black/40")
+                    }
+                  >
+                    <ConstellationSigil sigilKey={src.sigil_key} tier={src.tier} size={96} locked={!unlocked} />
+                    <p className={"mt-3 text-sm font-semibold " + (unlocked ? "text-zinc-100" : "text-zinc-500")}>
+                      {fam.name}
+                    </p>
+                    <p className={"mt-1 text-[11px] leading-snug " + (unlocked ? "text-zinc-400" : "text-zinc-600")}>
+                      {unlocked ? src.description : (nextMeta?.description ?? "Locked")}
+                    </p>
+                    <div className="mt-2 flex items-center gap-1">
+                      {Array.from({ length: maxLevel }).map((_, i) => (
+                        <span
+                          key={i}
+                          className="block h-1.5 w-4 rounded-full"
+                          style={{ background: i < currentLevel ? "rgb(52 211 153)" : "rgba(255,255,255,0.08)" }}
+                        />
+                      ))}
+                    </div>
+                    <span className="mt-1 font-mono text-[10px] uppercase tracking-widest text-zinc-500">
+                      Lv {currentLevel} / {maxLevel}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
         )}
 
         {grouped?.map((cat) => (

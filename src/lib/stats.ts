@@ -32,6 +32,54 @@ export type LeaderRow = {
   pawns_eliminated: number;
 };
 
+/** Everything the in-game player banner needs for one player. */
+export type BannerData = {
+  playerId: string;
+  country: string | null;
+  rating: number | null;
+  showcased: string[];        // slug list, up to 3
+  avatarColor: string | null;
+  avatarUrl: string | null;
+};
+
+/** Batch fetch banner data for the given player ids. Missing rows are skipped. */
+export async function fetchBannerDataMany(playerIds: string[]): Promise<Map<string, BannerData>> {
+  const out = new Map<string, BannerData>();
+  const ids = playerIds.filter((x): x is string => !!x);
+  if (ids.length === 0) return out;
+  const [{ data: players }, { data: stats }] = await Promise.all([
+    supabase.from("players").select("id,country,avatar_color,avatar_url,showcased_achievements").in("id", ids),
+    supabase.from("player_stats").select("player_id,rating").in("player_id", ids),
+  ]);
+  const sById = new Map<string, { rating?: number }>();
+  for (const s of (stats ?? []) as Array<{ player_id: string; rating?: number }>) {
+    sById.set(s.player_id, s);
+  }
+  for (const p of (players ?? []) as Array<{ id: string; country: string | null; avatar_color: string | null; avatar_url: string | null; showcased_achievements: string[] | null }>) {
+    out.set(p.id, {
+      playerId: p.id,
+      country: p.country ?? null,
+      rating: sById.get(p.id)?.rating ?? null,
+      showcased: Array.isArray(p.showcased_achievements) ? p.showcased_achievements.slice(0, 3) : [],
+      avatarColor: p.avatar_color,
+      avatarUrl: p.avatar_url,
+    });
+  }
+  return out;
+}
+
+/** Fetch (slug, sigil_key, tier) for a set of achievement slugs. */
+export async function fetchAchievementMeta(slugs: string[]): Promise<Map<string, { sigil_key: string; tier: string; name: string }>> {
+  const out = new Map<string, { sigil_key: string; tier: string; name: string }>();
+  const unique = Array.from(new Set(slugs.filter(Boolean)));
+  if (unique.length === 0) return out;
+  const { data } = await supabase.from("achievements").select("slug,sigil_key,tier,name").in("slug", unique);
+  for (const r of (data ?? []) as Array<{ slug: string; sigil_key: string; tier: string; name: string }>) {
+    out.set(r.slug, { sigil_key: r.sigil_key, tier: r.tier, name: r.name });
+  }
+  return out;
+}
+
 export async function recordMatch(m: MatchResult): Promise<string | null> {
   try {
     const uid = await ensureAuthSession();

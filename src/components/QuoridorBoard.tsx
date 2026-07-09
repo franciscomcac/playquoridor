@@ -405,49 +405,8 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
       />
     </div>
 
-    {/* Desktop: player + walls summary below the board, aligned bottom-left. */}
-    <div className="mt-1 hidden gap-2 self-start md:flex">
-      {Array.from({ length: state.mode }).map((_, i) => {
-        const color = PLAYER_COLORS[i];
-        const isYou = i === you;
-        const isTurn = state.turn === i && state.winner === null && state.active[i];
-        const wallsLeft = state.wallsLeft[i] ?? 0;
-        return (
-          <div
-            key={`psum-${i}`}
-            className={
-              "flex items-center gap-2 rounded-xl border px-3 py-2 text-[11px] font-semibold uppercase tracking-widest transition " +
-              (isTurn
-                ? "border-primary/60 bg-primary/5 text-foreground"
-                : "border-border bg-card text-muted-foreground")
-            }
-          >
-            <span
-              aria-hidden
-              className="grid h-6 w-6 place-items-center rounded-full text-[10px] font-bold text-black/80"
-              style={{ background: color, boxShadow: `0 0 10px color-mix(in oklab, ${color} 45%, transparent)` }}
-            >
-              {i + 1}
-            </span>
-            <span className={isYou ? "text-foreground" : ""}>
-              {isYou ? "You" : `P${i + 1}`}
-            </span>
-            <span className="ml-1 flex items-center gap-1">
-              <span
-                aria-hidden
-                className="block rounded-sm"
-                style={{
-                  background: `linear-gradient(180deg, color-mix(in oklab, ${color} 100%, white 12%), ${color} 55%, color-mix(in oklab, ${color} 70%, black 25%))`,
-                  width: 14,
-                  height: 6,
-                }}
-              />
-              <span style={{ color }}>{wallsLeft}</span>
-            </span>
-          </div>
-        );
-      })}
-    </div>
+    {/* Player + walls summary now lives in the top/bottom PlayerBanner
+        rendered outside this component (see game.tsx). */}
     </div>
   );
 }
