@@ -1352,7 +1352,9 @@ function GameScreen({
     // Solo-host fallback → replace with a full local bot game.
     let soloT: number | null = null;
     if (onBotFallback) {
-      const soloDelay = initialMode === 4 ? 60_000 : 30_000;
+      // Casual 2p: match ranked's aggressive fallback so nobody waits
+      // more than ~8s on an empty queue before getting a bot game.
+      const soloDelay = initialMode === 4 ? 60_000 : 8_000;
       soloT = window.setTimeout(() => {
         const cur = presenceRef.current;
         if (cur.count >= cur.expected) return;
