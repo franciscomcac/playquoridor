@@ -31,6 +31,7 @@ import { Route as PuzzleDateRouteImport } from './routes/puzzle.$date'
 import { Route as PlayerPlayerIdRouteImport } from './routes/player.$playerId'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as AnalyzeClipIdRouteImport } from './routes/analyze.$clipId'
+import { Route as ForumTIdRouteImport } from './routes/forum.t.$id'
 import { Route as ForumCSlugRouteImport } from './routes/forum.c.$slug'
 import { Route as ApiClipSignRouteImport } from './routes/api/clip/sign'
 import { Route as ApiClipRenderRouteImport } from './routes/api/clip/render'
@@ -145,6 +146,11 @@ const AnalyzeClipIdRoute = AnalyzeClipIdRouteImport.update({
   path: '/analyze/$clipId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ForumTIdRoute = ForumTIdRouteImport.update({
+  id: '/forum/t/$id',
+  path: '/forum/t/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ForumCSlugRoute = ForumCSlugRouteImport.update({
   id: '/forum/c/$slug',
   path: '/forum/c/$slug',
@@ -187,6 +193,7 @@ export interface FileRoutesByFullPath {
   '/api/clip/render': typeof ApiClipRenderRoute
   '/api/clip/sign': typeof ApiClipSignRoute
   '/forum/c/$slug': typeof ForumCSlugRoute
+  '/forum/t/$id': typeof ForumTIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -214,6 +221,7 @@ export interface FileRoutesByTo {
   '/api/clip/render': typeof ApiClipRenderRoute
   '/api/clip/sign': typeof ApiClipSignRoute
   '/forum/c/$slug': typeof ForumCSlugRoute
+  '/forum/t/$id': typeof ForumTIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -242,6 +250,7 @@ export interface FileRoutesById {
   '/api/clip/render': typeof ApiClipRenderRoute
   '/api/clip/sign': typeof ApiClipSignRoute
   '/forum/c/$slug': typeof ForumCSlugRoute
+  '/forum/t/$id': typeof ForumTIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -271,6 +280,7 @@ export interface FileRouteTypes {
     | '/api/clip/render'
     | '/api/clip/sign'
     | '/forum/c/$slug'
+    | '/forum/t/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -298,6 +308,7 @@ export interface FileRouteTypes {
     | '/api/clip/render'
     | '/api/clip/sign'
     | '/forum/c/$slug'
+    | '/forum/t/$id'
   id:
     | '__root__'
     | '/'
@@ -325,6 +336,7 @@ export interface FileRouteTypes {
     | '/api/clip/render'
     | '/api/clip/sign'
     | '/forum/c/$slug'
+    | '/forum/t/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -353,6 +365,7 @@ export interface RootRouteChildren {
   ApiClipRenderRoute: typeof ApiClipRenderRoute
   ApiClipSignRoute: typeof ApiClipSignRoute
   ForumCSlugRoute: typeof ForumCSlugRoute
+  ForumTIdRoute: typeof ForumTIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -511,6 +524,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AnalyzeClipIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/forum/t/$id': {
+      id: '/forum/t/$id'
+      path: '/forum/t/$id'
+      fullPath: '/forum/t/$id'
+      preLoaderRoute: typeof ForumTIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/forum/c/$slug': {
       id: '/forum/c/$slug'
       path: '/forum/c/$slug'
@@ -561,6 +581,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiClipRenderRoute: ApiClipRenderRoute,
   ApiClipSignRoute: ApiClipSignRoute,
   ForumCSlugRoute: ForumCSlugRoute,
+  ForumTIdRoute: ForumTIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
