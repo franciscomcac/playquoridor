@@ -37,7 +37,13 @@ export async function linkAuthToPlayer(): Promise<void> {
     const { data: { session } } = await supabase.auth.getSession();
     const uid = session?.user?.id;
     const ident = getStoredIdentity();
-    if (!uid || !ident) return;
+    if (!uid) return;
+    if (!ident) {
+      // No local identity yet — hydrate it from the account's existing
+      // players row instead of leaving the user with no name link.
+      await restoreIdentityFromAuth();
+      return;
+    }
     await supabase.from("players").upsert({
       id: ident.id, name: ident.name, auth_user_id: uid,
       updated_at: new Date().toISOString(),
