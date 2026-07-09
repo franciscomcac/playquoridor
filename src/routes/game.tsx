@@ -2643,16 +2643,7 @@ function FourPlayerRoundStart({ starter, you, nameOf, playerIdOf }: {
                   Goes first
                 </div>
                 {/* Avatar */}
-                <div
-                  className="grid h-16 w-16 flex-none place-items-center rounded-full text-lg font-extrabold sm:h-20 sm:w-20 sm:text-xl"
-                  style={{
-                    background: `radial-gradient(circle at 32% 28%, color-mix(in oklab, ${color} 55%, white 50%), ${color} 55%, color-mix(in oklab, ${color} 60%, black 40%) 100%)`,
-                    border: `3.5px solid ${color}`,
-                    color: "oklch(0.15 0.02 55)",
-                  }}
-                >
-                  {initialsOf(name)}
-                </div>
+                <IntroAvatar playerId={playerIdOf?.(slot) ?? null} name={name} color={color} size={80} borderWidth={3.5} />
                 {/* Name + title */}
                 <div className="flex min-w-0 flex-1 flex-col">
                   <p className="truncate text-base font-extrabold text-foreground sm:text-lg">{name}</p>
