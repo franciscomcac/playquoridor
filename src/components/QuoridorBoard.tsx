@@ -288,9 +288,14 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
       cells.push(
         <div key={`${r}-${c}`} style={{
           gridRow: r + 1, gridColumn: c + 1,
-          background: bg,
+          background: tint
+            ? `radial-gradient(circle at center, color-mix(in oklab, ${tint} 28%, ${bg}) 0%, ${bg} 78%)`
+            : bg,
           boxShadow: `inset 0 0 0 1px var(--board-line)` +
-            (tint ? `, inset 0 0 0 3px color-mix(in oklab, ${tint} 22%, transparent)` : ""),
+            (tint
+              ? `, inset 0 0 0 2px color-mix(in oklab, ${tint} 55%, transparent), inset 0 0 18px color-mix(in oklab, ${tint} 45%, transparent)`
+              : ""),
+          animation: tint ? "goalPulse 2.4s ease-in-out infinite" : undefined,
         }} className="relative">
           {isLegal && (
             <span className={"pointer-events-none absolute left-1/2 top-1/2 block rounded-full " + (isHovered ? "move-target-hover" : "legal-breathe")}
