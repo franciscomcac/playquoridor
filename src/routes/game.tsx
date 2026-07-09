@@ -1599,6 +1599,7 @@ function GameScreen({
   });
   const revealedRef = useRef<Set<string>>(new Set());
   const [visibleWallKeys, setVisibleWallKeys] = useState<Set<string> | undefined>(undefined);
+  const [visibleCells, setVisibleCells] = useState<Set<number> | undefined>(undefined);
   useEffect(() => {
     try { localStorage.setItem("quoridor:fogOfWalls", fogOn ? "1" : "0"); } catch { /* ignore */ }
   }, [fogOn]);
@@ -1608,10 +1609,11 @@ function GameScreen({
   }, [state.moveCount]);
   // Recompute visibility whenever the board changes.
   useEffect(() => {
-    if (!fogOn) { setVisibleWallKeys(undefined); return; }
+    if (!fogOn) { setVisibleWallKeys(undefined); setVisibleCells(undefined); return; }
     const next = computeVisibleWalls(state, you, revealedRef.current);
     revealedRef.current = next;
     setVisibleWallKeys(next);
+    setVisibleCells(computeVisibleCells(state, you));
   }, [state.walls, state.pawns, fogOn, you]);
   useEffect(() => {
     if (state.winner !== null && prevWinnerRef.current === null) {
