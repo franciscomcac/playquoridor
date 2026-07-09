@@ -3368,7 +3368,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave }:
     // Post-match achievement evaluation for bot games.
     if (!unlockFiredRef.current) {
       unlockFiredRef.current = true;
-      const oppRatingPre = rankedBot?.rating ?? null;
+      const oppRatingPre = rankedBot?.currentRating ?? null;
       void (async () => {
         await new Promise((r) => window.setTimeout(r, 1400));
         const unlocked = await evaluatePostMatch({
