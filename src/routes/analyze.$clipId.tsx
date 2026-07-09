@@ -326,7 +326,6 @@ function MoveList({ listRows, frames, analyses, snapshot, activeIdx, onPick }: {
   activeIdx: number;
   onPick: (i: number) => void;
 }) {
-  const scrollRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -336,7 +335,7 @@ function MoveList({ listRows, frames, analyses, snapshot, activeIdx, onPick }: {
   }, [activeIdx]);
 
   return (
-    <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-2.5 pb-4 pt-2">
+    <div className="min-h-0 flex-1 overflow-y-auto px-2.5 pb-4 pt-2">
       {listRows.map((row, k) => {
               if (row.kind === "divider") {
                 return (
