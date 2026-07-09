@@ -347,42 +347,12 @@ function Lobby() {
             </div>
           </Card>
 
-          <Card>
-            <CardHeader
-              eyebrow="Recent matches"
-              action={recent && recent.length > 0 ? (
-                <Link to="/history" className="text-[11.5px] font-semibold uppercase tracking-[0.06em] text-[#f5a524] hover:text-[#ffc45e]">History</Link>
-              ) : null}
-            />
-            <div className="mt-3">
-              {recent === null && Array.from({ length: 3 }).map((_, i) => (
-                <Row key={i}>
-                  <span className="h-[26px] w-[26px] animate-pulse rounded-lg bg-[#1e1e24]" />
-                  <span className="h-3 w-24 animate-pulse rounded bg-[#1e1e24]" />
-                </Row>
-              ))}
-              {recent?.length === 0 && (
-                <div className="border-t border-[#1a1a1f] px-5 py-4 text-[12.5px] text-[#83838e]">
-                  No recent matches yet.
-                </div>
-              )}
-              {recent?.map((m) => {
-                const win = m.result === "win";
-                return (
-                  <Row key={m.matchId}>
-                    <span className={"grid h-[26px] w-[26px] place-items-center rounded-lg font-[IBM_Plex_Mono,monospace] text-[11.5px] font-bold " + (win ? "bg-[rgba(47,213,117,0.12)] text-[#2fd575]" : "bg-[rgba(255,92,92,0.1)] text-[#ff7a7a]")}>
-                      {win ? "W" : "L"}
-                    </span>
-                    <div className="flex-1">
-                      <div className="text-[13px] font-semibold">vs {m.opponentName}</div>
-                      <div className="text-[11px] text-[#5c5c66]">{m.ranked ? "Ranked" : "Casual"} · {m.mode}p</div>
-                    </div>
-                    <span className="font-[IBM_Plex_Mono,monospace] text-[11px] text-[#5c5c66]">{timeAgo(m.endedAt)}</span>
-                  </Row>
-                );
-              })}
-            </div>
-          </Card>
+          <FogLtmButton
+            onClick={() => {
+              if (hasActiveGame()) { void navigate({ to: "/game" }); return; }
+              go("fog2");
+            }}
+          />
         </div>
 
         {/* Middle: Live Lobby */}
@@ -497,33 +467,6 @@ function Lobby() {
         {/* Right column */}
         <div className="flex flex-col gap-4">
           <div className="px-1 pt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#5c5c66]">Quick play</div>
-          <button
-            onClick={() => {
-              if (hasActiveGame()) { void navigate({ to: "/game" }); return; }
-              go("fog2");
-            }}
-            className="ltm-shimmer group relative overflow-hidden rounded-2xl border border-fuchsia-400/40 bg-gradient-to-br from-[#1a0f24] via-[#170a1f] to-[#0d0616] p-5 text-left transition-transform hover:-translate-y-0.5"
-            style={{ boxShadow: "0 8px 32px rgba(168,85,247,0.18), inset 0 1px 0 rgba(255,255,255,0.04)" }}
-          >
-            <div className="flex items-center justify-between">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-fuchsia-400/60 bg-fuchsia-500/10 px-2 py-[3px] font-[IBM_Plex_Mono,monospace] text-[9.5px] font-black uppercase tracking-[0.18em] text-fuchsia-200">
-                <span aria-hidden>🌫️</span> LTM
-              </span>
-              <span className="font-[IBM_Plex_Mono,monospace] text-[10px] uppercase tracking-[0.14em] text-fuchsia-300/70">
-                Limited time
-              </span>
-            </div>
-            <div className="mt-3 text-[17px] font-bold text-[#f3e8ff]">Fog of Walls</div>
-            <div className="mt-1 text-[12px] leading-relaxed text-[#b8a5cf]">
-              Enemy walls stay hidden until your pawn gets close. Scout, guess, punish.
-            </div>
-            <div className="mt-3 flex items-center justify-between">
-              <span className="text-[12px] font-semibold uppercase tracking-[0.08em] text-fuchsia-300 group-hover:text-fuchsia-200">
-                Play now →
-              </span>
-              <span className="text-[10px] text-[#7a6b90]">2p · Casual</span>
-            </div>
-          </button>
           <Card>
             <CardHeader eyebrow="CPU Practice" action={<span className="text-[11px] text-[#5c5c66]">choose difficulty</span>} />
             <div className="mt-3">
@@ -629,6 +572,39 @@ function CpuRow({ onClick, color, lvl, name, desc }: { onClick: () => void; colo
         <div className="text-[11px] text-[#5c5c66]">{desc}</div>
       </div>
       <span className="text-[16px] text-[#3d3d46]">›</span>
+    </button>
+  );
+}
+
+function FogLtmButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="ltm-btn group relative block w-full overflow-hidden rounded-2xl border border-fuchsia-400/40 bg-[#120820] p-[1px] text-left"
+    >
+      <span aria-hidden className="ltm-conic pointer-events-none absolute inset-0 rounded-2xl opacity-70" />
+      <span aria-hidden className="ltm-sheen pointer-events-none absolute inset-0 rounded-2xl" />
+      <span className="relative flex items-center gap-3 rounded-[15px] bg-gradient-to-br from-[#1a0f24] via-[#150a1f] to-[#0b0514] px-4 py-4">
+        <span aria-hidden className="ltm-orb relative grid h-11 w-11 flex-none place-items-center rounded-xl border border-fuchsia-400/50 bg-[radial-gradient(circle_at_30%_30%,#c084fc,#7e22ce_60%,#3b0764)] text-[20px] shadow-[0_0_18px_rgba(192,132,252,0.55)]">
+          🌫️
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-2">
+            <span className="inline-flex items-center rounded-full border border-fuchsia-400/60 bg-fuchsia-500/15 px-1.5 py-[1px] font-[IBM_Plex_Mono,monospace] text-[9px] font-black uppercase tracking-[0.18em] text-fuchsia-200">
+              LTM
+            </span>
+            <span className="ltm-live inline-flex items-center gap-1 font-[IBM_Plex_Mono,monospace] text-[9.5px] uppercase tracking-[0.14em] text-fuchsia-300/80">
+              <span className="h-[6px] w-[6px] rounded-full bg-fuchsia-400 shadow-[0_0_8px_#e879f9]" />
+              Live now
+            </span>
+          </span>
+          <span className="mt-1 block text-[15px] font-bold text-[#f5e9ff]">Fog of Walls</span>
+          <span className="mt-[2px] block text-[11px] leading-snug text-[#b8a5cf]">
+            Enemy walls hidden until seen.
+          </span>
+        </span>
+        <span className="flex-none text-[18px] text-fuchsia-300 transition-transform group-hover:translate-x-1">→</span>
+      </span>
     </button>
   );
 }
