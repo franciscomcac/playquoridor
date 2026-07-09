@@ -3767,7 +3767,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave }:
     if (state.winner === null || state.matchWinner !== null) return;
     if (roundEndAnim) return;
     const r = state.endReason;
-    if (r === "time" || r === "afk" || r === "forfeit") requestReady();
+    if (r === "time" || r === "afk") requestReady();
   }, [state.winner, state.matchWinner, state.endReason, roundEndAnim, requestReady]);
 
   // Reset ready roster whenever a new round begins.
