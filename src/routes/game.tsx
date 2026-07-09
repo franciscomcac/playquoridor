@@ -3707,6 +3707,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
   });
   const revealedRef = useRef<Set<string>>(new Set());
   const [visibleWallKeys, setVisibleWallKeys] = useState<Set<string> | undefined>(undefined);
+  const [visibleCells, setVisibleCells] = useState<Set<number> | undefined>(undefined);
   useEffect(() => {
     try { localStorage.setItem("quoridor:fogOfWalls", fogOn ? "1" : "0"); } catch { /* ignore */ }
   }, [fogOn]);
@@ -3714,10 +3715,11 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
     if ((state.moveCount ?? 0) === 0) revealedRef.current = new Set();
   }, [state.moveCount]);
   useEffect(() => {
-    if (!fogOn) { setVisibleWallKeys(undefined); return; }
+    if (!fogOn) { setVisibleWallKeys(undefined); setVisibleCells(undefined); return; }
     const next = computeVisibleWalls(state, YOU, revealedRef.current);
     revealedRef.current = next;
     setVisibleWallKeys(next);
+    setVisibleCells(computeVisibleCells(state, YOU));
   }, [state.walls, state.pawns, fogOn]);
 
   // Helper: apply a move and roll the clock over to the next player.
