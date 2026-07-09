@@ -2206,16 +2206,7 @@ function RoundStartBanner({ slot, name, side, phase, isWinner, isLoser, playerId
         Goes first
       </div>
       {/* Avatar */}
-      <div
-        className="grid h-9 w-9 flex-none place-items-center rounded-full text-xs font-extrabold sm:h-10 sm:w-10 sm:text-sm"
-        style={{
-          background: `radial-gradient(circle at 32% 28%, color-mix(in oklab, ${color} 55%, white 50%), ${color} 55%, color-mix(in oklab, ${color} 60%, black 40%) 100%)`,
-          border: `2px solid ${color}`,
-          color: "oklch(0.15 0.02 55)",
-        }}
-      >
-        {initialsOf(name)}
-      </div>
+      <IntroAvatar playerId={playerId} name={name} color={color} size={40} borderWidth={2} />
       {/* Name + title */}
       <div className="flex min-w-0 flex-1 flex-col">
         <p className="truncate text-[13px] font-extrabold text-foreground sm:text-sm" style={{ color: "var(--foreground)" }}>
