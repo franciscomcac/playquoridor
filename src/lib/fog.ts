@@ -17,24 +17,21 @@ export function wallKey(w: { o: string; r: number; c: number }): string {
   return `${w.o}-${w.r}-${w.c}`;
 }
 
-function reachableCells(state: GameState, from: [number, number], radius: number): Set<number> {
+// Line-of-sight along the four cardinal directions from the pawn.
+// Extends outward until blocked by a wall or the board edge.
+function sightCells(state: GameState, from: [number, number]): Set<number> {
   const seen = new Set<number>();
   const [sr, sc] = from;
-  const start = sr * BOARD + sc;
-  seen.add(start);
-  const q: Array<[number, number, number]> = [[sr, sc, 0]];
+  seen.add(sr * BOARD + sc);
   const dirs: Array<[number, number]> = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-  while (q.length) {
-    const [r, c, d] = q.shift()!;
-    if (d >= radius) continue;
-    for (const [dr, dc] of dirs) {
+  for (const [dr, dc] of dirs) {
+    let r = sr, c = sc;
+    while (true) {
       const nr = r + dr, nc = c + dc;
-      if (nr < 0 || nr >= BOARD || nc < 0 || nc >= BOARD) continue;
-      const idx = nr * BOARD + nc;
-      if (seen.has(idx)) continue;
-      if (isBlocked(r, c, nr, nc, state.walls)) continue;
-      seen.add(idx);
-      q.push([nr, nc, d + 1]);
+      if (nr < 0 || nr >= BOARD || nc < 0 || nc >= BOARD) break;
+      if (isBlocked(r, c, nr, nc, state.walls)) break;
+      seen.add(nr * BOARD + nc);
+      r = nr; c = nc;
     }
   }
   return seen;
@@ -57,7 +54,7 @@ export function computeVisibleWalls(
   prior: Set<string> = new Set(),
 ): Set<string> {
   const out = new Set(prior);
-  const seen = reachableCells(state, state.pawns[viewer], FOG_RADIUS);
+  const seen = sightCells(state, state.pawns[viewer]);
   for (const w of state.walls) {
     const k = wallKey(w);
     if (out.has(k)) continue;
@@ -72,5 +69,5 @@ export function computeVisibleWalls(
 /** Sight overlay: cells the viewer can currently "see". Used for optional
  *  board dimming so the player knows what's fogged. */
 export function computeVisibleCells(state: GameState, viewer: PlayerId): Set<number> {
-  return reachableCells(state, state.pawns[viewer], FOG_RADIUS);
+  return sightCells(state, state.pawns[viewer]);
 }

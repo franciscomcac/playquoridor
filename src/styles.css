@@ -641,45 +641,41 @@ button:not([data-no-press]):active:not(:disabled) {
 /* ------------------------------------------------------------------ */
 /* Fog of Walls — themed arena + animated fog overlay                 */
 /* ------------------------------------------------------------------ */
-:root {
-  --fog-board-bg:
-    radial-gradient(120% 90% at 50% 0%, #241546 0%, #150b2c 45%, #08040f 100%);
-}
 .fog-frame {
   padding: 10px;
   border-radius: var(--radius);
   background:
-    radial-gradient(120% 120% at 20% 0%, rgba(140, 80, 220, 0.35), transparent 60%),
-    radial-gradient(120% 120% at 100% 100%, rgba(60, 200, 220, 0.22), transparent 55%),
-    linear-gradient(160deg, #14092b 0%, #0a0416 100%);
-  border: 1px solid rgba(160, 120, 240, 0.35);
+    radial-gradient(120% 120% at 20% 0%, rgba(140, 110, 240, 0.45), transparent 60%),
+    radial-gradient(120% 120% at 100% 100%, rgba(90, 130, 240, 0.35), transparent 55%),
+    linear-gradient(160deg, #2a1e6b 0%, #14205a 100%);
+  border: 1px solid rgba(170, 150, 255, 0.4);
   box-shadow:
-    0 0 0 1px rgba(180, 140, 255, 0.15) inset,
-    0 18px 60px -22px rgba(120, 60, 220, 0.55),
-    0 0 40px -12px rgba(90, 220, 240, 0.25);
+    0 0 0 1px rgba(190, 170, 255, 0.2) inset,
+    0 18px 60px -22px rgba(120, 90, 240, 0.55),
+    0 0 40px -12px rgba(100, 140, 240, 0.3);
 }
 .fog-cell {
   position: absolute;
   border-radius: 6px;
   background:
-    radial-gradient(60% 60% at 30% 40%, rgba(220, 220, 220, 0.35), transparent 70%),
-    radial-gradient(70% 70% at 70% 65%, rgba(170, 170, 170, 0.28), transparent 75%),
-    linear-gradient(140deg, rgba(80, 80, 80, 0.92), rgba(40, 40, 40, 0.98));
-  filter: blur(2px);
+    radial-gradient(60% 60% at 30% 40%, rgba(220, 220, 220, 0.22), transparent 70%),
+    radial-gradient(70% 70% at 70% 65%, rgba(180, 180, 180, 0.18), transparent 75%),
+    linear-gradient(140deg, rgba(120, 120, 130, 0.55), rgba(70, 70, 80, 0.6));
+  filter: blur(3px);
   animation:
     fog-pulse 5.5s ease-in-out infinite,
     fog-drift 7s ease-in-out infinite;
   will-change: transform, opacity;
-  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.6);
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.35);
 }
 .fog-vignette {
   position: absolute; inset: 0;
-  background: radial-gradient(80% 80% at 50% 50%, transparent 55%, rgba(0,0,0,0.55) 100%);
+  background: radial-gradient(80% 80% at 50% 50%, transparent 60%, rgba(20, 15, 60, 0.35) 100%);
   mix-blend-mode: multiply;
 }
 @keyframes fog-pulse {
-  0%, 100% { opacity: 0.88; }
-  50%      { opacity: 0.98; }
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 0.72; }
 }
 @keyframes fog-drift {
   0%   { transform: translate(0, 0) scale(1); }

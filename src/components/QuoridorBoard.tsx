@@ -341,7 +341,9 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity, vis
         className="relative h-full w-full select-none overflow-hidden rounded-md"
         style={{
           cursor,
-          background: fog ? "var(--fog-board-bg, #0a0616)" : "var(--board-bg)",
+          background: fog
+            ? "radial-gradient(120% 90% at 50% 0%, #3a2a8a 0%, #1e2270 45%, #0f1240 100%)"
+            : "var(--board-bg)",
           transform: rotation ? `rotate(${rotation}deg)` : undefined,
           transition: "transform 240ms ease",
           touchAction: "manipulation",
