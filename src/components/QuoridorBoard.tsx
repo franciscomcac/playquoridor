@@ -313,7 +313,8 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
 
   return (
     <div className="flex w-full flex-col gap-2">
-    <div className="w-full" style={{
+    <div className="mx-auto w-full" style={{
+      maxWidth: "min(100%, 72vh, 700px)",
       display: "grid",
       gridTemplateColumns: "0.875rem minmax(0,1fr)",
       gridTemplateRows: "minmax(0,1fr) 0.875rem",
