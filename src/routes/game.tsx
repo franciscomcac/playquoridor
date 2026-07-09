@@ -2785,7 +2785,12 @@ function RoundEndScoreAnim({ state, nameOf, onDone }: {
 
   // Pre-bump scores: the game state already includes the +1 for the winner,
   // so subtract it during the "idle/show" frames.
-  const bumped = phase === "bump" || phase === "exit";
+  // Once we hit the bump, the score stays at its final value — never revert
+  // to pre-bump display (that caused a visible "1 → 0" flicker on the
+  // return-to-show phase after the bump animation).
+  const bumped = phase === "bump" || phase === "exit" || phase === "show"
+    ? phase !== "show" ? true : undefined as unknown as boolean
+    : false;
   const scoreFor = (slot: PlayerId): number => {
     const s = state.score[slot] ?? 0;
     return bumped || slot !== winner ? s : Math.max(0, s - 1);
