@@ -2168,6 +2168,45 @@ function RoundStartBanner({ slot, name, side, phase, isWinner, isLoser, playerId
   );
 }
 
+// Small helper: fetches showcased achievements for a player and renders up
+// to `count` constellation sigils. Used on the round-start intro banners.
+function IntroBadgeSlots({ playerId, size, count }: { playerId: string | null; size: number; count: number }) {
+  const [banner, setBanner] = useState<BannerData | null>(null);
+  const [meta, setMeta] = useState<Map<string, { sigil_key: string; tier: string }>>(new Map());
+  useEffect(() => {
+    if (!playerId) { setBanner(null); return; }
+    let cancel = false;
+    void fetchBannerDataMany([playerId]).then((m) => { if (!cancel) setBanner(m.get(playerId) ?? null); });
+    return () => { cancel = true; };
+  }, [playerId]);
+  useEffect(() => {
+    const slugs = banner?.showcased ?? [];
+    if (slugs.length === 0) { setMeta(new Map()); return; }
+    let cancel = false;
+    void fetchAchievementMeta(slugs).then((m) => {
+      if (cancel) return;
+      const out = new Map<string, { sigil_key: string; tier: string }>();
+      for (const [k, v] of m.entries()) out.set(k, { sigil_key: v.sigil_key, tier: v.tier });
+      setMeta(out);
+    });
+    return () => { cancel = true; };
+  }, [banner?.showcased?.join(",")]);
+  const showcased = banner?.showcased ?? [];
+  return (
+    <div className="hidden flex-none items-center gap-2 sm:flex">
+      {Array.from({ length: count }).map((_, i) => {
+        const slug = showcased[i];
+        const m = slug ? meta.get(slug) : null;
+        if (!m) {
+          return <div key={i} className="rounded-full border border-dashed"
+            style={{ width: size, height: size, borderColor: "color-mix(in oklab, var(--foreground) 18%, transparent)" }} />;
+        }
+        return <ConstellationSigil key={i} sigilKey={m.sigil_key} tier={m.tier as SigilTier} size={size} />;
+      })}
+    </div>
+  );
+}
+
 function CoinflipOverlay({ starter, you, mode, nameOf, playerIdOf }: {
   starter: PlayerId; you: PlayerId; mode: Mode; nameOf: (s: PlayerId) => string;
   playerIdOf?: (s: PlayerId) => string | null;
@@ -2343,8 +2382,9 @@ function CoinflipOverlay({ starter, you, mode, nameOf, playerIdOf }: {
 // in the middle, then a spinning selector cycles around all four cards
 // (decelerating) before landing on the winner. Ranks 2-4 reveal in slot
 // order afterwards. Purely cosmetic — the winner is whatever `starter` is.
-function FourPlayerRoundStart({ starter, you, nameOf }: {
+function FourPlayerRoundStart({ starter, you, nameOf, playerIdOf }: {
   starter: PlayerId; you: PlayerId; nameOf: (s: PlayerId) => string;
+  playerIdOf?: (s: PlayerId) => string | null;
 }) {
   const [phase, setPhase] = useState(0); // 0 idle → 1 slide → 2 impact → 3 spin → 4 reveal → 5 exit → 6 gone
   const [shakeKey, setShakeKey] = useState(0);
