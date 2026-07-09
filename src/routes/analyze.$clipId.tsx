@@ -436,36 +436,93 @@ function CoachPanel({ snapshot, frame, analysis }: {
 
   const speaker = frame && frame.by !== null ? snapshot.playerNames[frame.by] : null;
   const verdict = analysis?.verdict;
+  const quip = verdict ? pickQuip(verdict, `${frame?.roundIndex}-${frame?.plyIndex}`) : null;
 
   return (
-    <div className="coach-in sticky top-0 z-[2] flex items-start gap-3 border-b border-white/10 bg-[#101014]/95 px-3 py-2.5 backdrop-blur">
-      <div aria-hidden className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/10 bg-gradient-to-br from-amber-500/25 to-amber-500/5 text-lg">
-        <span className="coach-eye">🧙</span>
+    <div className="coach-in sticky top-0 z-[2] flex items-start gap-4 border-b border-white/10 bg-[#101014]/95 px-4 py-4 backdrop-blur">
+      <div aria-hidden className={
+        "grid h-20 w-20 shrink-0 place-items-center rounded-2xl border text-4xl shadow-lg " +
+        (verdict ? coachAvatarStyle(verdict) : "border-white/10 bg-gradient-to-br from-amber-500/25 to-amber-500/5 shadow-amber-500/10")
+      }>
+        <span className="coach-eye">{verdict ? COACH_EMOJI[verdict] : "🧙"}</span>
       </div>
       <div className="min-w-0 flex-1">
-        <div className="flex items-baseline gap-2">
-          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-amber-300">Coach</p>
+        <div className="flex flex-wrap items-baseline gap-2">
+          <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-amber-300">Coach</p>
           {speaker && (
-            <span className="truncate text-[10.5px] text-zinc-500">
-              on {speaker}
+            <span className="truncate text-[11px] text-zinc-500">
+              on <span className="text-zinc-300">{speaker}</span>
               {verdict && (
-                <span className={"ml-1.5 rounded border px-1 py-px text-[8.5px] font-bold uppercase tracking-widest " + VERDICT_CHIP[verdict]}>
+                <span className={"ml-2 rounded border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest " + VERDICT_CHIP[verdict]}>
                   {verdict}
                 </span>
               )}
             </span>
           )}
         </div>
-        <p className="mt-1 text-[12px] leading-snug text-zinc-200">
-          {!frame || !analysis || frame.by === null
-            ? "Pick any move to hear my take."
-            : busy
-              ? <span className="italic text-zinc-500">Thinking…</span>
-              : note ?? <span className="italic text-zinc-500">…</span>}
-        </p>
+        {!frame || !analysis || frame.by === null ? (
+          <p className="mt-1.5 text-lg font-semibold leading-tight text-zinc-300">
+            Pick any move to hear my take.
+          </p>
+        ) : (
+          <>
+            <p className={"mt-1 text-2xl font-extrabold leading-tight tracking-tight " + (verdict ? QUIP_COLOR[verdict] : "text-zinc-100")}>
+              {quip}
+            </p>
+            <p className="mt-1.5 text-[12.5px] leading-snug text-zinc-400">
+              {busy
+                ? <span className="italic text-zinc-500">Thinking…</span>
+                : note ?? <span className="italic text-zinc-500">…</span>}
+            </p>
+          </>
+        )}
       </div>
     </div>
   );
+}
+
+const COACH_EMOJI: Record<Verdict, string> = {
+  best: "🧠",
+  good: "👍",
+  inaccuracy: "🤔",
+  mistake: "😬",
+  blunder: "💀",
+};
+
+const QUIP_COLOR: Record<Verdict, string> = {
+  best: "text-emerald-300",
+  good: "text-lime-300",
+  inaccuracy: "text-amber-300",
+  mistake: "text-orange-300",
+  blunder: "text-rose-300",
+};
+
+const QUIPS: Record<Verdict, string[]> = {
+  best: ["Perfect.", "Now that's chess.", "Book move.", "Chef's kiss.", "Textbook.", "Nailed it."],
+  good: ["Good move.", "Solid.", "I'll take it.", "Nice one.", "Fine choice.", "Clean."],
+  inaccuracy: ["Meh.", "Could be better.", "A bit loose.", "Slightly off.", "Not quite.", "Eh, ok."],
+  mistake: ["Bad move.", "Ouch.", "Yikes.", "That hurts.", "Rough call.", "Oof."],
+  blunder: ["What a blunder!", "Catastrophic.", "You cannot be serious.", "Absolutely tragic.", "💀 blunder city.", "Turn off the stream."],
+};
+
+function coachAvatarStyle(v: Verdict): string {
+  switch (v) {
+    case "best": return "border-emerald-400/40 bg-gradient-to-br from-emerald-500/30 to-emerald-500/5 shadow-emerald-500/20";
+    case "good": return "border-lime-400/40 bg-gradient-to-br from-lime-500/30 to-lime-500/5 shadow-lime-500/20";
+    case "inaccuracy": return "border-amber-400/40 bg-gradient-to-br from-amber-500/30 to-amber-500/5 shadow-amber-500/20";
+    case "mistake": return "border-orange-400/40 bg-gradient-to-br from-orange-500/30 to-orange-500/5 shadow-orange-500/20";
+    case "blunder": return "border-rose-400/40 bg-gradient-to-br from-rose-500/30 to-rose-500/5 shadow-rose-500/20";
+  }
+}
+
+function pickQuip(v: Verdict, seedKey: string): string {
+  const arr = QUIPS[v];
+  let h = 2166136261;
+  for (let i = 0; i < seedKey.length; i++) {
+    h ^= seedKey.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return arr[Math.abs(h) % arr.length];
 }
 
 function MoveCard({ snapshot, slot, analysis, actual }: {
