@@ -1793,7 +1793,7 @@ function GameScreen({
   }
 
   return (
-    <div className="grid w-full max-w-6xl gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+    <div className="grid w-full max-w-7xl gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_400px]">
       <div className="order-1 flex min-w-0 flex-col gap-3 pb-20 lg:pb-0">
         {state.mode === 4 && <ChaosBanner />}
         {afk && state.winner === null && state.matchWinner === null && (
@@ -1801,6 +1801,9 @@ function GameScreen({
         )}
         <PlayerBanners state={state} you={you} nameOf={nameOf} playerIdOf={playerIdOf} placement="top" />
         <div className="flex gap-2 sm:gap-3">
+          <div className="hidden sm:contents">
+            <BoardSideClocks state={state} you={you} nameOf={nameOf} />
+          </div>
           <div className="relative min-w-0 flex-1">
             <QuoridorBoard state={displayState} you={you} onMove={handleMove} interactive={boardInteractive} onActivity={() => markActivity(you)} />
             {coinflip?.animating && <CoinflipOverlay starter={coinflip.starter} you={you} mode={state.mode as Mode} nameOf={nameOf} playerIdOf={playerIdOf} />}
@@ -1821,9 +1824,6 @@ function GameScreen({
             {matchOver && (
               <div className="pointer-events-none absolute inset-0 rounded-lg bg-background/70 backdrop-blur-sm" />
             )}
-          </div>
-          <div className="hidden sm:contents">
-            <BoardSideClocks state={state} you={you} nameOf={nameOf} />
           </div>
         </div>
         <PlayerBanners state={state} you={you} nameOf={nameOf} playerIdOf={playerIdOf} placement="bottom" />
