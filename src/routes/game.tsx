@@ -2064,7 +2064,7 @@ function PlayerBanners({ state, you, nameOf, playerIdOf, placement }: {
   const relevant = placement === "top" ? seats.filter((s) => s !== you) : [you];
   if (relevant.length === 0) return null;
   return (
-    <div className={"grid gap-2 sm:gap-3 " + (relevant.length === 1 ? "grid-cols-1" : relevant.length === 2 ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-3")}>
+    <div className={"grid gap-2 sm:gap-3 sm:ml-auto sm:w-full sm:max-w-[560px] " + (relevant.length === 1 ? "grid-cols-1" : relevant.length === 2 ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-3")}>
       {relevant.map((s) => {
         const isTurn = state.turn === s && state.winner === null && state.matchWinner === null && state.active[s];
         return (
