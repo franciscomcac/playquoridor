@@ -3794,11 +3794,12 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave }:
           presence={{ count: mode, expected: mode }}
           coinAnimating={!!coinflip?.animating} nameOf={nameOf}
         />
+        <PlayerBanners state={state} you={YOU} nameOf={nameOf} playerIdOf={playerIdOf} placement="top" />
         <div className="flex gap-2 sm:gap-3">
           <div className="relative min-w-0 flex-1">
             <QuoridorBoard state={displayState} you={YOU} onMove={handleMove} interactive={boardInteractive} />
             {coinflip?.animating && (
-              <CoinflipOverlay starter={coinflip.starter} you={YOU} mode={mode} nameOf={nameOf} />
+              <CoinflipOverlay starter={coinflip.starter} you={YOU} mode={mode} nameOf={nameOf} playerIdOf={playerIdOf} />
             )}
             {roundOver && !matchOver && !coinflip?.animating && roundEndAnim && (
               <RoundEndScoreAnim
@@ -3813,6 +3814,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave }:
           </div>
           <BoardSideClocks state={state} you={YOU} nameOf={nameOf} />
         </div>
+        <PlayerBanners state={state} you={YOU} nameOf={nameOf} playerIdOf={playerIdOf} placement="bottom" />
       </div>
 
       {matchOver && (
