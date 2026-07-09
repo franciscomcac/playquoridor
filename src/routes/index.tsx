@@ -497,33 +497,6 @@ function Lobby() {
         {/* Right column */}
         <div className="flex flex-col gap-4">
           <div className="px-1 pt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#5c5c66]">Quick play</div>
-          <button
-            onClick={() => {
-              if (hasActiveGame()) { void navigate({ to: "/game" }); return; }
-              go("fog2");
-            }}
-            className="ltm-shimmer group relative overflow-hidden rounded-2xl border border-fuchsia-400/40 bg-gradient-to-br from-[#1a0f24] via-[#170a1f] to-[#0d0616] p-5 text-left transition-transform hover:-translate-y-0.5"
-            style={{ boxShadow: "0 8px 32px rgba(168,85,247,0.18), inset 0 1px 0 rgba(255,255,255,0.04)" }}
-          >
-            <div className="flex items-center justify-between">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-fuchsia-400/60 bg-fuchsia-500/10 px-2 py-[3px] font-[IBM_Plex_Mono,monospace] text-[9.5px] font-black uppercase tracking-[0.18em] text-fuchsia-200">
-                <span aria-hidden>🌫️</span> LTM
-              </span>
-              <span className="font-[IBM_Plex_Mono,monospace] text-[10px] uppercase tracking-[0.14em] text-fuchsia-300/70">
-                Limited time
-              </span>
-            </div>
-            <div className="mt-3 text-[17px] font-bold text-[#f3e8ff]">Fog of Walls</div>
-            <div className="mt-1 text-[12px] leading-relaxed text-[#b8a5cf]">
-              Enemy walls stay hidden until your pawn gets close. Scout, guess, punish.
-            </div>
-            <div className="mt-3 flex items-center justify-between">
-              <span className="text-[12px] font-semibold uppercase tracking-[0.08em] text-fuchsia-300 group-hover:text-fuchsia-200">
-                Play now →
-              </span>
-              <span className="text-[10px] text-[#7a6b90]">2p · Casual</span>
-            </div>
-          </button>
           <Card>
             <CardHeader eyebrow="CPU Practice" action={<span className="text-[11px] text-[#5c5c66]">choose difficulty</span>} />
             <div className="mt-3">
