@@ -327,15 +327,18 @@ function MoveList({ listRows, frames, analyses, snapshot, activeIdx, onPick }: {
   onPick: (i: number) => void;
 }) {
   const activeRef = useRef<HTMLButtonElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const el = activeRef.current;
-    if (!el) return;
-    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    const parent = listRef.current;
+    if (!el || !parent) return;
+    const target = el.offsetTop - parent.clientHeight / 2 + el.clientHeight / 2;
+    parent.scrollTo({ top: Math.max(0, target), behavior: "smooth" });
   }, [activeIdx]);
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto px-2.5 pb-4 pt-2">
+    <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto px-2.5 pb-4 pt-2">
       {listRows.map((row, k) => {
               if (row.kind === "divider") {
                 return (
