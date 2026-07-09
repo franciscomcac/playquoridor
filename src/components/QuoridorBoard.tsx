@@ -12,6 +12,9 @@ type Props = {
   onMove: (m: Move) => void;
   interactive: boolean;
   onActivity?: () => void;
+  /** Optional Fog-of-Walls filter: keys of walls that should be rendered.
+   *  When provided, walls not in the set are hidden from view. */
+  visibleWallKeys?: Set<string>;
 };
 
 export const PLAYER_COLORS = [
@@ -29,7 +32,7 @@ type Pop = { key: number; player: PlayerId; r: number; c: number };
 
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h", "i"];
 
-export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: Props) {
+export function QuoridorBoard({ state, you, onMove, interactive, onActivity, visibleWallKeys }: Props) {
   const [hover, setHover] = useState<HoverTarget | null>(null);
   // Touch users get a two-tap flow: first tap arms a ghost wall; second tap
   // in the same spot places it. The armed spec also drives an on-board
@@ -355,7 +358,9 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
           ) : null,
         )}
 
-        {state.walls.map((w) => (
+        {state.walls
+          .filter((w) => !visibleWallKeys || visibleWallKeys.has(`${w.o}-${w.r}-${w.c}`))
+          .map((w) => (
           <WallView key={`w-${w.o}-${w.r}-${w.c}`} wall={w} tone="solid"
             latest={state.lastWall !== null && state.lastWall.o === w.o && state.lastWall.r === w.r && state.lastWall.c === w.c} />
         ))}
