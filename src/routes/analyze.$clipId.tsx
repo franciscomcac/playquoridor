@@ -304,13 +304,45 @@ function AnalyzePage() {
             frame={cur ?? null}
             analysis={curAnalysis ?? null}
           />
-          <div className="min-h-0 flex-1 overflow-y-auto px-2.5 pb-4 pt-2">
-            {listRows.map((row, k) => {
+          <MoveList
+            listRows={listRows}
+            frames={frames}
+            analyses={analyses}
+            snapshot={snapshot}
+            activeIdx={idx}
+            onPick={(i) => { setPlaying(false); setIdx(i); }}
+          />
+        </section>
+      </div>
+    </Shell>
+  );
+}
+
+function MoveList({ listRows, frames, analyses, snapshot, activeIdx, onPick }: {
+  listRows: Array<{ kind: "divider"; roundIndex: number } | { kind: "move"; i: number }>;
+  frames: ReturnType<typeof replay>;
+  analyses: Array<Analysis | null>;
+  snapshot: MatchSnapshot;
+  activeIdx: number;
+  onPick: (i: number) => void;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const activeRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const el = activeRef.current;
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [activeIdx]);
+
+  return (
+    <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-2.5 pb-4 pt-2">
+      {listRows.map((row, k) => {
               if (row.kind === "divider") {
                 return (
                   <div key={"d-" + k} className="sticky top-0 z-[1] flex items-center gap-3 bg-gradient-to-b from-[color:var(--analyze-panel,#101014)] to-transparent px-4 pb-2 pt-3">
                     <div className="h-px flex-1 bg-white/10" />
-                    <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-600">Round {row.roundIndex + 1}</span>
+                    <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-zinc-500">Round {row.roundIndex + 1}</span>
                     <div className="h-px flex-1 bg-white/10" />
                   </div>
                 );
@@ -319,26 +351,28 @@ function AnalyzePage() {
               const a = analyses[row.i];
               if (!a || f.by === null) return null;
               const name = snapshot.playerNames[f.by];
-              const active = row.i === idx;
+              const active = row.i === activeIdx;
               return (
-                <button key={row.i} onClick={() => { setPlaying(false); setIdx(row.i); }}
-                  className={"grid w-full grid-cols-[24px_10px_84px_1fr_84px] items-center gap-2 rounded-lg px-2.5 py-1.5 text-left transition " +
-                    (active ? "" : "hover:bg-white/[0.035]")}
-                  style={active ? { background: "color-mix(in oklch, " + PLAYER_HEX[0] + " 12%, transparent)" } : undefined}>
-                  <span className="font-mono text-[10.5px] text-zinc-600">{f.plyIndex + 1}.</span>
-                  <span className="h-1.5 w-1.5 rounded-full" style={{ background: PLAYER_HEX[f.by] }} />
-                  <span className={"truncate text-[11.5px] " + (active ? "text-zinc-100" : "text-zinc-500")} title={name}>{name}</span>
-                  <span className="truncate font-mono text-[11.5px] text-zinc-100">{moveText(a.actual)}</span>
-                  <span className={"justify-self-end rounded border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest " + VERDICT_CHIP[a.verdict]}>
+                <button key={row.i} ref={active ? activeRef : undefined}
+                  onClick={() => onPick(row.i)}
+                  className={"grid w-full grid-cols-[32px_12px_110px_1fr_78px] items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition " +
+                    (active
+                      ? "ring-1 ring-inset ring-amber-400/40"
+                      : "hover:bg-white/[0.04]")}
+                  style={active
+                    ? { background: "color-mix(in oklch, " + PLAYER_HEX[0] + " 16%, transparent)" }
+                    : undefined}>
+                  <span className={"font-mono text-[12px] " + (active ? "text-zinc-300" : "text-zinc-600")}>{f.plyIndex + 1}.</span>
+                  <span className="h-2 w-2 rounded-full" style={{ background: PLAYER_HEX[f.by] }} />
+                  <span className={"truncate text-[13px] " + (active ? "font-semibold text-zinc-100" : "text-zinc-400")} title={name}>{name}</span>
+                  <span className={"truncate font-mono text-[13px] " + (active ? "font-semibold text-white" : "text-zinc-200")}>{moveText(a.actual)}</span>
+                  <span className={"justify-self-end rounded border px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-widest " + VERDICT_CHIP[a.verdict]}>
                     {a.verdict}
                   </span>
                 </button>
               );
-            })}
-          </div>
-        </section>
-      </div>
-    </Shell>
+      })}
+    </div>
   );
 }
 
