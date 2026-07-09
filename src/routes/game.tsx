@@ -218,7 +218,7 @@ function Home() {
 
   return (
     <main className="min-h-screen lg:h-screen lg:overflow-hidden" onPointerDown={() => initSoundOnGesture()}>
-      <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-1 py-2 sm:px-6 sm:py-6 lg:h-full lg:min-h-0 lg:py-4">
+      <div className="mx-auto flex min-h-screen w-full max-w-[1600px] flex-col px-1 py-2 sm:px-6 sm:py-6 lg:h-full lg:min-h-0 lg:py-4">
         <Header onOpenSettings={() => setSettingsOpen(true)} ident={ident} />
 
         {!ident ? (
@@ -1793,7 +1793,7 @@ function GameScreen({
   }
 
   return (
-    <div className="grid w-full max-w-6xl gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+    <div className="grid w-full gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
       <div className="order-1 flex min-w-0 flex-col gap-3 pb-20 lg:pb-0">
         {state.mode === 4 && <ChaosBanner />}
         {afk && state.winner === null && state.matchWinner === null && (
@@ -3786,7 +3786,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave }:
   const boardInteractive = state.winner === null && !coinflip?.animating && state.turn === YOU && !review;
 
   return (
-    <div className="grid w-full max-w-6xl gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+    <div className="grid w-full gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
       <div className="order-1 flex min-w-0 flex-col gap-3 pb-20 lg:pb-0">
         <PlayerBanners state={state} you={YOU} nameOf={nameOf} playerIdOf={playerIdOf} placement="top" />
         <div className="flex gap-2 sm:gap-3">
@@ -3995,7 +3995,7 @@ function SpectatorGame({ ident, code, onLeave }: {
   }, [code]);
 
   return (
-    <div className="grid w-full max-w-6xl gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+    <div className="grid w-full gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
       <div className="order-1 flex min-w-0 flex-col gap-3 pb-20 lg:pb-0">
         <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 shadow-sm">
           <span className="grid h-9 w-9 place-items-center rounded-full text-[10px] font-semibold uppercase tracking-widest"
