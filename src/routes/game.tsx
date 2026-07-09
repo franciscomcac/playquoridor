@@ -1589,6 +1589,26 @@ function GameScreen({
   const prevWinnerRef = useRef<PlayerId | null>(null);
   const prevMatchWinnerRef = useRef<PlayerId | null>(null);
   const [roundEndAnim, setRoundEndAnim] = useState(false);
+  // Fog of Walls — client-side visibility filter. Persists per match.
+  const [fogOn, setFogOn] = useState<boolean>(() => {
+    try { return localStorage.getItem("quoridor:fogOfWalls") === "1"; } catch { return false; }
+  });
+  const revealedRef = useRef<Set<string>>(new Set());
+  const [visibleWallKeys, setVisibleWallKeys] = useState<Set<string> | undefined>(undefined);
+  useEffect(() => {
+    try { localStorage.setItem("quoridor:fogOfWalls", fogOn ? "1" : "0"); } catch { /* ignore */ }
+  }, [fogOn]);
+  // Reset revealed set at the start of every round.
+  useEffect(() => {
+    if ((state.moveCount ?? 0) === 0) revealedRef.current = new Set();
+  }, [state.moveCount]);
+  // Recompute visibility whenever the board changes.
+  useEffect(() => {
+    if (!fogOn) { setVisibleWallKeys(undefined); return; }
+    const next = computeVisibleWalls(state, YOU, revealedRef.current);
+    revealedRef.current = next;
+    setVisibleWallKeys(next);
+  }, [state.walls, state.pawns, fogOn]);
   useEffect(() => {
     if (state.winner !== null && prevWinnerRef.current === null) {
       const r = state.endReason;
@@ -3832,7 +3852,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
         <PlayerBanners state={state} you={YOU} nameOf={nameOf} playerIdOf={playerIdOf} placement="top" />
         <div className="flex">
           <div className="relative min-w-0 flex-1">
-            <QuoridorBoard state={displayState} you={YOU} onMove={handleMove} interactive={boardInteractive} />
+            <QuoridorBoard state={displayState} you={YOU} onMove={handleMove} interactive={boardInteractive} visibleWallKeys={visibleWallKeys} />
             {coinflip?.animating && (
               <CoinflipOverlay starter={coinflip.starter} you={YOU} mode={mode} nameOf={nameOf} playerIdOf={playerIdOf} />
             )}
@@ -3887,6 +3907,18 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
             onConfirm={forfeit}
             disabled={state.winner !== null || state.matchWinner !== null || !state.active[YOU]}
           />
+          <button
+            onClick={() => setFogOn((v) => !v)}
+            className={
+              "rounded-lg border px-3 py-2 text-xs font-medium uppercase tracking-widest transition " +
+              (fogOn
+                ? "border-primary bg-primary/15 text-primary"
+                : "border-border bg-secondary/30 hover:bg-secondary")
+            }
+            title="Hide opponent walls outside your pawn's line of sight"
+          >
+            Fog of Walls: {fogOn ? "On" : "Off"}
+          </button>
           <div className="flex gap-2">
             <button onClick={startMatch} disabled={!!coinflip?.animating}
               className="flex-1 rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary disabled:opacity-40">
