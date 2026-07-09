@@ -37,7 +37,13 @@ export async function linkAuthToPlayer(): Promise<void> {
     const { data: { session } } = await supabase.auth.getSession();
     const uid = session?.user?.id;
     const ident = getStoredIdentity();
-    if (!uid || !ident) return;
+    if (!uid) return;
+    if (!ident) {
+      // No local identity yet — hydrate it from the account's existing
+      // players row instead of leaving the user with no name link.
+      await restoreIdentityFromAuth();
+      return;
+    }
     await supabase.from("players").upsert({
       id: ident.id, name: ident.name, auth_user_id: uid,
       updated_at: new Date().toISOString(),
@@ -94,4 +100,31 @@ export function ensureUniqueName(taken: string[], candidate: string): string {
   let n = 2;
   while (used.has(`${lower} ${n}`)) n++;
   return `${clean} ${n}`;
+}
+
+// Try to hydrate a stored identity from the signed-in user's `players` row.
+// Runs when localStorage has no identity but the user IS signed in (new
+// browser, cleared storage, incognito) — without this we'd mint a random
+// gamer name and orphan the account for the session.
+export async function restoreIdentityFromAuth(): Promise<Identity | null> {
+  if (typeof window === "undefined") return null;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) return null;
+    // Skip anonymous auth sessions — those aren't a "real" account.
+    if (session?.user?.is_anonymous) return null;
+    const { data, error } = await supabase
+      .from("players")
+      .select("id,name")
+      .eq("auth_user_id", uid)
+      .maybeSingle();
+    if (error || !data) return null;
+    localStorage.setItem(ID_KEY, data.id);
+    localStorage.setItem(NAME_KEY, data.name);
+    return { id: data.id, name: data.name };
+  } catch (e) {
+    console.warn("restoreIdentityFromAuth failed", e);
+    return null;
+  }
 }
