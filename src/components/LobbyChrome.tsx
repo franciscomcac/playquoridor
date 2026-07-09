@@ -40,14 +40,7 @@ export function LobbyChrome({
       <header className="h-[68px] border-b border-[#1a1a1f]">
         <div className="mx-auto flex h-full max-w-[1600px] items-center justify-between gap-3 px-4 sm:px-8">
           <Link to="/" className="flex items-center gap-3">
-            <span className="grid h-9 w-9 place-items-center rounded-[9px] border border-[#2a2a31] bg-gradient-to-br from-[#1d1d22] to-[#101013]">
-              <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden>
-                <rect x="1" y="1" width="7" height="7" rx="1.5" fill="#f5a524" />
-                <rect x="10" y="1" width="7" height="7" rx="1.5" fill="#2e2e36" />
-                <rect x="1" y="10" width="7" height="7" rx="1.5" fill="#2e2e36" />
-                <rect x="10" y="10" width="7" height="7" rx="1.5" fill="#2e2e36" />
-              </svg>
-            </span>
+            <img src="/favicon.svg" alt="playquoridor.online logo" width={36} height={36} className="h-9 w-9" />
             <span className="text-[15px] font-bold">
               playquoridor<span className="text-[#5c5c66]">.online</span>
             </span>
