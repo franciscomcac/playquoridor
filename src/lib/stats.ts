@@ -4,6 +4,12 @@ import { ensureAuthSession, getStoredIdentity } from "@/lib/identity";
 import { PLACEMENT_GAMES } from "@/components/LobbyChrome";
 // Bot rows are excluded from the leaderboard via the `players.is_bot` flag.
 
+const OPEN_ROOM_STALE_MS = 45_000;
+
+function openRoomCutoffIso(): string {
+  return new Date(Date.now() - OPEN_ROOM_STALE_MS).toISOString();
+}
+
 export type MatchResult = {
   mode: 2 | 4;
   rounds: number;
@@ -256,7 +262,7 @@ export async function removeOpenRoom(code: string) {
   try { await ensureAuthSession(); await supabase.from("open_rooms").delete().eq("code", code); } catch {}
 }
 export async function findOpenRoom(mode: 2 | 4, ranked = false): Promise<string | null> {
-  const cutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+  const cutoff = openRoomCutoffIso();
   const { data } = await supabase.from("open_rooms")
     .select("code, seats_taken, seats_total, ranked, updated_at")
     .eq("mode", mode).eq("ranked", ranked).gte("updated_at", cutoff)
@@ -275,7 +281,7 @@ export async function findOpenRoom(mode: 2 | 4, ranked = false): Promise<string 
 export async function findOpenRoomOlderThan(
   myCode: string, mode: 2 | 4, ranked = false,
 ): Promise<string | null> {
-  const cutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+  const cutoff = openRoomCutoffIso();
   const { data } = await supabase.from("open_rooms")
     .select("code, seats_taken, seats_total, updated_at")
     .eq("mode", mode).eq("ranked", ranked).gte("updated_at", cutoff)
@@ -299,7 +305,7 @@ export async function fetchGamesToday(): Promise<number> {
 
 /** Count of ranked open rooms currently waiting for opponents. */
 export async function fetchQueueCount(): Promise<number> {
-  const cutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+  const cutoff = openRoomCutoffIso();
   const { data } = await supabase
     .from("open_rooms")
     .select("seats_taken, seats_total")
@@ -319,7 +325,7 @@ export type LiveRoom = {
 
 /** Currently-known open rooms (both waiting and full). Used for the spectate/live list. */
 export async function fetchLiveRooms(limit = 6): Promise<LiveRoom[]> {
-  const cutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+  const cutoff = openRoomCutoffIso();
   const { data } = await supabase
     .from("open_rooms")
     .select("code, mode, ranked, host_name, seats_taken, seats_total, updated_at")

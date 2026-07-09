@@ -318,7 +318,7 @@ function Home() {
                   difficulty: randomDifficulty().value,
                   opponentNames: Array.from({ length: view.mode - 1 }, () => randomGamerName()),
                 })}
-                onRankedTimeout={undefined}
+                onRankedTimeout={view.quickMatch ? () => setView({ name: "quick", mode: view.mode, ranked: view.ranked }) : undefined}
                 onRequeue={view.quickMatch ? () => {
                   clearInterruptedGame();
                   setView({ name: "quick", mode: view.mode, ranked: view.ranked });
@@ -1156,11 +1156,13 @@ function GameScreen({
         if (cancelled) return;
         console.error(err);
         const em = err?.message ?? String(err);
-        // Ranked joiner hit a stale/dead host — purge the room and surface
-        // the "search time exceeded" screen instead of a scary error.
-        if (ranked && !isHost && onRankedTimeout &&
+        // Quick-match joiner hit a stale/dead host — purge that queue row and
+        // requeue immediately instead of leaving them on Connection error.
+        if (quickMatch && !isHost && onRankedTimeout &&
             (em.includes("peer-unavailable") || em.toLowerCase().includes("could not connect"))) {
           void removeOpenRoom(code);
+          roomRef.current?.close();
+          roomRef.current = null;
           onRankedTimeout();
           return;
         }
