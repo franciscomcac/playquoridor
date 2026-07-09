@@ -8,5 +8,6 @@
 - [About Quoridor](/about): Full rules, history, strategy tips, glossary and FAQ for the wall blocking board game.
 - [Stats & leaderboard](/stats): Global ELO leaderboard and player standings.
 - [Daily puzzle](/puzzle): Today's Quoridor tactics puzzle.
+- [Blog](/blog): Quoridor strategy guides, rules explainers, and updates on new game modes.
 - [Privacy](/privacy): Privacy policy.
 - [Terms](/terms): Terms of service.
