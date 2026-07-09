@@ -41,12 +41,20 @@ function beep(ctx: AudioContext, freq = 620, ms = 55) {
 function drawRotated(canvas: HTMLCanvasElement, frame: ReplayFrame, pov: "bottom" | "top") {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
+  // Black 9:16 backdrop
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // Square board centered vertically
+  const size = Math.min(canvas.width, canvas.height);
+  const ox = (canvas.width - size) / 2;
+  const oy = (canvas.height - size) / 2;
   ctx.save();
+  ctx.translate(ox, oy);
   if (pov === "top") {
-    ctx.translate(canvas.width, canvas.height);
+    ctx.translate(size, size);
     ctx.rotate(Math.PI);
   }
-  drawState(ctx, frame.state, canvas.width, canvas.height);
+  drawState(ctx, frame.state, size, size);
   ctx.restore();
 }
 
@@ -135,12 +143,18 @@ export function ExportClipModal({ open, snapshot, onClose, filename }: Props) {
       const stopped = new Promise<void>((resolve) => { rec.onstop = () => resolve(); });
 
       const drawFrame = (frame: ReplayFrame) => {
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        const size = Math.min(canvas.width, canvas.height);
+        const ox = (canvas.width - size) / 2;
+        const oy = (canvas.height - size) / 2;
         ctx.save();
+        ctx.translate(ox, oy);
         if (pov === "top") {
-          ctx.translate(canvas.width, canvas.height);
+          ctx.translate(size, size);
           ctx.rotate(Math.PI);
         }
-        drawState(ctx, frame.state, canvas.width, canvas.height);
+        drawState(ctx, frame.state, size, size);
         ctx.restore();
       };
 
