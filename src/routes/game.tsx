@@ -1796,7 +1796,6 @@ function GameScreen({
     <div className="grid w-full max-w-6xl gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div className="order-1 flex min-w-0 flex-col gap-3 pb-20 lg:pb-0">
         {state.mode === 4 && <ChaosBanner />}
-        <TurnBar state={state} you={you} status={status} presence={presence} coinAnimating={!!coinflip?.animating} nameOf={nameOf} />
         {afk && state.winner === null && state.matchWinner === null && (
           <AfkBanner slot={afk.slot} deadline={afk.deadline} name={nameOf(afk.slot)} />
         )}
@@ -3789,11 +3788,6 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave }:
   return (
     <div className="grid w-full max-w-6xl gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div className="order-1 flex min-w-0 flex-col gap-3 pb-20 lg:pb-0">
-        <TurnBar
-          state={state} you={YOU} status={"connected"}
-          presence={{ count: mode, expected: mode }}
-          coinAnimating={!!coinflip?.animating} nameOf={nameOf}
-        />
         <PlayerBanners state={state} you={YOU} nameOf={nameOf} playerIdOf={playerIdOf} placement="top" />
         <div className="flex gap-2 sm:gap-3">
           <div className="relative min-w-0 flex-1">
