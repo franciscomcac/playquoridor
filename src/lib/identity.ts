@@ -114,15 +114,32 @@ export async function restoreIdentityFromAuth(): Promise<Identity | null> {
     if (!uid) return null;
     // Skip anonymous auth sessions — those aren't a "real" account.
     if (session?.user?.is_anonymous) return null;
-    const { data, error } = await supabase
+    // Prefer the onboarded players row (the canonical username the user
+    // chose during onboarding) over an older anon-session row that may
+    // still be linked to this auth user with a stale random gamer name.
+    const { data: onboarded } = await supabase
       .from("players")
-      .select("id,name")
+      .select("id,name,onboarded_at")
       .eq("auth_user_id", uid)
+      .not("onboarded_at", "is", null)
+      .order("onboarded_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
-    if (error || !data) return null;
-    localStorage.setItem(ID_KEY, data.id);
-    localStorage.setItem(NAME_KEY, data.name);
-    return { id: data.id, name: data.name };
+    let row: { id: string; name: string } | null = onboarded
+      ? { id: onboarded.id, name: onboarded.name }
+      : null;
+    if (!row) {
+      const { data, error } = await supabase
+        .from("players")
+        .select("id,name")
+        .eq("auth_user_id", uid)
+        .maybeSingle();
+      if (error || !data) return null;
+      row = { id: data.id, name: data.name };
+    }
+    localStorage.setItem(ID_KEY, row.id);
+    localStorage.setItem(NAME_KEY, row.name);
+    return row;
   } catch (e) {
     console.warn("restoreIdentityFromAuth failed", e);
     return null;

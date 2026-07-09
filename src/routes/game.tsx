@@ -1799,10 +1799,10 @@ function GameScreen({
   }
 
   return (
-    <div className="grid w-full items-start gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_340px]">
+    <div className="grid w-full items-start gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_380px] xl:grid-cols-[minmax(0,1fr)_420px]">
       <div
-        className="order-1 mx-auto flex w-full min-w-0 flex-col gap-2 pb-20 sm:gap-3 lg:pb-0"
-        style={{ maxWidth: "min(740px, calc(100vh - 15rem))" }}
+        className="order-1 mx-auto flex w-full min-w-0 flex-col gap-2 pb-20 sm:gap-3 lg:mx-0 lg:pb-0"
+        style={{ maxWidth: "min(700px, calc(100vh - 15rem))" }}
       >
         {state.mode === 4 && <ChaosBanner />}
         {afk && state.winner === null && state.matchWinner === null && (
@@ -2064,7 +2064,7 @@ function PlayerBanners({ state, you, nameOf, playerIdOf, placement }: {
   const relevant = placement === "top" ? seats.filter((s) => s !== you) : [you];
   if (relevant.length === 0) return null;
   return (
-    <div className={"grid gap-2 sm:gap-3 " + (relevant.length === 1 ? "grid-cols-1" : relevant.length === 2 ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-3")}>
+    <div className={"grid gap-2 sm:gap-3 sm:ml-auto sm:w-full sm:max-w-[560px] " + (relevant.length === 1 ? "grid-cols-1" : relevant.length === 2 ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-3")}>
       {relevant.map((s) => {
         const isTurn = state.turn === s && state.winner === null && state.matchWinner === null && state.active[s];
         return (
@@ -2666,7 +2666,7 @@ function ChessClock({ state, playerId, nameOf, compact = false }: {
     wasActiveRef.current = active;
   }, [active]);
   const cls =
-    "rounded-lg border px-3 py-2 transition " +
+    "rounded-lg border px-2.5 py-2 transition " +
     (active ? "clock-active " : "opacity-60 ") +
     (active && danger ? "clock-danger " : active && warn ? "clock-warn " : "");
   return (
@@ -2682,7 +2682,7 @@ function ChessClock({ state, playerId, nameOf, compact = false }: {
         </span>
         <span className="h-2 w-2 rounded-full" style={{ background: color }} />
       </div>
-      <p className={"font-mono tabular-nums " + (compact ? "text-lg" : "text-2xl") + " leading-tight"}
+      <p className={"font-mono tabular-nums " + (compact ? "text-xl" : "text-2xl sm:text-3xl") + " leading-tight"}
         style={{ color: danger ? "var(--destructive)" : "inherit" }}>
         {formatClock(remaining)}
       </p>
@@ -2731,14 +2731,14 @@ function BoardSideClocks({ state, you, nameOf }: {
   for (let i = 0; i < state.mode; i++) if (i !== you) others.push(i as PlayerId);
   const showYou = you >= 0 && you < state.mode;
   return (
-    <div className="flex w-20 shrink-0 flex-col justify-between gap-2 sm:w-24 md:w-28">
+    <div className="flex w-24 shrink-0 flex-col justify-between gap-2 sm:w-28 md:w-32">
       <div className="flex flex-col gap-2">
         {others.map((o) => (
-          <ChessClock key={o} state={state} playerId={o} nameOf={nameOf} compact />
+          <ChessClock key={o} state={state} playerId={o} nameOf={nameOf} />
         ))}
       </div>
       {showYou && (
-        <ChessClock state={state} playerId={you} nameOf={nameOf} compact />
+        <ChessClock state={state} playerId={you} nameOf={nameOf} />
       )}
     </div>
   );

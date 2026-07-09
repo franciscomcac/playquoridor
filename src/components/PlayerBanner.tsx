@@ -130,17 +130,17 @@ export function PlayerBanner({ slot, color, name, isYou, isTurn, wallsLeft, tota
       </div>
 
       {/* Wall counter */}
-      <div className="flex flex-none items-center gap-1">
-        <div className="flex items-center gap-[2px]">
+      <div className="flex flex-none items-center gap-1.5">
+        <div className="flex items-center gap-[3px]">
           {Array.from({ length: totalWalls }).map((_, i) => (
             <span
               key={i}
-              className="block h-2.5 w-1 rounded-sm sm:h-3"
+              className="block h-4 w-[5px] rounded-sm sm:h-5 sm:w-1.5"
               style={{ background: i < shown ? color : "var(--border)", opacity: i < shown ? 1 : 0.5 }}
             />
           ))}
         </div>
-        <span className="ml-0.5 hidden font-mono text-[10px] font-bold tabular-nums sm:inline" style={{ color }}>
+        <span className="ml-0.5 hidden font-mono text-xs font-bold tabular-nums sm:inline" style={{ color }}>
           {wallsLeft}
         </span>
       </div>
