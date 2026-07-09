@@ -3735,6 +3735,10 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave }:
         />
       )}
 
+      {unlockQueue && unlockQueue.length > 0 && !rankUp && (
+        <AchievementUnlockOverlay items={unlockQueue} onDone={() => setUnlockQueue(null)} />
+      )}
+
       <MobileAsideSheet chat={<ChatPanel entries={chat} onSend={sendChat} you={YOU} />}>
         <ScoreCard state={state} you={YOU} nameOf={nameOf} />
         <PlayersCard state={state} you={YOU} nameOf={nameOf} />
