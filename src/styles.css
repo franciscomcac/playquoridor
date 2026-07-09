@@ -86,16 +86,11 @@
 }
 
 .wood-frame {
-  padding: 14px;
-  border-radius: 16px;
-  background:
-    linear-gradient(145deg, oklch(0.62 0.09 55), oklch(0.42 0.08 45)) padding-box,
-    linear-gradient(145deg, oklch(0.78 0.09 70), oklch(0.35 0.06 45)) border-box;
-  border: 2px solid transparent;
-  box-shadow:
-    inset 0 1px 0 oklch(0.88 0.06 75 / 0.55),
-    inset 0 -3px 6px oklch(0.2 0.03 40 / 0.45),
-    0 20px 40px -14px oklch(0.2 0.03 40 / 0.45);
+  padding: 10px;
+  border-radius: var(--radius);
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 32px -18px rgba(0, 0, 0, 0.6);
 }
 
 /* Coinflip */

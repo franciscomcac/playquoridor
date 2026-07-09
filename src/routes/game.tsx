@@ -1799,20 +1799,17 @@ function GameScreen({
   }
 
   return (
-    <div className="grid w-full items-start gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_380px] xl:grid-cols-[minmax(0,1fr)_420px]">
+    <div className="mx-auto grid w-full max-w-[1120px] items-start gap-6 px-4 sm:px-6 lg:grid-cols-[minmax(0,720px)_360px]">
       <div
-        className="order-1 mx-auto flex w-full min-w-0 flex-col gap-2 pb-20 sm:gap-3 lg:mx-0 lg:pb-0"
-        style={{ maxWidth: "min(700px, calc(100vh - 15rem))" }}
+        className="order-1 mx-auto flex w-full min-w-0 flex-col gap-3 pb-20 lg:mx-0 lg:pb-0"
+        style={{ maxWidth: "min(720px, calc(100vh - 12rem))" }}
       >
         {state.mode === 4 && <ChaosBanner />}
         {afk && state.winner === null && state.matchWinner === null && (
           <AfkBanner slot={afk.slot} deadline={afk.deadline} name={nameOf(afk.slot)} />
         )}
         <PlayerBanners state={state} you={you} nameOf={nameOf} playerIdOf={playerIdOf} placement="top" />
-        <div className="flex gap-2 sm:gap-3">
-          <div className="hidden sm:contents">
-            <BoardSideClocks state={state} you={you} nameOf={nameOf} />
-          </div>
+        <div className="flex">
           <div className="relative min-w-0 flex-1">
             <QuoridorBoard state={displayState} you={you} onMove={handleMove} interactive={boardInteractive} onActivity={() => markActivity(you)} />
             {coinflip?.animating && <CoinflipOverlay starter={coinflip.starter} you={you} mode={state.mode as Mode} nameOf={nameOf} playerIdOf={playerIdOf} />}
@@ -1875,7 +1872,6 @@ function GameScreen({
         </div>
 
         <ScoreCard state={state} you={you} nameOf={nameOf} />
-        <PlayersCard state={state} you={you} nameOf={nameOf} />
         <MoveHistoryPanel state={state} nameOf={nameOf} compact defaultOpen onView={setReview} />
         <EventLog entries={log} />
 
@@ -2064,7 +2060,7 @@ function PlayerBanners({ state, you, nameOf, playerIdOf, placement }: {
   const relevant = placement === "top" ? seats.filter((s) => s !== you) : [you];
   if (relevant.length === 0) return null;
   return (
-    <div className={"grid gap-2 sm:gap-3 sm:ml-auto sm:w-full sm:max-w-[560px] " + (relevant.length === 1 ? "grid-cols-1" : relevant.length === 2 ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-3")}>
+    <div className={"grid gap-2 sm:gap-3 " + (relevant.length === 1 ? "grid-cols-1" : relevant.length === 2 ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-3")}>
       {relevant.map((s) => {
         const isTurn = state.turn === s && state.winner === null && state.matchWinner === null && state.active[s];
         return (
@@ -2078,10 +2074,37 @@ function PlayerBanners({ state, you, nameOf, playerIdOf, placement }: {
             wallsLeft={state.wallsLeft[s] ?? 0}
             playerId={playerIdOf(s)}
             align={placement}
+            clock={state.clocks ? <PlateClock state={state} playerId={s} /> : undefined}
           />
         );
       })}
     </div>
+  );
+}
+
+// Compact monospace clock merged into the trailing edge of a PlayerBanner.
+function PlateClock({ state, playerId }: { state: GameState; playerId: PlayerId }) {
+  const [now, setNow] = useState<number>(() => Date.now());
+  const active = state.turn === playerId && state.winner === null
+    && state.matchWinner === null && state.active[playerId];
+  useEffect(() => {
+    if (!state.clocks) return;
+    const iv = window.setInterval(() => setNow(Date.now()), 200);
+    return () => window.clearInterval(iv);
+  }, [state.clocks]);
+  if (!state.clocks) return null;
+  const remaining = liveRemaining(state.clocks, state.turn, playerId, now);
+  const seconds = remaining / 1000;
+  const danger = seconds <= 15;
+  return (
+    <span
+      className="font-mono text-base font-semibold tabular-nums leading-none sm:text-lg"
+      style={{
+        color: danger ? "var(--destructive)" : active ? "var(--foreground)" : "var(--muted-foreground)",
+      }}
+    >
+      {formatClock(remaining)}
+    </span>
   );
 }
 
@@ -3795,11 +3818,13 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave }:
   const boardInteractive = state.winner === null && !coinflip?.animating && state.turn === YOU && !review;
 
   return (
-    <div className="grid w-full gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-      <div className="order-1 flex min-w-0 flex-col gap-3 pb-20 lg:pb-0">
+    <div className="mx-auto grid w-full max-w-[1120px] items-start gap-6 px-4 sm:px-6 lg:grid-cols-[minmax(0,720px)_360px]">
+      <div
+        className="order-1 mx-auto flex w-full min-w-0 flex-col gap-3 pb-20 lg:mx-0 lg:pb-0"
+        style={{ maxWidth: "min(720px, calc(100vh - 12rem))" }}
+      >
         <PlayerBanners state={state} you={YOU} nameOf={nameOf} playerIdOf={playerIdOf} placement="top" />
-        <div className="flex gap-2 sm:gap-3">
-          <BoardSideClocks state={state} you={YOU} nameOf={nameOf} />
+        <div className="flex">
           <div className="relative min-w-0 flex-1">
             <QuoridorBoard state={displayState} you={YOU} onMove={handleMove} interactive={boardInteractive} />
             {coinflip?.animating && (
@@ -3840,7 +3865,6 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave }:
 
       <MobileAsideSheet chat={<ChatPanel entries={chat} onSend={sendChat} you={YOU} />}>
         <ScoreCard state={state} you={YOU} nameOf={nameOf} />
-        <PlayersCard state={state} you={YOU} nameOf={nameOf} />
         <MoveHistoryPanel state={state} nameOf={nameOf} compact defaultOpen onView={setReview} />
 
         {toast && (
