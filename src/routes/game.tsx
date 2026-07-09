@@ -2666,7 +2666,7 @@ function ChessClock({ state, playerId, nameOf, compact = false }: {
     wasActiveRef.current = active;
   }, [active]);
   const cls =
-    "rounded-lg border px-3 py-2 transition " +
+    "rounded-lg border px-2.5 py-2 transition " +
     (active ? "clock-active " : "opacity-60 ") +
     (active && danger ? "clock-danger " : active && warn ? "clock-warn " : "");
   return (
@@ -2682,7 +2682,7 @@ function ChessClock({ state, playerId, nameOf, compact = false }: {
         </span>
         <span className="h-2 w-2 rounded-full" style={{ background: color }} />
       </div>
-      <p className={"font-mono tabular-nums " + (compact ? "text-lg" : "text-2xl") + " leading-tight"}
+      <p className={"font-mono tabular-nums " + (compact ? "text-xl" : "text-2xl sm:text-3xl") + " leading-tight"}
         style={{ color: danger ? "var(--destructive)" : "inherit" }}>
         {formatClock(remaining)}
       </p>
