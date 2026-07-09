@@ -289,7 +289,11 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity, vis
       const alt = (r + c) % 2 === 0;
       const tint = fog ? undefined : goalTint[`${r},${c}`];
       const isOpp = !!oppRowRange && r >= oppRowRange[0] && r <= oppRowRange[1];
-      const baseCell = alt ? "var(--board-cell)" : "var(--board-cell-alt)";
+      const baseCell = fog
+        ? (alt
+            ? "oklch(0.42 0.13 275)"   // blue haze
+            : "oklch(0.38 0.15 305)")  // purple haze
+        : (alt ? "var(--board-cell)" : "var(--board-cell-alt)");
       const bg = isOpp
         ? `color-mix(in oklab, ${baseCell} 95%, oklch(0.35 0.05 55))`
         : baseCell;
