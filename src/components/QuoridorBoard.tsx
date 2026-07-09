@@ -333,7 +333,7 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity, vis
           <span key={i} className="text-center leading-none">{BOARD - i}</span>
         ))}
       </div>
-      <div className="wood-frame aspect-square w-full min-w-0">
+      <div className={"aspect-square w-full min-w-0 " + (fog ? "fog-frame" : "wood-frame")}>
       <div ref={boardRef}
         onPointerMove={handlePointerMove}
         onPointerLeave={() => setHover(null)}
@@ -341,7 +341,7 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity, vis
         className="relative h-full w-full select-none overflow-hidden rounded-md"
         style={{
           cursor,
-          background: "var(--board-bg)",
+          background: fog ? "var(--fog-board-bg, #0a0616)" : "var(--board-bg)",
           transform: rotation ? `rotate(${rotation}deg)` : undefined,
           transition: "transform 240ms ease",
           touchAction: "manipulation",
@@ -377,6 +377,28 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity, vis
         {pops.map((p) => (
           <PopFX key={p.key} r={p.r} c={p.c} color={PLAYER_COLORS[p.player]} />
         ))}
+
+        {fog && (
+          <div className="pointer-events-none absolute inset-0 z-[4]">
+            {Array.from({ length: BOARD * BOARD }, (_, i) => {
+              const r = Math.floor(i / BOARD), c = i % BOARD;
+              if (visibleCells && visibleCells.has(i)) return null;
+              const delay = ((r * 7 + c * 11) % 13) * -0.9;
+              const drift = ((r * 3 + c * 5) % 5) * -1.3;
+              return (
+                <div key={`fog-${i}`} className="fog-cell"
+                  style={{
+                    left: `${(c / BOARD) * 100}%`,
+                    top: `${(r / BOARD) * 100}%`,
+                    width: `${(1 / BOARD) * 100}%`,
+                    height: `${(1 / BOARD) * 100}%`,
+                    animationDelay: `${delay}s, ${drift}s`,
+                  }} />
+              );
+            })}
+            <div className="fog-vignette" />
+          </div>
+        )}
       </div>
       </div>
       <div />
