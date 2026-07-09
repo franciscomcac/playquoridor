@@ -55,12 +55,33 @@ export async function fetchBannerDataMany(playerIds: string[]): Promise<Map<stri
   for (const s of (stats ?? []) as Array<{ player_id: string; rating?: number }>) {
     sById.set(s.player_id, s);
   }
+  // Fallback showcased: for any player with an empty showcased list, pull
+  // their 3 most-recently unlocked achievements so the banner never looks
+  // empty when they haven't picked a showcase yet.
+  const needFallback = ((players ?? []) as Array<{ id: string; showcased_achievements: string[] | null }>)
+    .filter((p) => !Array.isArray(p.showcased_achievements) || p.showcased_achievements.length === 0)
+    .map((p) => p.id);
+  const fallbackByPlayer = new Map<string, string[]>();
+  if (needFallback.length) {
+    const { data: unlocks } = await supabase
+      .from("player_achievements")
+      .select("player_id,achievement_slug,unlocked_at")
+      .in("player_id", needFallback)
+      .order("unlocked_at", { ascending: false });
+    for (const r of (unlocks ?? []) as Array<{ player_id: string; achievement_slug: string }>) {
+      const arr = fallbackByPlayer.get(r.player_id) ?? [];
+      if (arr.length < 3) { arr.push(r.achievement_slug); fallbackByPlayer.set(r.player_id, arr); }
+    }
+  }
   for (const p of (players ?? []) as Array<{ id: string; country: string | null; avatar_color: string | null; avatar_url: string | null; showcased_achievements: string[] | null }>) {
+    const chosen = Array.isArray(p.showcased_achievements) && p.showcased_achievements.length > 0
+      ? p.showcased_achievements.slice(0, 3)
+      : (fallbackByPlayer.get(p.id) ?? []);
     out.set(p.id, {
       playerId: p.id,
       country: p.country ?? null,
       rating: sById.get(p.id)?.rating ?? null,
-      showcased: Array.isArray(p.showcased_achievements) ? p.showcased_achievements.slice(0, 3) : [],
+      showcased: chosen,
       avatarColor: p.avatar_color,
       avatarUrl: p.avatar_url,
     });
