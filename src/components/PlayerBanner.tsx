@@ -19,6 +19,7 @@ type Props = {
   totalWalls?: number;          // default 10
   playerId?: string | null;     // for looking up country/ELO/showcased
   align?: "top" | "bottom";
+  clock?: React.ReactNode;      // merged monospace clock on the trailing edge
 };
 
 const COUNTRY_MAP: Map<string, { flag: string; name: string }> = (() => {
@@ -27,7 +28,7 @@ const COUNTRY_MAP: Map<string, { flag: string; name: string }> = (() => {
   return m;
 })();
 
-export function PlayerBanner({ slot, color, name, isYou, isTurn, wallsLeft, totalWalls = 10, playerId, align = "bottom" }: Props) {
+export function PlayerBanner({ slot, color, name, isYou, isTurn, wallsLeft, totalWalls = 10, playerId, align = "bottom", clock }: Props) {
   const [banner, setBanner] = useState<BannerData | null>(null);
   useEffect(() => {
     if (!playerId) { setBanner(null); return; }
@@ -144,6 +145,14 @@ export function PlayerBanner({ slot, color, name, isYou, isTurn, wallsLeft, tota
           {wallsLeft}
         </span>
       </div>
+      {clock && (
+        <div
+          className="ml-1 flex flex-none items-center border-l pl-2 sm:pl-3"
+          style={{ borderColor: "color-mix(in oklab, var(--border) 70%, transparent)" }}
+        >
+          {clock}
+        </div>
+      )}
       {alignedTop /* no-op, reserved for future asymmetric layout */ && null}
     </div>
   );
