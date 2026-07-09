@@ -7,6 +7,7 @@ import {
   type GameState, type Goal, type Move, type Orient, type PlayerId,
   type Pos, type Wall,
 } from "./quoridor";
+import { pickTitaniumMove } from "./bot-titanium";
 
 export type BotDifficulty = { label: "Medium" | "Hard"; value: number };
 
@@ -33,8 +34,9 @@ export type RankedBot = {
 /** Piecewise mapping of a locked initial rating to bot difficulty (0..1). */
 export function difficultyForRating(rating: number): number {
   const points: Array<[number, number]> = [
-    [400, 0.30], [700, 0.45], [1000, 0.60],
-    [1300, 0.78], [1600, 0.90], [2000, 0.98],
+    // Old top (0.98) is now mid-strong; Titanium takes the crown at 1.0.
+    [400, 0.28], [700, 0.42], [1000, 0.55],
+    [1300, 0.72], [1600, 0.85], [1800, 0.94], [2000, 1.00],
   ];
   if (rating <= points[0][0]) return points[0][1];
   if (rating >= points[points.length - 1][0]) return points[points.length - 1][1];
@@ -113,6 +115,17 @@ function bestPawnStepDist(state: GameState, walls: Wall[], slot: PlayerId, goal:
 export function pickBotMove(state: GameState, bot: PlayerId, difficulty: number): Move | null {
   if (state.winner !== null || state.matchWinner !== null) return null;
   if (!state.active[bot]) return null;
+
+  // Titanium engine tier — 2p only, top strength. Falls through on failure.
+  if (difficulty >= 0.95 && state.mode === 2) {
+    try {
+      const budget = difficulty >= 0.99 ? 550 : 400;
+      const depth = difficulty >= 0.99 ? 5 : 4;
+      const t = pickTitaniumMove(state, bot, { budgetMs: budget, maxDepth: depth, wallBudget: 14 });
+      if (t) return t;
+    } catch { /* fall through to classic engine */ }
+  }
+
   const legal = legalPawnMoves(state, bot);
   if (legal.length === 0) return null;
 
