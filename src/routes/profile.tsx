@@ -8,6 +8,7 @@ import { fetchProfile, fetchMyWinStreak, updateMyProfile, renameMyPlayer, fetchR
 import { saveBio, saveAvatar, moderateUsername } from "@/lib/moderation.functions";
 import { ConstellationSigil, type SigilTier } from "@/components/ConstellationSigil";
 import { supabase } from "@/integrations/supabase/client";
+import { partitionCatalog, type SlugMeta } from "@/lib/achievement-families";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
@@ -30,6 +31,8 @@ function ProfilePage() {
   const [recent, setRecent] = useState<RecentMatchRow[]>([]);
   const [badges, setBadges] = useState<Array<{ slug: string; name: string; tier: SigilTier; sigil_key: string; unlocked_at: string | null; description: string }>>([]);
   const [badgeCounts, setBadgeCounts] = useState<{ unlocked: number; total: number }>({ unlocked: 0, total: 0 });
+  const [catalog, setCatalog] = useState<SlugMeta[]>([]);
+  const [unlockedSet, setUnlockedSet] = useState<Set<string>>(new Set());
 
   const [pname, setPname] = useState("");
   const [pbio, setPbio] = useState("");
@@ -86,6 +89,8 @@ function ProfilePage() {
       });
       setBadges(withState);
       setBadgeCounts({ unlocked: unlockedMap.size, total: catalog.length });
+      setCatalog(catalog.map((c) => ({ slug: c.slug, name: c.name, description: c.description, tier: c.tier, sigil_key: c.sigil_key })));
+      setUnlockedSet(new Set(unlockedMap.keys()));
     })();
   }, [me]);
 
