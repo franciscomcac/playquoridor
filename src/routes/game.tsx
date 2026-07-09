@@ -3818,11 +3818,13 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave }:
   const boardInteractive = state.winner === null && !coinflip?.animating && state.turn === YOU && !review;
 
   return (
-    <div className="grid w-full gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-      <div className="order-1 flex min-w-0 flex-col gap-3 pb-20 lg:pb-0">
+    <div className="mx-auto grid w-full max-w-[1120px] items-start gap-6 px-4 sm:px-6 lg:grid-cols-[minmax(0,720px)_360px]">
+      <div
+        className="order-1 mx-auto flex w-full min-w-0 flex-col gap-3 pb-20 lg:mx-0 lg:pb-0"
+        style={{ maxWidth: "min(720px, calc(100vh - 12rem))" }}
+      >
         <PlayerBanners state={state} you={YOU} nameOf={nameOf} playerIdOf={playerIdOf} placement="top" />
-        <div className="flex gap-2 sm:gap-3">
-          <BoardSideClocks state={state} you={YOU} nameOf={nameOf} />
+        <div className="flex">
           <div className="relative min-w-0 flex-1">
             <QuoridorBoard state={displayState} you={YOU} onMove={handleMove} interactive={boardInteractive} />
             {coinflip?.animating && (
@@ -3863,7 +3865,6 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave }:
 
       <MobileAsideSheet chat={<ChatPanel entries={chat} onSend={sendChat} you={YOU} />}>
         <ScoreCard state={state} you={YOU} nameOf={nameOf} />
-        <PlayersCard state={state} you={YOU} nameOf={nameOf} />
         <MoveHistoryPanel state={state} nameOf={nameOf} compact defaultOpen onView={setReview} />
 
         {toast && (
