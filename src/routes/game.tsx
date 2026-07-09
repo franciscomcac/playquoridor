@@ -14,6 +14,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { AccountNav } from "@/components/AccountNav";
 import { QueuePuzzle } from "@/components/QueuePuzzle";
 import { RankUpOverlay, tierIndexFor } from "@/components/RankUpOverlay";
+import { AchievementUnlockOverlay, type UnlockItem } from "@/components/AchievementUnlockOverlay";
+import { evaluatePostMatch } from "@/lib/achievements";
 
 // Warm palette for celebratory confetti — browns, creams, blues, yellows
 // pulled from the app's existing tokens (kept in-sync with styles.css).
