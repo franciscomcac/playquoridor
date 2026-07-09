@@ -141,6 +141,7 @@ function AccountMenu({ username, country, compact }: { username: string; country
             <ul className="py-1 text-sm">
               <MenuItem to="/friends" label="Friends" />
               <MenuItem to="/history" label="Match history" />
+              <MenuItem to="/achievements" label="Achievements" />
               <MenuItem to="/clips" label="Saved clips" />
               <MenuItem to="/stats" label="Leaderboard" />
               <MenuItem to="/profile" label="Settings" />
