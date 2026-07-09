@@ -3079,16 +3079,13 @@ function RoundEndScoreAnim({ state, nameOf, playerIdOf, onDone }: {
                   }}
                 >
                   <div className="relative">
-                    <div
-                      className={"grid place-items-center rounded-full text-base font-extrabold " + (isFourP ? "h-16 w-16 sm:h-20 sm:w-20 sm:text-lg" : "h-20 w-20 sm:h-24 sm:w-24 sm:text-xl")}
-                      style={{
-                        background: `radial-gradient(circle at 32% 28%, color-mix(in oklab, ${color} 55%, white 50%), ${color} 55%, color-mix(in oklab, ${color} 60%, black 40%) 100%)`,
-                        border: `3px solid ${color}`,
-                        color: "oklch(0.15 0.02 55)",
-                      }}
-                    >
-                      {initialsOf(name)}
-                    </div>
+                    <IntroAvatar
+                      playerId={playerIdOf?.(slot) ?? null}
+                      name={name}
+                      color={color}
+                      size={isFourP ? 80 : 96}
+                      borderWidth={3}
+                    />
                     {bumping && (
                       <span
                         key={`glow-${phase}`}
