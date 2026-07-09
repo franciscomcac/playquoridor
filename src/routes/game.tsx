@@ -3786,10 +3786,11 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave }:
   const boardInteractive = state.winner === null && !coinflip?.animating && state.turn === YOU && !review;
 
   return (
-    <div className="grid w-full max-w-6xl gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+    <div className="grid w-full max-w-7xl gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_400px]">
       <div className="order-1 flex min-w-0 flex-col gap-3 pb-20 lg:pb-0">
         <PlayerBanners state={state} you={YOU} nameOf={nameOf} playerIdOf={playerIdOf} placement="top" />
         <div className="flex gap-2 sm:gap-3">
+          <BoardSideClocks state={state} you={YOU} nameOf={nameOf} />
           <div className="relative min-w-0 flex-1">
             <QuoridorBoard state={displayState} you={YOU} onMove={handleMove} interactive={boardInteractive} />
             {coinflip?.animating && (
@@ -3806,7 +3807,6 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave }:
               <div className="pointer-events-none absolute inset-0 rounded-lg bg-background/70 backdrop-blur-sm" />
             )}
           </div>
-          <BoardSideClocks state={state} you={YOU} nameOf={nameOf} />
         </div>
         <PlayerBanners state={state} you={YOU} nameOf={nameOf} playerIdOf={playerIdOf} placement="bottom" />
       </div>
