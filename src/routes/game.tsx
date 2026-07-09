@@ -3959,18 +3959,6 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
             onConfirm={forfeit}
             disabled={state.winner !== null || state.matchWinner !== null || !state.active[YOU]}
           />
-          <button
-            onClick={() => setFogOn((v) => !v)}
-            className={
-              "rounded-lg border px-3 py-2 text-xs font-medium uppercase tracking-widest transition " +
-              (fogOn
-                ? "border-primary bg-primary/15 text-primary"
-                : "border-border bg-secondary/30 hover:bg-secondary")
-            }
-            title="Hide opponent walls outside your pawn's line of sight"
-          >
-            Fog of Walls: {fogOn ? "On" : "Off"}
-          </button>
           <div className="flex gap-2">
             <button onClick={startMatch} disabled={!!coinflip?.animating}
               className="flex-1 rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary disabled:opacity-40">
