@@ -25,11 +25,14 @@ import { Route as AchievementsRouteImport } from './routes/achievements'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PuzzleIndexRouteImport } from './routes/puzzle.index'
+import { Route as ForumIndexRouteImport } from './routes/forum.index'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as PuzzleDateRouteImport } from './routes/puzzle.$date'
 import { Route as PlayerPlayerIdRouteImport } from './routes/player.$playerId'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as AnalyzeClipIdRouteImport } from './routes/analyze.$clipId'
+import { Route as ForumTIdRouteImport } from './routes/forum.t.$id'
+import { Route as ForumCSlugRouteImport } from './routes/forum.c.$slug'
 import { Route as ApiClipSignRouteImport } from './routes/api/clip/sign'
 import { Route as ApiClipRenderRouteImport } from './routes/api/clip/render'
 
@@ -113,6 +116,11 @@ const PuzzleIndexRoute = PuzzleIndexRouteImport.update({
   path: '/puzzle/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ForumIndexRoute = ForumIndexRouteImport.update({
+  id: '/forum/',
+  path: '/forum/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BlogIndexRoute = BlogIndexRouteImport.update({
   id: '/blog/',
   path: '/blog/',
@@ -136,6 +144,16 @@ const BlogSlugRoute = BlogSlugRouteImport.update({
 const AnalyzeClipIdRoute = AnalyzeClipIdRouteImport.update({
   id: '/analyze/$clipId',
   path: '/analyze/$clipId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForumTIdRoute = ForumTIdRouteImport.update({
+  id: '/forum/t/$id',
+  path: '/forum/t/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForumCSlugRoute = ForumCSlugRouteImport.update({
+  id: '/forum/c/$slug',
+  path: '/forum/c/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiClipSignRoute = ApiClipSignRouteImport.update({
@@ -170,9 +188,12 @@ export interface FileRoutesByFullPath {
   '/player/$playerId': typeof PlayerPlayerIdRoute
   '/puzzle/$date': typeof PuzzleDateRoute
   '/blog/': typeof BlogIndexRoute
+  '/forum/': typeof ForumIndexRoute
   '/puzzle/': typeof PuzzleIndexRoute
   '/api/clip/render': typeof ApiClipRenderRoute
   '/api/clip/sign': typeof ApiClipSignRoute
+  '/forum/c/$slug': typeof ForumCSlugRoute
+  '/forum/t/$id': typeof ForumTIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -195,9 +216,12 @@ export interface FileRoutesByTo {
   '/player/$playerId': typeof PlayerPlayerIdRoute
   '/puzzle/$date': typeof PuzzleDateRoute
   '/blog': typeof BlogIndexRoute
+  '/forum': typeof ForumIndexRoute
   '/puzzle': typeof PuzzleIndexRoute
   '/api/clip/render': typeof ApiClipRenderRoute
   '/api/clip/sign': typeof ApiClipSignRoute
+  '/forum/c/$slug': typeof ForumCSlugRoute
+  '/forum/t/$id': typeof ForumTIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -221,9 +245,12 @@ export interface FileRoutesById {
   '/player/$playerId': typeof PlayerPlayerIdRoute
   '/puzzle/$date': typeof PuzzleDateRoute
   '/blog/': typeof BlogIndexRoute
+  '/forum/': typeof ForumIndexRoute
   '/puzzle/': typeof PuzzleIndexRoute
   '/api/clip/render': typeof ApiClipRenderRoute
   '/api/clip/sign': typeof ApiClipSignRoute
+  '/forum/c/$slug': typeof ForumCSlugRoute
+  '/forum/t/$id': typeof ForumTIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -248,9 +275,12 @@ export interface FileRouteTypes {
     | '/player/$playerId'
     | '/puzzle/$date'
     | '/blog/'
+    | '/forum/'
     | '/puzzle/'
     | '/api/clip/render'
     | '/api/clip/sign'
+    | '/forum/c/$slug'
+    | '/forum/t/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -273,9 +303,12 @@ export interface FileRouteTypes {
     | '/player/$playerId'
     | '/puzzle/$date'
     | '/blog'
+    | '/forum'
     | '/puzzle'
     | '/api/clip/render'
     | '/api/clip/sign'
+    | '/forum/c/$slug'
+    | '/forum/t/$id'
   id:
     | '__root__'
     | '/'
@@ -298,9 +331,12 @@ export interface FileRouteTypes {
     | '/player/$playerId'
     | '/puzzle/$date'
     | '/blog/'
+    | '/forum/'
     | '/puzzle/'
     | '/api/clip/render'
     | '/api/clip/sign'
+    | '/forum/c/$slug'
+    | '/forum/t/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -324,9 +360,12 @@ export interface RootRouteChildren {
   PlayerPlayerIdRoute: typeof PlayerPlayerIdRoute
   PuzzleDateRoute: typeof PuzzleDateRoute
   BlogIndexRoute: typeof BlogIndexRoute
+  ForumIndexRoute: typeof ForumIndexRoute
   PuzzleIndexRoute: typeof PuzzleIndexRoute
   ApiClipRenderRoute: typeof ApiClipRenderRoute
   ApiClipSignRoute: typeof ApiClipSignRoute
+  ForumCSlugRoute: typeof ForumCSlugRoute
+  ForumTIdRoute: typeof ForumTIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -443,6 +482,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PuzzleIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/forum/': {
+      id: '/forum/'
+      path: '/forum'
+      fullPath: '/forum/'
+      preLoaderRoute: typeof ForumIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/blog/': {
       id: '/blog/'
       path: '/blog'
@@ -476,6 +522,20 @@ declare module '@tanstack/react-router' {
       path: '/analyze/$clipId'
       fullPath: '/analyze/$clipId'
       preLoaderRoute: typeof AnalyzeClipIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forum/t/$id': {
+      id: '/forum/t/$id'
+      path: '/forum/t/$id'
+      fullPath: '/forum/t/$id'
+      preLoaderRoute: typeof ForumTIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forum/c/$slug': {
+      id: '/forum/c/$slug'
+      path: '/forum/c/$slug'
+      fullPath: '/forum/c/$slug'
+      preLoaderRoute: typeof ForumCSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/clip/sign': {
@@ -516,9 +576,12 @@ const rootRouteChildren: RootRouteChildren = {
   PlayerPlayerIdRoute: PlayerPlayerIdRoute,
   PuzzleDateRoute: PuzzleDateRoute,
   BlogIndexRoute: BlogIndexRoute,
+  ForumIndexRoute: ForumIndexRoute,
   PuzzleIndexRoute: PuzzleIndexRoute,
   ApiClipRenderRoute: ApiClipRenderRoute,
   ApiClipSignRoute: ApiClipSignRoute,
+  ForumCSlugRoute: ForumCSlugRoute,
+  ForumTIdRoute: ForumTIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
