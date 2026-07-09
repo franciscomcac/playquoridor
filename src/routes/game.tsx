@@ -214,7 +214,7 @@ function Home() {
         {!ident ? (
           <div className="flex flex-1 items-center justify-center py-4 sm:py-6 text-sm text-muted-foreground">Opening table…</div>
         ) : (
-          <div key={view.name} className="view-fade flex flex-1 items-center justify-center py-4 sm:py-6">
+          <div key={view.name} className="view-fade flex flex-1 items-center justify-center py-1 sm:py-6">
             {view.name === "boot" && (
               <div className="text-sm text-muted-foreground">Opening table…</div>
             )}
