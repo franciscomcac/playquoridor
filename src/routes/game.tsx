@@ -14,6 +14,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { AccountNav } from "@/components/AccountNav";
 import { QueuePuzzle } from "@/components/QueuePuzzle";
 import { RankUpOverlay, tierIndexFor } from "@/components/RankUpOverlay";
+import { AchievementUnlockOverlay, type UnlockItem } from "@/components/AchievementUnlockOverlay";
+import { evaluatePostMatch } from "@/lib/achievements";
 
 // Warm palette for celebratory confetti — browns, creams, blues, yellows
 // pulled from the app's existing tokens (kept in-sync with styles.css).
@@ -928,6 +930,10 @@ function GameScreen({
     return () => { cancel = true; };
   }, [ranked, initialMode, ident.id]);
 
+  // Post-match badge unlock queue (shared between online & bot flows).
+  const unlockFiredRef = useRef(false);
+  const [unlockQueue, setUnlockQueue] = useState<UnlockItem[] | null>(null);
+
   // Ready-up state for the between-rounds flow (replaces "Next round" button).
   const [readySlots, setReadySlots] = useState<PlayerId[]>([]);
   const [merging, setMerging] = useState(false);
@@ -1640,10 +1646,34 @@ function GameScreen({
     const walls = state.wallsPlacedByPlayer[you] ?? 0;
     const pops = state.pawnsEliminatedByPlayer[you] ?? 0;
     const forfeited = state.leftMatch[you] ?? false;
-    void bumpMyStats(ident.id, {
-      matches: 1, wins: iWon ? 1 : 0, losses: iWon ? 0 : 1,
-      walls_placed: walls, pawns_eliminated: pops, forfeits: forfeited ? 1 : 0,
-    });
+    void (async () => {
+      await bumpMyStats(ident.id, {
+        matches: 1, wins: iWon ? 1 : 0, losses: iWon ? 0 : 1,
+        walls_placed: walls, pawns_eliminated: pops, forfeits: forfeited ? 1 : 0,
+      });
+      if (unlockFiredRef.current) return;
+      unlockFiredRef.current = true;
+      // Give recordMatch + applyElo a moment to settle so the evaluator sees
+      // fresh stats (wins/rating) when picking thresholds.
+      await new Promise((r) => window.setTimeout(r, 1400));
+      const roster = rosterRef.current;
+      const opp = roster.find((e) => e.slot !== you);
+      let oppRating: number | null = null;
+      if (ranked && state.mode === 2 && opp?.playerId) {
+        const s = await fetchMyStats(opp.playerId).catch(() => null);
+        oppRating = (s as { rating?: number } | null)?.rating ?? null;
+      }
+      const unlocked = await evaluatePostMatch({
+        playerId: ident.id,
+        mode: state.mode as 2 | 4,
+        ranked: !!ranked,
+        iWon, forfeited,
+        wallsThisMatch: walls,
+        pawnsThisMatch: pops,
+        opponentRating: oppRating,
+      });
+      if (unlocked.length) setUnlockQueue(unlocked);
+    })();
     // Only fire once per match end
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.matchWinner]);
@@ -1801,6 +1831,10 @@ function GameScreen({
           newRating={rankUp.newRating}
           onDone={() => setRankUp(null)}
         />
+      )}
+
+      {unlockQueue && unlockQueue.length > 0 && !rankUp && (
+        <AchievementUnlockOverlay items={unlockQueue} onDone={() => setUnlockQueue(null)} />
       )}
 
       <MobileAsideSheet
@@ -3312,6 +3346,9 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave }:
     return () => { cancel = true; };
   }, [rankedBot, ident.id]);
 
+  const unlockFiredRef = useRef(false);
+  const [unlockQueue, setUnlockQueue] = useState<UnlockItem[] | null>(null);
+
   useEffect(() => {
     if (state.matchWinner === null) return;
     if (botRecordedRef.current) return;
@@ -3328,6 +3365,25 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave }:
       matches: 1, wins: winnerIsYou ? 1 : 0, losses: winnerIsYou ? 0 : 1,
       walls_placed: walls, pawns_eliminated: pops, forfeits: forfeited ? 1 : 0,
     });
+    // Post-match achievement evaluation for bot games.
+    if (!unlockFiredRef.current) {
+      unlockFiredRef.current = true;
+      const oppRatingPre = rankedBot?.currentRating ?? null;
+      void (async () => {
+        await new Promise((r) => window.setTimeout(r, 1400));
+        const unlocked = await evaluatePostMatch({
+          playerId: ident.id,
+          mode: mode as 2 | 4,
+          ranked: !!rankedBot,
+          iWon: winnerIsYou,
+          forfeited,
+          wallsThisMatch: walls,
+          pawnsThisMatch: pops,
+          opponentRating: oppRatingPre,
+        });
+        if (unlocked.length) setUnlockQueue(unlocked);
+      })();
+    }
     void (async () => {
       const winnerId = winnerIsYou
         ? ident.id
@@ -3677,6 +3733,10 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave }:
           newRating={rankUp.newRating}
           onDone={() => setRankUp(null)}
         />
+      )}
+
+      {unlockQueue && unlockQueue.length > 0 && !rankUp && (
+        <AchievementUnlockOverlay items={unlockQueue} onDone={() => setUnlockQueue(null)} />
       )}
 
       <MobileAsideSheet chat={<ChatPanel entries={chat} onSend={sendChat} you={YOU} />}>

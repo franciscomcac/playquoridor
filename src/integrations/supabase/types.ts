@@ -572,6 +572,21 @@ export type Database = {
         Args: { _country: string; _name: string; _player_id: string }
         Returns: undefined
       }
+      evaluate_match_achievements: {
+        Args: {
+          _forfeited: boolean
+          _i_won: boolean
+          _mode: number
+          _opponent_rating: number
+          _pawns_this_match: number
+          _player_id: string
+          _ranked: boolean
+          _walls_this_match: number
+        }
+        Returns: {
+          slug: string
+        }[]
+      }
       grant_achievement: {
         Args: { _player_id: string; _progress?: Json; _slug: string }
         Returns: boolean
