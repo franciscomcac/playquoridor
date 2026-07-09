@@ -2492,7 +2492,7 @@ function FourPlayerRoundStart({ starter, you, nameOf, playerIdOf }: {
           transition: "transform .55s ease, opacity .55s ease",
         }}
       >
-        <div className="grid w-full max-w-3xl grid-cols-2 gap-3 sm:gap-4">
+        <div className="grid w-full max-w-4xl grid-cols-2 gap-3 sm:gap-5">
           {([0, 1, 2, 3] as PlayerId[]).map((slot) => {
             const pos = positions[slot];
             const landed = phase >= 1;
@@ -2506,7 +2506,7 @@ function FourPlayerRoundStart({ starter, you, nameOf, playerIdOf }: {
             return (
               <div
                 key={slot}
-                className="relative flex items-center gap-3 rounded-2xl border px-3 py-2.5 sm:gap-4 sm:px-4 sm:py-3"
+                className="relative flex items-center gap-4 rounded-2xl border px-4 py-3.5 sm:gap-5 sm:px-5 sm:py-4.5"
                 style={{
                   gridRow: pos.row + 1, gridColumn: pos.col + 1,
                   borderColor: "color-mix(in oklab, var(--border) 70%, transparent)",
@@ -2559,10 +2559,10 @@ function FourPlayerRoundStart({ starter, you, nameOf, playerIdOf }: {
                 </div>
                 {/* Avatar */}
                 <div
-                  className="grid h-11 w-11 flex-none place-items-center rounded-full text-sm font-extrabold sm:h-12 sm:w-12 sm:text-base"
+                  className="grid h-16 w-16 flex-none place-items-center rounded-full text-lg font-extrabold sm:h-20 sm:w-20 sm:text-xl"
                   style={{
                     background: `radial-gradient(circle at 32% 28%, color-mix(in oklab, ${color} 55%, white 50%), ${color} 55%, color-mix(in oklab, ${color} 60%, black 40%) 100%)`,
-                    border: `2.5px solid ${color}`,
+                    border: `3.5px solid ${color}`,
                     color: "oklch(0.15 0.02 55)",
                   }}
                 >
@@ -2570,18 +2570,13 @@ function FourPlayerRoundStart({ starter, you, nameOf, playerIdOf }: {
                 </div>
                 {/* Name + title */}
                 <div className="flex min-w-0 flex-1 flex-col">
-                  <p className="truncate text-sm font-extrabold text-foreground sm:text-base">{name}</p>
-                  <p className="text-[9.5px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  <p className="truncate text-base font-extrabold text-foreground sm:text-lg">{name}</p>
+                  <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                     {titleFor(name)}
                   </p>
                 </div>
-                {/* Badge slots (3) */}
-                <div className="hidden flex-none gap-1 sm:flex">
-                  {[0, 1, 2].map((i) => (
-                    <div key={i} className="h-5 w-5 rounded-full border border-dashed"
-                      style={{ borderColor: "color-mix(in oklab, var(--foreground) 18%, transparent)" }} />
-                  ))}
-                </div>
+                {/* Showcased badges */}
+                <IntroBadgeSlots playerId={playerIdOf?.(slot) ?? null} size={32} count={3} />
               </div>
             );
           })}
