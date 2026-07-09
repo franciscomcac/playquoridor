@@ -28,7 +28,7 @@ const WARM_CONFETTI = [
   "oklch(0.66 0.14 70)",   // amber
 ];
 import {
-  applyForfeit, applyMove, defaultWallsFor, initialState, newRound, winsNeeded,
+  applyForfeit, applyMove, defaultWallsFor, initialState, legalPawnMoves, newRound, winsNeeded,
   type GameState, type Mode, type Move, type PlayerId,
 } from "@/lib/quoridor";
 import {
