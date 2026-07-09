@@ -34,7 +34,9 @@ export async function evaluatePostMatch(ctx: EvalContext): Promise<UnlockedAchie
       _forfeited: ctx.forfeited,
       _walls_this_match: ctx.wallsThisMatch,
       _pawns_this_match: ctx.pawnsThisMatch,
-      _opponent_rating: ctx.opponentRating ?? undefined,
+      // The RPC treats NULL as "no rated opponent"; the generated typings
+      // demand a number, so cast through unknown when we want to send null.
+      _opponent_rating: (ctx.opponentRating ?? null) as unknown as number,
     });
     if (error) throw error;
     const slugs = ((data ?? []) as Array<{ slug: string }>).map((r) => r.slug).filter(Boolean);
