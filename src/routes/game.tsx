@@ -2119,7 +2119,7 @@ function RoundStartBanner({ slot, name, side, phase, isWinner, isLoser, playerId
     : "0 20px 50px rgba(0,0,0,.45)";
   return (
     <div
-      className="relative flex items-center gap-3 rounded-2xl border px-3 py-2.5 sm:gap-4 sm:px-4 sm:py-3"
+      className="relative flex items-center gap-2.5 rounded-xl border px-2.5 py-2 sm:gap-3 sm:px-3 sm:py-2.5"
       style={{
         borderColor: "color-mix(in oklab, var(--border) 70%, transparent)",
         background: "color-mix(in oklab, var(--card) 92%, black 8%)",
@@ -2146,10 +2146,10 @@ function RoundStartBanner({ slot, name, side, phase, isWinner, isLoser, playerId
       </div>
       {/* Avatar */}
       <div
-        className="grid h-12 w-12 flex-none place-items-center rounded-full text-base font-extrabold sm:h-14 sm:w-14 sm:text-lg"
+        className="grid h-9 w-9 flex-none place-items-center rounded-full text-xs font-extrabold sm:h-10 sm:w-10 sm:text-sm"
         style={{
           background: `radial-gradient(circle at 32% 28%, color-mix(in oklab, ${color} 55%, white 50%), ${color} 55%, color-mix(in oklab, ${color} 60%, black 40%) 100%)`,
-          border: `3px solid ${color}`,
+          border: `2px solid ${color}`,
           color: "oklch(0.15 0.02 55)",
         }}
       >
@@ -2157,15 +2157,15 @@ function RoundStartBanner({ slot, name, side, phase, isWinner, isLoser, playerId
       </div>
       {/* Name + title */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <p className="truncate text-sm font-extrabold text-foreground sm:text-base" style={{ color: "var(--foreground)" }}>
+        <p className="truncate text-[13px] font-extrabold text-foreground sm:text-sm" style={{ color: "var(--foreground)" }}>
           {name}
         </p>
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+        <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
           {titleFor(name)}
         </p>
       </div>
       {/* Showcased badges */}
-      <IntroBadgeSlots playerId={playerId} size={28} count={3} />
+      <IntroBadgeSlots playerId={playerId} size={20} count={3} />
     </div>
   );
 }
@@ -2307,7 +2307,7 @@ function CoinflipOverlay({ starter, you, mode, nameOf, playerIdOf }: {
           transition: "transform .55s ease, opacity .55s ease",
         }}
       >
-        <div className="flex w-full max-w-3xl flex-col items-stretch gap-4 sm:gap-5">
+        <div className="flex w-full max-w-md flex-col items-stretch gap-3">
           <RoundStartBanner
             slot={p1} name={p1Name} side="left" phase={phase}
             isWinner={phase === 5 && starter === p1}
