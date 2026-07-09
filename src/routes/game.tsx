@@ -36,7 +36,7 @@ import {
   type PeerMessage, type Room, type RosterEntry,
 } from "@/lib/peer-room";
 import {
-  getStoredIdentity, setStoredIdentity, type Identity,
+  getStoredIdentity, setStoredIdentity, restoreIdentityFromAuth, type Identity,
 } from "@/lib/identity";
 import {
   bumpMyStats, fetchMyStats, fetchMyWinStreak, findOpenRoom, findOpenRoomOlderThan, recordMatch, setMatchEloDelta,
@@ -165,23 +165,28 @@ function Home() {
     // redirect away on the second.
     if (bootRan.current) return;
     bootRan.current = true;
-    let stored = getStoredIdentity();
-    if (!stored) {
-      // Anonymous session: auto-mint a temporary gamer-style username so
-      // players can jump straight into a game (and use chat) without an
-      // account. They can still rename via the "edit" link in the menu.
-      stored = setStoredIdentity(randomGamerName());
-    }
-    setIdent(stored);
-    try {
-      const saved = loadInterruptedGame();
-      if (saved) { setView({ name: "resume", game: saved }); return; }
-      const j = sessionStorage.getItem("quoridor:pendingJoin");
-      const a = sessionStorage.getItem("quoridor:pendingAction");
-      if (j) { sessionStorage.removeItem("quoridor:pendingJoin"); setPending(`join:${j}`); }
-      else if (a) { sessionStorage.removeItem("quoridor:pendingAction"); setPending(a); }
-      else { void navigate({ to: "/" }); }
-    } catch {}
+    void (async () => {
+      let stored = getStoredIdentity();
+      if (!stored) {
+        // Prefer the signed-in account's players row if we can find one
+        // (new browser / cleared storage / incognito) — otherwise mint a
+        // temporary gamer-style username so anonymous visitors can play.
+        stored = await restoreIdentityFromAuth();
+      }
+      if (!stored) {
+        stored = setStoredIdentity(randomGamerName());
+      }
+      setIdent(stored);
+      try {
+        const saved = loadInterruptedGame();
+        if (saved) { setView({ name: "resume", game: saved }); return; }
+        const j = sessionStorage.getItem("quoridor:pendingJoin");
+        const a = sessionStorage.getItem("quoridor:pendingAction");
+        if (j) { sessionStorage.removeItem("quoridor:pendingJoin"); setPending(`join:${j}`); }
+        else if (a) { sessionStorage.removeItem("quoridor:pendingAction"); setPending(a); }
+        else { void navigate({ to: "/" }); }
+      } catch {}
+    })();
   }, [navigate]);
 
   useEffect(() => {
