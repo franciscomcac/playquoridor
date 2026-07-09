@@ -8,7 +8,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MatchSnapshot } from "@/lib/matchHistory";
 import { drawState, replay, type ReplayFrame } from "@/lib/matchReplay";
-import type { ClipRenderOptions } from "@/lib/clipRender/schema";
 
 type Props = {
   open: boolean;
@@ -21,6 +20,8 @@ type Phase = "preview" | "rendering" | "done" | "error";
 
 const PREVIEW_W = 360;
 const PREVIEW_H = 640;
+const EXPORT_W = 1080;
+const EXPORT_H = 1920;
 const BASE_MS = 500;
 
 function beep(ctx: AudioContext, freq = 620, ms = 55) {
@@ -47,6 +48,20 @@ function drawRotated(canvas: HTMLCanvasElement, frame: ReplayFrame, pov: "bottom
   }
   drawState(ctx, frame.state, canvas.width, canvas.height);
   ctx.restore();
+}
+
+function pickMime(): { mime: string; ext: string } {
+  const candidates = [
+    { mime: "video/mp4;codecs=avc1.42E01E", ext: "mp4" },
+    { mime: "video/mp4", ext: "mp4" },
+    { mime: "video/webm;codecs=vp9", ext: "webm" },
+    { mime: "video/webm;codecs=vp8", ext: "webm" },
+    { mime: "video/webm", ext: "webm" },
+  ];
+  for (const c of candidates) {
+    if (typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(c.mime)) return c;
+  }
+  return { mime: "", ext: "webm" };
 }
 
 export function ExportClipModal({ open, snapshot, onClose, filename }: Props) {
@@ -101,28 +116,59 @@ export function ExportClipModal({ open, snapshot, onClose, filename }: Props) {
     setPhase("rendering");
     setErrorMsg(null);
     try {
-      const options: ClipRenderOptions = { aspect: "9:16", speed, pov, sound };
-      const signRes = await fetch("/api/clip/sign", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ snapshot, options }),
-      });
-      if (!signRes.ok) {
-        const body = await signRes.text().catch(() => "");
-        throw new Error(`Sign failed (${signRes.status}) ${body.slice(0, 120)}`);
+      if (typeof MediaRecorder === "undefined") {
+        throw new Error("Your browser doesn't support video recording. Try Chrome, Edge, or Safari.");
       }
-      const { token } = (await signRes.json()) as { token: string };
-      const renderRes = await fetch(`/api/clip/render?token=${encodeURIComponent(token)}`);
-      if (!renderRes.ok) throw new Error(`Render failed (${renderRes.status})`);
-      const blob = await renderRes.blob();
+      const { mime, ext } = pickMime();
+      // Offscreen high-res canvas
+      const canvas = document.createElement("canvas");
+      canvas.width = EXPORT_W;
+      canvas.height = EXPORT_H;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Canvas unavailable");
+
+      const fps = 30;
+      const stream = canvas.captureStream(fps);
+      const rec = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 8_000_000 } : { videoBitsPerSecond: 8_000_000 });
+      const chunks: BlobPart[] = [];
+      rec.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+      const stopped = new Promise<void>((resolve) => { rec.onstop = () => resolve(); });
+
+      const drawFrame = (frame: ReplayFrame) => {
+        ctx.save();
+        if (pov === "top") {
+          ctx.translate(canvas.width, canvas.height);
+          ctx.rotate(Math.PI);
+        }
+        drawState(ctx, frame.state, canvas.width, canvas.height);
+        ctx.restore();
+      };
+
+      // Prime first frame before starting recorder so it captures a keyframe
+      drawFrame(frames[0]);
+      rec.start();
+
+      const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+      for (let i = 0; i < frames.length; i++) {
+        drawFrame(frames[i]);
+        const isStart = frames[i].plyIndex === -1;
+        const isLast = i === frames.length - 1;
+        const delay = isLast
+          ? Math.round(1800 / speed)
+          : Math.round((isStart ? BASE_MS * 2 : BASE_MS) / speed);
+        await wait(delay);
+      }
+
+      rec.stop();
+      await stopped;
+      stream.getTracks().forEach((t) => t.stop());
+
+      const blob = new Blob(chunks, { type: mime || "video/webm" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      const disp = renderRes.headers.get("content-disposition") ?? "";
-      const match = /filename="([^"]+)"/.exec(disp);
-      const serverName = match ? match[1] : null;
-      const ext = blob.type === "image/gif" ? "gif" : (blob.type.split("/")[1] || "bin");
       a.href = url;
-      a.download = serverName ?? (filename ?? `quoridor-clip.${ext}`);
+      a.download = filename ?? `quoridor-clip.${ext}`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -133,7 +179,7 @@ export function ExportClipModal({ open, snapshot, onClose, filename }: Props) {
       setErrorMsg(e instanceof Error ? e.message : "Something went wrong");
       setPhase("error");
     }
-  }, [snapshot, speed, pov, sound, filename]);
+  }, [snapshot, speed, pov, frames, filename]);
 
   if (!open) return null;
 
@@ -168,7 +214,7 @@ export function ExportClipModal({ open, snapshot, onClose, filename }: Props) {
             />
           </div>
           <p className="mt-2 text-[10px] uppercase tracking-widest text-zinc-500">
-            Live preview - 9:16 - {frames.length} frames - Export: 540x960 GIF
+            Live preview - 9:16 - {frames.length} frames - Export: 1080x1920 MP4
           </p>
         </div>
 
@@ -189,7 +235,7 @@ export function ExportClipModal({ open, snapshot, onClose, filename }: Props) {
           </Row>
         </fieldset>
 
-        <div className="mt-4">
+        <div className="sticky bottom-0 mt-4 -mx-4 -mb-4 rounded-b-2xl border-t border-white/10 bg-zinc-950/95 px-4 py-3 backdrop-blur">
           {phase === "preview" && (
             <button
               onClick={download}
