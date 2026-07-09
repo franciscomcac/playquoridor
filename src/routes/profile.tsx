@@ -1,10 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { Link } from "@tanstack/react-router";
 import { AVATAR_SWATCHES, Avatar, LobbyChrome, PLACEMENT_GAMES, UNRANKED_COLOR, isPlacement, placementRemaining, tierFromRating } from "@/components/LobbyChrome";
 import { requireRealUser } from "@/lib/auth-gate";
-import { fetchProfile, fetchMyWinStreak, updateMyProfile, renameMyPlayer } from "@/lib/stats";
+import { fetchProfile, fetchMyWinStreak, updateMyProfile, renameMyPlayer, fetchRecentMatches, type RecentMatchRow } from "@/lib/stats";
 import { saveBio, saveAvatar, moderateUsername } from "@/lib/moderation.functions";
+import { ConstellationSigil, type SigilTier } from "@/components/ConstellationSigil";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
@@ -24,6 +27,9 @@ function ProfilePage() {
   const [me, setMe] = useState<Me | null | undefined>(undefined);
   const [profile, setProfile] = useState<Awaited<ReturnType<typeof fetchProfile>> | null>(null);
   const [streak, setStreak] = useState<number>(0);
+  const [recent, setRecent] = useState<RecentMatchRow[]>([]);
+  const [badges, setBadges] = useState<Array<{ slug: string; name: string; tier: SigilTier; sigil_key: string; unlocked_at: string | null; description: string }>>([]);
+  const [badgeCounts, setBadgeCounts] = useState<{ unlocked: number; total: number }>({ unlocked: 0, total: 0 });
 
   const [pname, setPname] = useState("");
   const [pbio, setPbio] = useState("");
@@ -60,6 +66,27 @@ function ProfilePage() {
       setAvUrl(pl?.avatar_url ?? null);
     });
     void fetchMyWinStreak(me.playerId).then(setStreak);
+    void fetchRecentMatches(me.playerId, 8).then(setRecent);
+    void (async () => {
+      const [{ data: cat }, { data: mine }] = await Promise.all([
+        supabase.from("achievements").select("slug,name,description,tier,sigil_key,is_hidden,sort_order").order("sort_order", { ascending: true }),
+        supabase.from("player_achievements").select("achievement_slug,unlocked_at").eq("player_id", me.playerId),
+      ]);
+      const unlockedMap = new Map<string, string>((mine ?? []).map((r: { achievement_slug: string; unlocked_at: string }) => [r.achievement_slug, r.unlocked_at]));
+      const catalog = (cat ?? []) as Array<{ slug: string; name: string; description: string; tier: SigilTier; sigil_key: string; is_hidden: boolean; sort_order: number }>;
+      const visible = catalog.filter((c) => !c.is_hidden || unlockedMap.has(c.slug));
+      const withState = visible.map((c) => ({
+        slug: c.slug, name: c.name, description: c.description, tier: c.tier, sigil_key: c.sigil_key,
+        unlocked_at: unlockedMap.get(c.slug) ?? null,
+      }));
+      withState.sort((a, b) => {
+        if (!!b.unlocked_at !== !!a.unlocked_at) return a.unlocked_at ? -1 : 1;
+        if (a.unlocked_at && b.unlocked_at) return b.unlocked_at.localeCompare(a.unlocked_at);
+        return 0;
+      });
+      setBadges(withState);
+      setBadgeCounts({ unlocked: unlockedMap.size, total: catalog.length });
+    })();
   }, [me]);
 
   const nameLockedUntil = useMemo(() => {
@@ -172,8 +199,16 @@ function ProfilePage() {
 
   return (
     <LobbyChrome>
-      <div className="mx-auto max-w-[1240px] px-8 pb-8 pt-9">
-        <h1 className="text-[26px] font-bold tracking-[-0.02em]">Your profile</h1>
+      <div className="mx-auto max-w-[1240px] px-8 pb-12 pt-9">
+        <div className="flex items-end justify-between">
+          <div>
+            <h1 className="text-[26px] font-bold tracking-[-0.02em]">Your profile</h1>
+            <p className="mt-1 text-[12px] text-[#5c5c66]">Edit your identity, review your record, and track badge progress.</p>
+          </div>
+          <Link to="/player/$playerId" params={{ playerId: me!.playerId }} className="hidden rounded-[10px] border border-[#232329] bg-[#111114] px-4 py-2 text-[11.5px] font-semibold uppercase tracking-[0.12em] text-[#a4a4b0] hover:border-[rgba(245,165,36,0.35)] hover:text-[#ececf1] sm:inline-block">
+            View public page →
+          </Link>
+        </div>
         <div className="mt-5 grid items-start gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
           {/* Preview card */}
           <div className="rounded-2xl border border-[#232329] bg-[#111114] px-6 pb-6 pt-8 text-center">
@@ -311,6 +346,80 @@ function ProfilePage() {
             </button>
           </div>
         </div>
+
+        {/* Badges */}
+        <section className="mt-6 rounded-2xl border border-[#232329] bg-[#111114] p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#5c5c66]">Badges</div>
+              <div className="mt-1 text-[15px] font-semibold text-[#ececf1]">
+                {badgeCounts.unlocked} <span className="text-[#5c5c66]">/ {badgeCounts.total || "…"} unlocked</span>
+              </div>
+            </div>
+            <Link to="/achievements" className="rounded-[10px] border border-[#2b2b33] bg-[#17171b] px-3.5 py-2 text-[11.5px] font-semibold uppercase tracking-[0.12em] text-[#a4a4b0] hover:border-[rgba(245,165,36,0.35)] hover:text-[#ececf1]">
+              Browse all →
+            </Link>
+          </div>
+          {badgeCounts.total > 0 && (
+            <div className="mt-4 h-[5px] overflow-hidden rounded-full bg-[#1e1e24]">
+              <div className="h-full rounded-full bg-[linear-gradient(90deg,#f5a524,#f5c542)]" style={{ width: `${Math.round((badgeCounts.unlocked / badgeCounts.total) * 100)}%` }} />
+            </div>
+          )}
+          <div className="mt-5 grid grid-cols-3 gap-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8">
+            {badges.slice(0, 16).map((b) => (
+              <Link
+                key={b.slug}
+                to="/achievements"
+                title={`${b.name} — ${b.description}${b.unlocked_at ? "" : " (locked)"}`}
+                className="group flex flex-col items-center rounded-[12px] border border-[#1f1f25] bg-[#0d0d10] px-2 py-3 transition hover:border-[rgba(245,165,36,0.35)]"
+              >
+                <ConstellationSigil sigilKey={b.sigil_key} tier={b.tier} size={54} locked={!b.unlocked_at} />
+                <div className={"mt-2 line-clamp-1 text-[10.5px] font-semibold uppercase tracking-[0.06em] " + (b.unlocked_at ? "text-[#ececf1]" : "text-[#5c5c66]")}>
+                  {b.name}
+                </div>
+              </Link>
+            ))}
+            {badges.length === 0 && (
+              <div className="col-span-full text-[12.5px] text-[#5c5c66]">Play a ranked or casual match to start unlocking badges.</div>
+            )}
+          </div>
+        </section>
+
+        {/* Match history */}
+        <section className="mt-6 rounded-2xl border border-[#232329] bg-[#111114] p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#5c5c66]">Recent matches</div>
+              <div className="mt-1 text-[15px] font-semibold text-[#ececf1]">Last {Math.min(recent.length, 8) || "—"} game{recent.length === 1 ? "" : "s"}</div>
+            </div>
+            <Link to="/history" className="rounded-[10px] border border-[#2b2b33] bg-[#17171b] px-3.5 py-2 text-[11.5px] font-semibold uppercase tracking-[0.12em] text-[#a4a4b0] hover:border-[rgba(245,165,36,0.35)] hover:text-[#ececf1]">
+              Full history →
+            </Link>
+          </div>
+          {recent.length === 0 ? (
+            <div className="mt-4 rounded-[12px] border border-dashed border-[#232329] px-4 py-6 text-center text-[12.5px] text-[#5c5c66]">
+              No matches yet. Jump into a game to build your record.
+            </div>
+          ) : (
+            <ul className="mt-4 divide-y divide-[#1e1e24] overflow-hidden rounded-[12px] border border-[#1f1f25] bg-[#0d0d10]">
+              {recent.map((m) => {
+                const color = m.result === "win" ? "#4ade80" : m.result === "forfeit" ? "#f5a524" : "#f87171";
+                return (
+                  <li key={m.matchId} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 px-4 py-3 text-[13px]">
+                    <span className="truncate text-[#ececf1]">vs <span className="font-semibold">{m.opponentName}</span></span>
+                    <span className="font-[IBM_Plex_Mono,monospace] text-[10.5px] uppercase tracking-[0.1em] text-[#5c5c66]">
+                      {m.mode === 4 ? "4P" : "1v1"}{m.ranked ? " · RANKED" : ""}
+                    </span>
+                    <span className="font-[IBM_Plex_Mono,monospace] text-[10.5px] text-[#5c5c66]">{new Date(m.endedAt).toLocaleDateString()}</span>
+                    <span className="rounded-full border px-2 py-[3px] text-[10px] font-bold uppercase tracking-[0.14em]" style={{ borderColor: color + "55", color, background: color + "12" }}>
+                      {m.result}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
       </div>
     </LobbyChrome>
   );
