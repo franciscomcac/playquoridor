@@ -427,6 +427,8 @@ export type Database = {
           country: string | null
           created_at: string
           id: string
+          initial_rating: number | null
+          is_bot: boolean
           name: string
           name_changed_at: string | null
           onboarded_at: string | null
@@ -441,6 +443,8 @@ export type Database = {
           country?: string | null
           created_at?: string
           id: string
+          initial_rating?: number | null
+          is_bot?: boolean
           name: string
           name_changed_at?: string | null
           onboarded_at?: string | null
@@ -455,6 +459,8 @@ export type Database = {
           country?: string | null
           created_at?: string
           id?: string
+          initial_rating?: number | null
+          is_bot?: boolean
           name?: string
           name_changed_at?: string | null
           onboarded_at?: string | null
@@ -576,6 +582,15 @@ export type Database = {
           active_until: string
           kind: string
           reason: string
+        }[]
+      }
+      pick_ranked_bot: {
+        Args: { _rating: number }
+        Returns: {
+          current_rating: number
+          initial_rating: number
+          name: string
+          player_id: string
         }[]
       }
       rename_player: {
