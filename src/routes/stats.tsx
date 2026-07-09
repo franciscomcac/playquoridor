@@ -78,7 +78,7 @@ function LeaderboardPage() {
 
   return (
     <LobbyChrome>
-      <div className="mx-auto max-w-[1240px] px-8 pb-14 pt-[70px]">
+      <div className="mx-auto max-w-[1600px] px-8 pb-14 pt-[70px]">
         <div className="text-center">
           <div className="text-[11px] font-semibold uppercase tracking-[0.26em] text-[#f5a524]">{season.label} · {season.endsLabel}</div>
           <h1 className="mt-4 text-[42px] font-bold tracking-[-0.03em]">Leaderboard</h1>

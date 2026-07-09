@@ -321,7 +321,7 @@ function Lobby() {
       </section>
 
       {/* Main grid */}
-      <div id="play" className={"mx-auto grid max-w-[1240px] items-start gap-5 px-4 pb-6 sm:px-8 lg:grid-cols-[280px_1fr_300px] " + (signedIn ? "" : "hidden sm:grid")}>
+      <div id="play" className={"mx-auto grid max-w-[1600px] items-start gap-5 px-4 pb-6 sm:px-8 lg:grid-cols-[280px_1fr_300px] " + (signedIn ? "" : "hidden sm:grid")}>
         {/* Left column */}
         <div className="hidden flex-col gap-4 lg:flex">
           <Card>

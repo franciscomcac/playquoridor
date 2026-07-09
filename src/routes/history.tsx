@@ -236,7 +236,7 @@ function MatchActions({ row, meId }: { row: MatchRow; meId: string | null }) {
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
-      <div className="mx-auto max-w-4xl px-4 py-8 sm:py-12">
+      <div className="mx-auto max-w-[1600px] px-4 py-8 sm:py-12">
         <Link to="/" className="text-xs uppercase tracking-widest text-zinc-500 hover:text-zinc-300">← Home</Link>
         <div className="mt-6">{children}</div>
       </div>
