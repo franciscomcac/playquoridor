@@ -90,6 +90,7 @@ export function LobbyChrome({
           </span>
           <nav className="flex flex-wrap gap-6 text-[12px]">
             <Link to="/about" className="text-[#5c5c66] hover:text-[#a7a7b2]">About</Link>
+            <Link to="/blog" className="text-[#5c5c66] hover:text-[#a7a7b2]">Blog</Link>
             <Link to="/stats" className="text-[#5c5c66] hover:text-[#a7a7b2]">Leaderboard</Link>
             <Link to="/puzzle" className="text-[#5c5c66] hover:text-[#a7a7b2]">Puzzles</Link>
             <a href="mailto:hi@playquoridor.online" className="text-[#5c5c66] hover:text-[#a7a7b2]">Contact</a>
