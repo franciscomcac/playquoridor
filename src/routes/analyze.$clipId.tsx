@@ -583,7 +583,7 @@ function MoveCard({ snapshot, slot, analysis, actual }: {
           className="rounded-md border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-semibold text-zinc-100 transition hover:bg-white/[0.09] disabled:opacity-60">
           {busy ? "Thinking…" : note ? "Re-explain" : "Explain with AI"}
         </button>
-        {note && <p className="mt-2 text-xs italic text-zinc-200">{note}</p>}
+        {note && <p className="mt-2 text-sm italic leading-relaxed text-zinc-200">{note}</p>}
       </div>
     </div>
   );
