@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { COUNTRY_BY_ISO } from "@/lib/countries";
+import { getStoredIdentity } from "@/lib/identity";
 
 type Session = {
   signedIn: boolean;
@@ -91,6 +92,7 @@ export function AccountNav({ compact = false }: { compact?: boolean }) {
 
 function AccountMenu({ username, country, compact }: { username: string; country: string | null; compact: boolean }) {
   const [open, setOpen] = useState(false);
+  const playerId = getStoredIdentity()?.id ?? null;
   const flag = country ? (COUNTRY_BY_ISO[country]?.flag ?? "🌐") : "🌐";
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
@@ -139,6 +141,13 @@ function AccountMenu({ username, country, compact }: { username: string; country
               </p>
             </div>
             <ul className="py-1 text-sm">
+              {playerId && (
+                <MenuItem
+                  to="/player/$playerId"
+                  params={{ playerId }}
+                  label="Profile"
+                />
+              )}
               <MenuItem to="/friends" label="Friends" />
               <MenuItem to="/history" label="Match history" />
               <MenuItem to="/achievements" label="Achievements" />
@@ -159,10 +168,14 @@ function AccountMenu({ username, country, compact }: { username: string; country
   );
 }
 
-function MenuItem({ to, label }: { to: string; label: string }) {
+function MenuItem({ to, label, params }: { to: string; label: string; params?: Record<string, string> }) {
   return (
     <li>
-      <Link to={to} className="flex items-center px-4 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white">
+      <Link
+        to={to}
+        {...(params ? { params } : {})}
+        className="flex items-center px-4 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white"
+      >
         {label}
       </Link>
     </li>
