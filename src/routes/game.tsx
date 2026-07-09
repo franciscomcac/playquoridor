@@ -1793,7 +1793,7 @@ function GameScreen({
   }
 
   return (
-    <div className="grid w-full max-w-6xl gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+    <div className="grid w-full max-w-7xl gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_400px]">
       <div className="order-1 flex min-w-0 flex-col gap-3 pb-20 lg:pb-0">
         {state.mode === 4 && <ChaosBanner />}
         {afk && state.winner === null && state.matchWinner === null && (
@@ -1801,6 +1801,9 @@ function GameScreen({
         )}
         <PlayerBanners state={state} you={you} nameOf={nameOf} playerIdOf={playerIdOf} placement="top" />
         <div className="flex gap-2 sm:gap-3">
+          <div className="hidden sm:contents">
+            <BoardSideClocks state={state} you={you} nameOf={nameOf} />
+          </div>
           <div className="relative min-w-0 flex-1">
             <QuoridorBoard state={displayState} you={you} onMove={handleMove} interactive={boardInteractive} onActivity={() => markActivity(you)} />
             {coinflip?.animating && <CoinflipOverlay starter={coinflip.starter} you={you} mode={state.mode as Mode} nameOf={nameOf} playerIdOf={playerIdOf} />}
@@ -1821,9 +1824,6 @@ function GameScreen({
             {matchOver && (
               <div className="pointer-events-none absolute inset-0 rounded-lg bg-background/70 backdrop-blur-sm" />
             )}
-          </div>
-          <div className="hidden sm:contents">
-            <BoardSideClocks state={state} you={you} nameOf={nameOf} />
           </div>
         </div>
         <PlayerBanners state={state} you={you} nameOf={nameOf} playerIdOf={playerIdOf} placement="bottom" />
@@ -3786,10 +3786,11 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave }:
   const boardInteractive = state.winner === null && !coinflip?.animating && state.turn === YOU && !review;
 
   return (
-    <div className="grid w-full max-w-6xl gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+    <div className="grid w-full max-w-7xl gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_400px]">
       <div className="order-1 flex min-w-0 flex-col gap-3 pb-20 lg:pb-0">
         <PlayerBanners state={state} you={YOU} nameOf={nameOf} playerIdOf={playerIdOf} placement="top" />
         <div className="flex gap-2 sm:gap-3">
+          <BoardSideClocks state={state} you={YOU} nameOf={nameOf} />
           <div className="relative min-w-0 flex-1">
             <QuoridorBoard state={displayState} you={YOU} onMove={handleMove} interactive={boardInteractive} />
             {coinflip?.animating && (
@@ -3806,7 +3807,6 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave }:
               <div className="pointer-events-none absolute inset-0 rounded-lg bg-background/70 backdrop-blur-sm" />
             )}
           </div>
-          <BoardSideClocks state={state} you={YOU} nameOf={nameOf} />
         </div>
         <PlayerBanners state={state} you={YOU} nameOf={nameOf} playerIdOf={playerIdOf} placement="bottom" />
       </div>
@@ -3995,7 +3995,7 @@ function SpectatorGame({ ident, code, onLeave }: {
   }, [code]);
 
   return (
-    <div className="grid w-full max-w-6xl gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+    <div className="grid w-full max-w-7xl gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_400px]">
       <div className="order-1 flex min-w-0 flex-col gap-3 pb-20 lg:pb-0">
         <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 shadow-sm">
           <span className="grid h-9 w-9 place-items-center rounded-full text-[10px] font-semibold uppercase tracking-widest"
@@ -4027,6 +4027,7 @@ function SpectatorGame({ ident, code, onLeave }: {
         )}
 
         <div className="flex gap-2 sm:gap-3">
+          {state && <BoardSideClocks state={state} you={SPECTATOR_YOU} nameOf={nameOf} />}
           <div className="relative min-w-0 flex-1">
             {state ? (
               <QuoridorBoard
@@ -4049,7 +4050,6 @@ function SpectatorGame({ ident, code, onLeave }: {
               />
             )}
           </div>
-          {state && <BoardSideClocks state={state} you={SPECTATOR_YOU} nameOf={nameOf} />}
         </div>
       </div>
 
