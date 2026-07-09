@@ -126,7 +126,7 @@ function FriendsPage() {
     }
   }
 
-  if (me === undefined) return <LobbyChrome><div className="mx-auto max-w-[1240px] px-8 py-16 text-sm text-[#5c5c66]">Loading…</div></LobbyChrome>;
+  if (me === undefined) return <LobbyChrome><div className="mx-auto max-w-[1600px] px-8 py-16 text-sm text-[#5c5c66]">Loading…</div></LobbyChrome>;
 
   const selectedName = selected?.kind === "friend" ? selected.item.name : selected?.item.name ?? "—";
   const selectedColor = selected?.kind === "friend" ? selected.item.avatarColor : null;
@@ -136,7 +136,7 @@ function FriendsPage() {
 
   return (
     <LobbyChrome>
-      <div className="mx-auto max-w-[1240px] px-8 pb-8 pt-9">
+      <div className="mx-auto max-w-[1600px] px-8 pb-8 pt-9">
         <div className="flex items-center justify-between">
           <h1 className="text-[26px] font-bold tracking-[-0.02em]">Friends</h1>
           <button onClick={() => navigate({ to: "/game" })}

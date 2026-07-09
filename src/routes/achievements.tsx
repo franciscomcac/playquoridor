@@ -139,7 +139,7 @@ function AchievementsPage() {
 
   return (
     <LobbyChrome>
-      <div className="mx-auto max-w-6xl px-4 py-10">
+      <div className="mx-auto max-w-[1600px] px-4 py-10">
         <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-[10px] uppercase tracking-[0.3em] text-zinc-500">Sigil Codex</p>
