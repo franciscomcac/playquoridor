@@ -3346,6 +3346,9 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave }:
     return () => { cancel = true; };
   }, [rankedBot, ident.id]);
 
+  const unlockFiredRef = useRef(false);
+  const [unlockQueue, setUnlockQueue] = useState<UnlockItem[] | null>(null);
+
   useEffect(() => {
     if (state.matchWinner === null) return;
     if (botRecordedRef.current) return;
@@ -3362,6 +3365,25 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave }:
       matches: 1, wins: winnerIsYou ? 1 : 0, losses: winnerIsYou ? 0 : 1,
       walls_placed: walls, pawns_eliminated: pops, forfeits: forfeited ? 1 : 0,
     });
+    // Post-match achievement evaluation for bot games.
+    if (!unlockFiredRef.current) {
+      unlockFiredRef.current = true;
+      const oppRatingPre = rankedBot?.rating ?? null;
+      void (async () => {
+        await new Promise((r) => window.setTimeout(r, 1400));
+        const unlocked = await evaluatePostMatch({
+          playerId: ident.id,
+          mode: mode as 2 | 4,
+          ranked: !!rankedBot,
+          iWon: winnerIsYou,
+          forfeited,
+          wallsThisMatch: walls,
+          pawnsThisMatch: pops,
+          opponentRating: oppRatingPre,
+        });
+        if (unlocked.length) setUnlockQueue(unlocked);
+      })();
+    }
     void (async () => {
       const winnerId = winnerIsYou
         ? ident.id
