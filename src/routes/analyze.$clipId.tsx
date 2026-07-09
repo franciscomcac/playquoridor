@@ -561,22 +561,22 @@ function MoveCard({ snapshot, slot, analysis, actual }: {
   return (
     <div className="mt-4 rounded-xl border border-white/10 bg-black/30 p-3.5">
       <div className="flex items-baseline justify-between gap-3">
-        <p className="text-xs text-zinc-400">
-          <span className="text-zinc-600">Played by</span>{" "}
-          <span className="font-semibold text-zinc-100" style={{ color: PLAYER_HEX[slot] }}>{snapshot.playerNames[slot]}</span>
-          <span className="text-zinc-600"> · </span>
-          <span className="font-mono text-zinc-100">{moveText(actual)}</span>
+        <p className="text-sm text-white">
+          <span className="text-zinc-300">Played by</span>{" "}
+          <span className="font-semibold" style={{ color: PLAYER_HEX[slot] }}>{snapshot.playerNames[slot]}</span>
+          <span className="text-zinc-500"> · </span>
+          <span className="font-mono text-white">{moveText(actual)}</span>
         </p>
         <span className={"rounded border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest " + VERDICT_CHIP[analysis.verdict]}>
           {analysis.verdict}
         </span>
       </div>
-      <p className="mt-1.5 text-[11px] text-zinc-500">
-        Engine suggested <span className="font-mono text-zinc-200">{moveText(analysis.best)}</span>
-        <span className="text-zinc-700"> · </span>
-        path <span className="font-mono text-zinc-300">{analysis.distMe}→{analysis.distMeAfter}</span>
-        <span className="text-zinc-700"> · </span>
-        opp <span className="font-mono text-zinc-300">{analysis.distOpp}→{analysis.distOppAfter}</span>
+      <p className="mt-1.5 text-xs text-white">
+        <span className="text-zinc-300">Engine suggested</span> <span className="font-mono text-white">{moveText(analysis.best)}</span>
+        <span className="text-zinc-500"> · </span>
+        <span className="text-zinc-300">path</span> <span className="font-mono text-white">{analysis.distMe}→{analysis.distMeAfter}</span>
+        <span className="text-zinc-500"> · </span>
+        <span className="text-zinc-300">opp</span> <span className="font-mono text-white">{analysis.distOpp}→{analysis.distOppAfter}</span>
       </p>
       <div className="mt-2.5">
         <button onClick={explain} disabled={busy}
