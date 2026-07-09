@@ -34,7 +34,7 @@ export async function evaluatePostMatch(ctx: EvalContext): Promise<UnlockedAchie
       _forfeited: ctx.forfeited,
       _walls_this_match: ctx.wallsThisMatch,
       _pawns_this_match: ctx.pawnsThisMatch,
-      _opponent_rating: ctx.opponentRating,
+      _opponent_rating: ctx.opponentRating ?? undefined,
     });
     if (error) throw error;
     const slugs = ((data ?? []) as Array<{ slug: string }>).map((r) => r.slug).filter(Boolean);
