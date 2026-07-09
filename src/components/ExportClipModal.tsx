@@ -235,7 +235,7 @@ export function ExportClipModal({ open, snapshot, onClose, filename }: Props) {
           </Row>
         </fieldset>
 
-        <div className="mt-4">
+        <div className="sticky bottom-0 mt-4 -mx-4 -mb-4 rounded-b-2xl border-t border-white/10 bg-zinc-950/95 px-4 py-3 backdrop-blur">
           {phase === "preview" && (
             <button
               onClick={download}
