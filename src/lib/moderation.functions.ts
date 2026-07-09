@@ -65,9 +65,75 @@ export const moderateChatMessage = createServerFn({ method: "POST" })
     if (!d?.playerId || typeof d.text !== "string") throw new Error("bad input");
     return { playerId: String(d.playerId), matchId: d.matchId ? String(d.matchId).slice(0, 40) : null, text: d.text.slice(0, 500) };
   })
-  .handler(async (): Promise<ChatModResult> => {
-    // Chat moderation is disabled: never block messages, never issue bans.
-    return { allow: true };
+  .handler(async ({ data, context }): Promise<ChatModResult> => {
+    const { supabase, userId } = context;
+    const player = await ownPlayerRow(supabase, userId, data.playerId);
+    if (!player) throw new Error("Player not found");
+
+    const { moderateText, pickPenaltyForChat, activeUntilFor, penaltyLabel } =
+      await import("./moderation.server");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // If already chat-banned, block outright.
+    if (await hasActiveChatBan(supabase, data.playerId)) {
+      return {
+        allow: false,
+        penalty: "chat_ban_24h",
+        severity: 3,
+        reason: "existing chat ban",
+        senderMessage: "You're currently chat-banned. Message not sent.",
+        lobbyMessage: null,
+      };
+    }
+
+    const verdict = await moderateText(data.text);
+
+    // Always record the event for audit.
+    await supabaseAdmin.from("moderation_events").insert({
+      player_id: data.playerId,
+      auth_user_id: userId,
+      surface: "chat",
+      content: data.text,
+      match_id: data.matchId,
+      categories: verdict.categories,
+      severity: verdict.severity,
+      verdict: verdict.severity <= 1 ? "ok" : "blocked",
+    });
+
+    if (verdict.severity <= 1) return { allow: true };
+
+    const strikes = await recentStrikeCount(supabase, data.playerId);
+    const penalty = pickPenaltyForChat(verdict.severity, strikes, false);
+    if (!penalty) return { allow: true };
+
+    const activeUntil = activeUntilFor(penalty);
+    await supabaseAdmin.from("moderation_penalties").insert({
+      player_id: data.playerId,
+      auth_user_id: userId,
+      kind: penalty,
+      reason: `chat: ${verdict.summary || verdict.categories.join(", ")}`,
+      active_until: activeUntil ? activeUntil.toISOString() : null,
+    });
+
+    const label = penaltyLabel(penalty);
+    const reasonText = verdict.summary || verdict.categories.join(", ") || "policy violation";
+    const senderMessage =
+      penalty === "warn"
+        ? `Message blocked (warning). Reason: ${reasonText}. Further violations will escalate.`
+        : `Message blocked — ${label} issued. Reason: ${reasonText}.`;
+    const lobbyMessage =
+      penalty === "warn"
+        ? null
+        : `${player.name} received a ${label} for chat policy violations.`;
+
+    return {
+      allow: false,
+      penalty,
+      severity: verdict.severity,
+      reason: reasonText,
+      senderMessage,
+      lobbyMessage,
+    };
   });
 
 // ---------- Bio moderation + save ----------
@@ -167,9 +233,22 @@ export const saveAvatar = createServerFn({ method: "POST" })
 // ---------- Current chat-ban state for the caller ----------
 export const myChatBan = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async (): Promise<ChatBanState> => {
-    // Chat bans disabled — always report clear.
-    return { active: false };
+  .handler(async ({ context }): Promise<ChatBanState> => {
+    const { supabase, userId } = context;
+    const { data } = await supabase
+      .from("moderation_penalties")
+      .select("kind, active_until, reason, player_id")
+      .eq("auth_user_id", userId)
+      .in("kind", ["chat_ban_24h", "chat_ban_7d", "perm"])
+      .order("active_until", { ascending: false, nullsFirst: false })
+      .limit(5);
+    const now = Date.now();
+    const row = (data ?? []).find(
+      (r: { active_until: string | null }) =>
+        !r.active_until || new Date(r.active_until).getTime() > now,
+    );
+    if (!row) return { active: false };
+    return { active: true, kind: row.kind as Kind, until: row.active_until, reason: row.reason };
   });
 
 // ---------- Username moderation (no penalty — just accept/reject) ----------
