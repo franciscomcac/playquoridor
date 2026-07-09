@@ -46,6 +46,7 @@ import {
   getVolume, initSoundOnGesture, isMuted, play, playWheelSpin, setMuted, setVolume, startSampleLoop,
 } from "@/lib/sound";
 import { humanThinkTimeMs, pickBotMove, pickRankedBotForRating, randomDifficulty, difficultyForRating, type RankedBot } from "@/lib/bot";
+import { computeVisibleWalls } from "@/lib/fog";
 import { randomGamerName } from "@/lib/names";
 import { PlayerBanner } from "@/components/PlayerBanner";
 import { fetchBannerDataMany, fetchAchievementMeta, type BannerData } from "@/lib/stats";
