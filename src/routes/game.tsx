@@ -2104,9 +2104,10 @@ function titleFor(name: string): string {
   return TITLE_POOL[Math.abs(h) % TITLE_POOL.length];
 }
 
-function RoundStartBanner({ slot, name, side, phase, isWinner, isLoser }: {
+function RoundStartBanner({ slot, name, side, phase, isWinner, isLoser, playerId }: {
   slot: PlayerId; name: string; side: "left" | "right"; phase: number;
   isWinner: boolean; isLoser: boolean;
+  playerId: string | null;
 }) {
   const color = PLAYER_COLORS[slot];
   const landed = phase >= 1;
@@ -2116,7 +2117,7 @@ function RoundStartBanner({ slot, name, side, phase, isWinner, isLoser }: {
     : "0 20px 50px rgba(0,0,0,.45)";
   return (
     <div
-      className="relative flex items-center gap-4 rounded-2xl border px-4 py-3 sm:gap-5 sm:px-5 sm:py-4"
+      className="relative flex items-center gap-5 rounded-2xl border px-5 py-4 sm:gap-6 sm:px-7 sm:py-6"
       style={{
         borderColor: "color-mix(in oklab, var(--border) 70%, transparent)",
         background: "color-mix(in oklab, var(--card) 92%, black 8%)",
@@ -2143,10 +2144,10 @@ function RoundStartBanner({ slot, name, side, phase, isWinner, isLoser }: {
       </div>
       {/* Avatar */}
       <div
-        className="grid h-14 w-14 flex-none place-items-center rounded-full text-lg font-extrabold sm:h-16 sm:w-16 sm:text-xl"
+        className="grid h-20 w-20 flex-none place-items-center rounded-full text-2xl font-extrabold sm:h-24 sm:w-24 sm:text-3xl"
         style={{
           background: `radial-gradient(circle at 32% 28%, color-mix(in oklab, ${color} 55%, white 50%), ${color} 55%, color-mix(in oklab, ${color} 60%, black 40%) 100%)`,
-          border: `3px solid ${color}`,
+          border: `4px solid ${color}`,
           color: "oklch(0.15 0.02 55)",
         }}
       >
@@ -2154,25 +2155,22 @@ function RoundStartBanner({ slot, name, side, phase, isWinner, isLoser }: {
       </div>
       {/* Name + title */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <p className="truncate text-base font-extrabold text-foreground sm:text-lg" style={{ color: "var(--foreground)" }}>
+        <p className="truncate text-xl font-extrabold text-foreground sm:text-2xl" style={{ color: "var(--foreground)" }}>
           {name}
         </p>
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+        <p className="text-[11.5px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
           {titleFor(name)}
         </p>
       </div>
-      {/* Badge slots (3) */}
-      <div className="hidden flex-none gap-1.5 sm:flex">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="h-7 w-7 rounded-full border border-dashed" style={{ borderColor: "color-mix(in oklab, var(--foreground) 18%, transparent)" }} />
-        ))}
-      </div>
+      {/* Showcased badges */}
+      <IntroBadgeSlots playerId={playerId} size={44} count={3} />
     </div>
   );
 }
 
-function CoinflipOverlay({ starter, you, mode, nameOf }: {
+function CoinflipOverlay({ starter, you, mode, nameOf, playerIdOf }: {
   starter: PlayerId; you: PlayerId; mode: Mode; nameOf: (s: PlayerId) => string;
+  playerIdOf?: (s: PlayerId) => string | null;
 }) {
   // Phase machine driven by mount-time timers.
   //  0 idle → 1 banners land → 2 impact/flash+shake → 3 coin shows → 4 coin spins → 5 reveal
@@ -2218,7 +2216,7 @@ function CoinflipOverlay({ starter, you, mode, nameOf }: {
 
   // 4-player mode gets its own multi-banner intro with a spinning selector.
   if (mode === 4) {
-    return <FourPlayerRoundStart starter={starter} you={you} nameOf={nameOf} />;
+    return <FourPlayerRoundStart starter={starter} you={you} nameOf={nameOf} playerIdOf={playerIdOf} />;
   }
 
   const exiting = phase >= 6;
@@ -2273,11 +2271,13 @@ function CoinflipOverlay({ starter, you, mode, nameOf }: {
             slot={p1} name={p1Name} side="left" phase={phase}
             isWinner={phase === 5 && starter === p1}
             isLoser={phase === 5 && starter !== p1}
+            playerId={playerIdOf?.(p1) ?? null}
           />
           <RoundStartBanner
             slot={p2} name={p2Name} side="right" phase={phase}
             isWinner={phase === 5 && starter === p2}
             isLoser={phase === 5 && starter !== p2}
+            playerId={playerIdOf?.(p2) ?? null}
           />
         </div>
 
