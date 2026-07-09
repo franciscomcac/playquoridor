@@ -3708,11 +3708,16 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
   const revealedRef = useRef<Set<string>>(new Set());
   const [visibleWallKeys, setVisibleWallKeys] = useState<Set<string> | undefined>(undefined);
   const [visibleCells, setVisibleCells] = useState<Set<number> | undefined>(undefined);
+  // Per-bot reveal memory — each bot only "knows" walls it has personally seen.
+  const botRevealedRef = useRef<Map<PlayerId, Set<string>>>(new Map());
   useEffect(() => {
     try { localStorage.setItem("quoridor:fogOfWalls", fogOn ? "1" : "0"); } catch { /* ignore */ }
   }, [fogOn]);
   useEffect(() => {
-    if ((state.moveCount ?? 0) === 0) revealedRef.current = new Set();
+    if ((state.moveCount ?? 0) === 0) {
+      revealedRef.current = new Set();
+      botRevealedRef.current = new Map();
+    }
   }, [state.moveCount]);
   useEffect(() => {
     if (!fogOn) { setVisibleWallKeys(undefined); setVisibleCells(undefined); return; }
@@ -3746,7 +3751,21 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
     if (slot === YOU) return;
     if (!state.active[slot]) return;
 
-    const move = pickBotMove(state, slot, difficulty);
+    // In Fog of Walls mode: bot only sees walls it has personally revealed
+    // (line-of-sight from its own pawn), and is dumbed down to medium-easy.
+    let botState = state;
+    let botDifficulty = difficulty;
+    if (fogOn) {
+      const prior = botRevealedRef.current.get(slot) ?? new Set<string>();
+      const seen = computeVisibleWalls(state, slot, prior);
+      botRevealedRef.current.set(slot, seen);
+      const filteredWalls = state.walls.filter((w) =>
+        seen.has(`${w.o}-${w.r}-${w.c}`),
+      );
+      botState = { ...state, walls: filteredWalls };
+      botDifficulty = Math.min(difficulty, 0.35);
+    }
+    const move = pickBotMove(botState, slot, botDifficulty);
     if (!move) {
       const ns = applyForfeit(state, slot, false);
       if (ns) {
@@ -3755,7 +3774,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
       }
       return;
     }
-    let delay = humanThinkTimeMs(state, move, difficulty);
+    let delay = humanThinkTimeMs(state, move, botDifficulty);
     if (state.clocks) {
       const remaining = liveRemaining(state.clocks, state.turn, slot, Date.now());
       delay = Math.min(delay, Math.max(120, remaining - 400));
@@ -3763,14 +3782,20 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
     const t = window.setTimeout(() => {
       const cur = stateRef.current;
       if (cur.turn !== slot || cur.winner !== null || cur.matchWinner !== null) return;
-      const ns = applyLocalMove(slot, move);
+      // Move might be illegal on real state (bot planned through a wall
+      // it couldn't see). Fall back to any legal pawn move.
+      let ns = applyLocalMove(slot, move);
+      if (!ns && move.kind === "wall") {
+        const legal = legalPawnMoves(cur, slot);
+        if (legal.length) ns = applyLocalMove(slot, { kind: "pawn", to: legal[0] });
+      }
       if (ns) {
         setState(ns);
         play(move.kind === "wall" ? "wall" : "pop");
       }
     }, delay);
     return () => window.clearTimeout(t);
-  }, [state, coinflip?.animating, difficulty, applyLocalMove]);
+  }, [state, coinflip?.animating, difficulty, applyLocalMove, fogOn]);
 
   // Clock enforcement — if either side runs out of time, they lose the round.
   useEffect(() => {
