@@ -347,42 +347,12 @@ function Lobby() {
             </div>
           </Card>
 
-          <Card>
-            <CardHeader
-              eyebrow="Recent matches"
-              action={recent && recent.length > 0 ? (
-                <Link to="/history" className="text-[11.5px] font-semibold uppercase tracking-[0.06em] text-[#f5a524] hover:text-[#ffc45e]">History</Link>
-              ) : null}
-            />
-            <div className="mt-3">
-              {recent === null && Array.from({ length: 3 }).map((_, i) => (
-                <Row key={i}>
-                  <span className="h-[26px] w-[26px] animate-pulse rounded-lg bg-[#1e1e24]" />
-                  <span className="h-3 w-24 animate-pulse rounded bg-[#1e1e24]" />
-                </Row>
-              ))}
-              {recent?.length === 0 && (
-                <div className="border-t border-[#1a1a1f] px-5 py-4 text-[12.5px] text-[#83838e]">
-                  No recent matches yet.
-                </div>
-              )}
-              {recent?.map((m) => {
-                const win = m.result === "win";
-                return (
-                  <Row key={m.matchId}>
-                    <span className={"grid h-[26px] w-[26px] place-items-center rounded-lg font-[IBM_Plex_Mono,monospace] text-[11.5px] font-bold " + (win ? "bg-[rgba(47,213,117,0.12)] text-[#2fd575]" : "bg-[rgba(255,92,92,0.1)] text-[#ff7a7a]")}>
-                      {win ? "W" : "L"}
-                    </span>
-                    <div className="flex-1">
-                      <div className="text-[13px] font-semibold">vs {m.opponentName}</div>
-                      <div className="text-[11px] text-[#5c5c66]">{m.ranked ? "Ranked" : "Casual"} · {m.mode}p</div>
-                    </div>
-                    <span className="font-[IBM_Plex_Mono,monospace] text-[11px] text-[#5c5c66]">{timeAgo(m.endedAt)}</span>
-                  </Row>
-                );
-              })}
-            </div>
-          </Card>
+          <FogLtmButton
+            onClick={() => {
+              if (hasActiveGame()) { void navigate({ to: "/game" }); return; }
+              go("fog2");
+            }}
+          />
         </div>
 
         {/* Middle: Live Lobby */}
