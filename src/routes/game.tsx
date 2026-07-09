@@ -2307,7 +2307,7 @@ function CoinflipOverlay({ starter, you, mode, nameOf, playerIdOf }: {
           transition: "transform .55s ease, opacity .55s ease",
         }}
       >
-        <div className="flex w-full max-w-3xl flex-col items-stretch gap-4 sm:gap-5">
+        <div className="flex w-full max-w-md flex-col items-stretch gap-3">
           <RoundStartBanner
             slot={p1} name={p1Name} side="left" phase={phase}
             isWinner={phase === 5 && starter === p1}
