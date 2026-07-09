@@ -111,22 +111,33 @@ export function PlayerBanner({ slot, color, name, isYou, isTurn, wallsLeft, tota
               {rating}
             </span>
           )}
-          {showcased.length > 0 && (
-            <span className="ml-0.5 flex items-center gap-1">
-              {showcased.map((slug) => {
-                const meta = sigilMeta.get(slug);
-                if (!meta) return <span key={slug} className="h-4 w-4 rounded-full border border-dashed border-white/10" />;
+          <span className="ml-0.5 flex items-center gap-1">
+            {Array.from({ length: 3 }).map((_, i) => {
+              const slug = showcased[i];
+              const meta = slug ? sigilMeta.get(slug) : null;
+              if (!slug) {
                 return (
-                  <ConstellationSigil
-                    key={slug}
-                    sigilKey={meta.sigil_key}
-                    tier={meta.tier as SigilTier}
-                    size={16}
+                  <span
+                    key={`empty-${i}`}
+                    className="h-4 w-4 rounded-full border border-dashed border-white/10"
+                    style={{ opacity: 0.5 }}
+                    aria-hidden
                   />
                 );
-              })}
-            </span>
-          )}
+              }
+              if (!meta) {
+                return <span key={slug} className="h-4 w-4 rounded-full border border-dashed border-white/10" />;
+              }
+              return (
+                <ConstellationSigil
+                  key={slug}
+                  sigilKey={meta.sigil_key}
+                  tier={meta.tier as SigilTier}
+                  size={16}
+                />
+              );
+            })}
+          </span>
         </div>
       </div>
 
