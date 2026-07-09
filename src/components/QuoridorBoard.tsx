@@ -315,11 +315,11 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
     <div className="flex w-full flex-col gap-2">
     <div className="w-full" style={{
       display: "grid",
-      gridTemplateColumns: "1.25rem minmax(0,1fr)",
-      gridTemplateRows: "minmax(0,1fr) 1.25rem",
-      gap: "0.25rem",
+      gridTemplateColumns: "0.875rem minmax(0,1fr)",
+      gridTemplateRows: "minmax(0,1fr) 0.875rem",
+      gap: "0.1875rem",
     }}>
-      <div aria-hidden className="flex flex-col justify-around py-[3%] text-[10px] font-medium uppercase tracking-widest text-muted-foreground sm:text-xs" style={{ visibility: rotated ? "hidden" : undefined }}>
+      <div aria-hidden className="flex flex-col justify-around py-[3%] text-[9px] font-medium uppercase tracking-widest text-muted-foreground sm:text-[10px]" style={{ visibility: rotated ? "hidden" : undefined }}>
         {Array.from({ length: BOARD }, (_, i) => (
           <span key={i} className="text-center leading-none">{BOARD - i}</span>
         ))}
@@ -369,7 +369,7 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
       </div>
       </div>
       <div />
-      <div aria-hidden className="flex justify-around px-[3%] text-[10px] font-medium uppercase tracking-widest text-muted-foreground sm:text-xs" style={{ visibility: rotated ? "hidden" : undefined }}>
+      <div aria-hidden className="flex justify-around px-[3%] text-[9px] font-medium uppercase tracking-widest text-muted-foreground sm:text-[10px]" style={{ visibility: rotated ? "hidden" : undefined }}>
         {FILES.map((f) => (
           <span key={f} className="text-center leading-none">{f}</span>
         ))}
