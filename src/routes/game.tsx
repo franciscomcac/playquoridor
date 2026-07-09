@@ -1348,13 +1348,13 @@ function GameScreen({
         setBotSlots((prev) => [...prev, ...assigned.map((s) => s as PlayerId)]);
         void removeOpenRoom(code);
       }
-    }, 60_000) : null;
+    }, 30_000) : null;
     // Solo-host fallback → replace with a full local bot game.
     let soloT: number | null = null;
     if (onBotFallback) {
       // Casual 2p: match ranked's aggressive fallback so nobody waits
       // more than ~8s on an empty queue before getting a bot game.
-      const soloDelay = initialMode === 4 ? 60_000 : 8_000;
+      const soloDelay = initialMode === 4 ? 30_000 : 8_000;
       soloT = window.setTimeout(() => {
         const cur = presenceRef.current;
         if (cur.count >= cur.expected) return;
