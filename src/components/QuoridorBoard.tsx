@@ -353,8 +353,11 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity, vis
           {cells}
         </div>
 
-        {state.pawns.map((p, i) =>
-          state.active[i] ? (
+        {state.pawns.map((p, i) => {
+          if (!state.active[i]) return null;
+          const hidden = fog && i !== you && visibleCells && !visibleCells.has(p[0] * BOARD + p[1]);
+          if (hidden) return null;
+          return (
             <div key={`pawn-${i}`} className="pawn-glide pointer-events-none absolute grid place-items-center"
               style={{
                 left: `${(p[1] / BOARD) * 100}%`, top: `${(p[0] / BOARD) * 100}%`,
@@ -362,8 +365,8 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity, vis
               }}>
               <Pawn key={`${p[0]}-${p[1]}`} player={i as PlayerId} you={you} active={state.turn === i && state.winner === null} counterRotate={rotation} />
             </div>
-          ) : null,
-        )}
+          );
+        })}
 
         {state.walls
           .filter((w) => !visibleWallKeys || visibleWallKeys.has(`${w.o}-${w.r}-${w.c}`))
