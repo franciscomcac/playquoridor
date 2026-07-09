@@ -196,6 +196,10 @@ function Home() {
     if (pending === "quick2") setView({ name: "quick", mode: 2 });
     else if (pending === "quick4") setView({ name: "quick", mode: 4 });
     else if (pending === "ranked2") setView({ name: "quick", mode: 2, ranked: true });
+    else if (pending === "fog2") {
+      try { localStorage.setItem("quoridor:fogOfWalls", "1"); } catch { /* ignore */ }
+      setView({ name: "quick", mode: 2 });
+    }
     else if (pending === "create") setView({ name: "create", mode: 2, walls: defaultWallsFor(2), rounds: 3 });
     else if (pending === "cpu:easy") setView({ name: "bot", mode: 2, difficulty: 0.22, opponentNames: ["Tom"] });
     else if (pending === "cpu:medium") setView({ name: "bot", mode: 2, difficulty: 0.6, opponentNames: ["Jackeline"] });
