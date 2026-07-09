@@ -334,6 +334,10 @@ function Home() {
                 opponentNames={view.opponentNames}
                 rankedBot={view.rankedBot}
                 onLeave={goHome}
+                onRequeue={() => {
+                  clearInterruptedGame();
+                  setView({ name: "quick", mode: view.mode, ranked: !!view.rankedBot });
+                }}
               />
             )}
           </div>
