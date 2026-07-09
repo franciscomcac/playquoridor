@@ -23,6 +23,52 @@ const PREVIEW_H = 640;
 const EXPORT_W = 1080;
 const EXPORT_H = 1920;
 const BASE_MS = 500;
+const FINALE_MS = 1800;
+const CONFETTI_COLORS = ["#f59e0b", "#ec4899", "#8b5cf6", "#22d3ee", "#34d399", "#f43f5e", "#fbbf24"];
+
+type Confetto = { x: number; vx: number; vy: number; g: number; rot: number; vr: number; size: number; color: string; shape: 0 | 1; };
+
+function makeConfetti(w: number, count = 90): Confetto[] {
+  const arr: Confetto[] = [];
+  // Deterministic seeded RNG so preview & export match
+  let s = 1337;
+  const rnd = () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+  for (let i = 0; i < count; i++) {
+    arr.push({
+      x: rnd() * w,
+      vx: (rnd() - 0.5) * w * 0.4,
+      vy: -rnd() * w * 0.9 - w * 0.4,
+      g: w * 1.6,
+      rot: rnd() * Math.PI * 2,
+      vr: (rnd() - 0.5) * 8,
+      size: w * (0.012 + rnd() * 0.018),
+      color: CONFETTI_COLORS[Math.floor(rnd() * CONFETTI_COLORS.length)],
+      shape: rnd() > 0.5 ? 1 : 0,
+    });
+  }
+  return arr;
+}
+
+function drawConfetti(ctx: CanvasRenderingContext2D, w: number, h: number, t: number, parts: Confetto[]) {
+  for (const p of parts) {
+    const x = p.x + p.vx * t;
+    const y = h * 0.75 + p.vy * t + 0.5 * p.g * t * t;
+    const rot = p.rot + p.vr * t;
+    if (y > h + 40) continue;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+    ctx.fillStyle = p.color;
+    if (p.shape === 0) {
+      ctx.fillRect(-p.size / 2, -p.size / 3, p.size, p.size * 0.6);
+    } else {
+      ctx.beginPath();
+      ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}
 
 function beep(ctx: AudioContext, freq = 620, ms = 55) {
   const osc = ctx.createOscillator();
@@ -81,6 +127,7 @@ export function ExportClipModal({ open, snapshot, onClose, filename }: Props) {
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const audioRef = useRef<AudioContext | null>(null);
+  const confettiRafRef = useRef<number | null>(null);
 
   const frames = useMemo<ReplayFrame[]>(() => (snapshot ? replay(snapshot) : []), [snapshot]);
   const [idx, setIdx] = useState(0);
@@ -99,8 +146,26 @@ export function ExportClipModal({ open, snapshot, onClose, filename }: Props) {
     drawRotated(c, frames[idx], pov);
 
     if (idx >= frames.length - 1) {
-      const restart = window.setTimeout(() => setIdx(0), Math.round(1800 / speed));
-      return () => window.clearTimeout(restart);
+      // Play confetti finale on the preview canvas
+      const ctx = c.getContext("2d");
+      const parts = ctx ? makeConfetti(c.width) : [];
+      const start = performance.now();
+      const duration = Math.round(FINALE_MS / speed);
+      const loop = (now: number) => {
+        const elapsed = now - start;
+        if (!ctx) return;
+        drawRotated(c, frames[idx], pov);
+        drawConfetti(ctx, c.width, c.height, (elapsed / 1000) * speed, parts);
+        if (elapsed < duration) {
+          confettiRafRef.current = requestAnimationFrame(loop);
+        }
+      };
+      confettiRafRef.current = requestAnimationFrame(loop);
+      const restart = window.setTimeout(() => setIdx(0), duration);
+      return () => {
+        window.clearTimeout(restart);
+        if (confettiRafRef.current !== null) cancelAnimationFrame(confettiRafRef.current);
+      };
     }
     const isStart = frames[idx].plyIndex === -1;
     const delay = Math.round((isStart ? BASE_MS * 2 : BASE_MS) / speed);
@@ -168,10 +233,21 @@ export function ExportClipModal({ open, snapshot, onClose, filename }: Props) {
         drawFrame(frames[i]);
         const isStart = frames[i].plyIndex === -1;
         const isLast = i === frames.length - 1;
-        const delay = isLast
-          ? Math.round(1800 / speed)
-          : Math.round((isStart ? BASE_MS * 2 : BASE_MS) / speed);
-        await wait(delay);
+        if (isLast) {
+          // Confetti finale — animate at 30fps for FINALE_MS
+          const parts = makeConfetti(canvas.width);
+          const totalMs = Math.round(FINALE_MS / speed);
+          const step = Math.round(1000 / fps);
+          const steps = Math.max(1, Math.round(totalMs / step));
+          for (let f = 0; f < steps; f++) {
+            drawFrame(frames[i]);
+            drawConfetti(ctx, canvas.width, canvas.height, (f * step / 1000) * speed, parts);
+            await wait(step);
+          }
+        } else {
+          const delay = Math.round((isStart ? BASE_MS * 2 : BASE_MS) / speed);
+          await wait(delay);
+        }
       }
 
       rec.stop();
