@@ -1,64 +1,67 @@
-# Ranked bot pool: 100 bots with dynamic ELO, fixed strength
+## What we're building
 
-## What's broken today
+Four connected changes to the game screen and badge system.
 
-- Only **6 hard-coded bot rows** exist in the DB (ratings 700, 900, 1100, 1300, 1500, 1700). Ranked fallback picks whichever of those 6 is closest to your ELO — so you keep meeting the same handful.
-- Bot difficulty currently comes from a hardcoded number attached to each of the 6 tiers, so if a bot's rating drifted from wins/losses there'd be no separation between "who they are" and "how they play."
-- No mechanism to pick from a large pool by *current* rating.
+### 1. Badge levels (auto-merge tiered families)
 
-## Goal
+Group same-family badges (e.g. `win_10`/`win_50`/`win_100`/`win_500`/`win_1000` → **Wins**) into one card that shows a level (1–5) and a bar of progress toward the next level. Data stays exactly as it is in the DB; this is a display transform.
 
-- **100 unique ranked bots** with gamertag-style names, seeded across the ladder.
-- Each bot has an **initial_rating** (locked forever, drives difficulty) and a **current rating** (updates like a human's after every ranked match, via existing `apply_elo_1v1`).
-- Ranked matchmaking timeout picks the bot whose **current rating** is closest to yours (with tiny jitter so it isn't always the same one).
-- Bots keep playing at the strength implied by their **initial_rating**, no matter how far their current rating drifts.
-- Bots stay hidden from the leaderboard.
+**Families**: wins, streaks, walls, milestones (matches), mode_2p, mode_4p, rank, puzzles, friends (link), conduct, rounds, laurel, banner (identity), mode_3p. Non-family badges (e.g. minimalist, phoenix, comeback, void) remain single-level cards.
 
-## Plan
+- New `src/lib/achievement-families.ts` maps slug → `{ familyId, level }` and produces a `getFamilyView(unlockedSlugs, allSlugs)` helper returning `{ familyId, currentLevel, maxLevel, current, next, tier, sigilKey }`.
+- `src/routes/achievements.tsx` and `src/routes/profile.tsx` render one card per family, with a level pip strip and "Lv N" label. Non-family slugs render as before.
+- `AchievementUnlockOverlay` shows `Level N — Wins` under the badge name when the unlocked slug belongs to a family; overlay ordering coalesces multiple family unlocks in the same match into one reveal at the highest level.
 
-### 1. Database migration
+### 2. In-game player banners (top + bottom of board)
 
-- Add `is_bot boolean not null default false` and `initial_rating int` to `public.players`.
-- Backfill the existing 6 bots: `is_bot = true`, `initial_rating = current rating`.
-- Seed **94 new bot rows** so total = 100, with:
-  - Unique UUIDs, unique gamertag-style names (curated list — no "bot" / "novice" / numeric suffixes look).
-  - `initial_rating` spread across 400–2200 (roughly matches the ladder curve, denser around 900–1500 where real players cluster).
-  - Matching `player_stats` row with `rating = initial_rating`, `ranked_matches = 0`.
-- Add index on `player_stats.rating` for fast nearest-neighbor lookup.
-- Update `search_players` to exclude `is_bot = true` so bots don't appear in friend search.
+New `PlayerBanner` component placed above and below the board. Contents:
 
-### 2. Server function: pick bot by current rating
+```text
+[avatar disc #N]  Name           Wall counter (10 vertical bars)
+                  PT · 1247 ELO
+                  [sigil][sigil][sigil]  ← up to 3 showcased badges
+```
 
-New `pickRankedBotForRating` server fn (public, no auth needed — reads bot rows only):
-- Query bots ordered by `abs(current_rating − player_rating)`, limit 5.
-- Pick one at random from those 5 (so the same rating band doesn't always yield the same bot).
-- Return `{ playerId, name, initialRating, currentRating }`.
+- Bottom banner = you. Top banner = opponent (or a horizontal row of banners in 4P mode).
+- Country renders as an ISO code chip with a small flag glyph (`countryCode → emoji flag` helper).
+- Showcased sigils are the small `ConstellationSigil` at ~28px, pulled from `players.showcased_achievements`.
+- Wall counter reuses the existing dot/bar row already shown on the small "YOU/P2" chip.
 
-### 3. Client wiring
+**Data plumbing (peer protocol extension, backward-compatible):**
 
-- Replace the hardcoded `RANKED_BOTS` array in `src/lib/bot.ts` with:
-  - A `difficultyForRating(rating)` helper that maps `initial_rating` → difficulty value (piecewise: 400→0.30, 700→0.45, 1000→0.60, 1300→0.78, 1600→0.90, 2000+→0.98).
-  - Keep `RankedBot` type but source it from the server fn.
-- In `game.tsx` `onBotFallback`: call `pickRankedBotForRating(myRating)` instead of the local `rankedBotForRating`. Compute difficulty from `bot.initialRating`.
+- Extend `RosterEntry` and the join/roster peer messages with optional `country`, `rating`, `showcased` (string[] of slugs).
+- On host boot and guest join, fetch the local player's `country`, `player_stats.rating`, and `players.showcased_achievements` (single query, or bundled in an existing stats call) and include it in the payload.
+- For bot matches, read `players.country`/`player_stats.rating` for the bot row (already exists) and pass `showcased: []`.
+- Old clients that don't send these fields fall back to name/ELO-only rendering — no breakage.
 
-### 4. Leaderboard / stats filtering
+### 3. Remove the small YOU / P2 chip strip
 
-- Replace `RANKED_BOT_PLAYER_IDS` static list with a `is_bot = false` filter in:
-  - `fetchLeaderboard` (`src/lib/stats.ts`)
-  - Anywhere else the constant is used.
-- `apply_elo_1v1` updates: switch the "skip counter increment" check from the hardcoded UUID list to a lookup on `players.is_bot`.
+Delete the chip row below the board (its two jobs — showing whose turn / wall count — now live in the banners). Retain only the compact clock badge if there is one for the current player.
 
-### 5. Timing tweak
+### 4. Enlarge the opening-animation banners + their badges
 
-- The ranked→bot fallback fires after 5s of no opponent. Keep as-is unless you want it faster.
+The 2P coinflip intro and 4P multi-banner intro currently render small nameplates.
 
-## What stays the same
+- Increase intro banner width/height ~1.4× and font sizes ~1.25×.
+- The pfp/sigil on those banners scales from ~48px → ~72px so the sigil art is legible.
+- `introDurationMs` unchanged; only sizing changes.
 
-- ELO math (`apply_elo_1v1`).
-- Rank overlays, bot AI engine, wall/pawn animations.
-- Bot names are still random gamertags per match display-wise — but now the underlying `player_id` and stored name are one of 100 real DB identities, so match history / rating drift is coherent.
+## Technical details
 
-## Open questions
+**Files touched**
+- `src/lib/achievement-families.ts` (new)
+- `src/lib/peer-room.ts` (roster/join types + payloads)
+- `src/lib/stats.ts` (add helper: `fetchPlayerBannerData(playerId)` returning `{country, rating, showcased}`)
+- `src/components/PlayerBanner.tsx` (new)
+- `src/components/AchievementUnlockOverlay.tsx` (level label)
+- `src/components/ConstellationSigil.tsx` (accept optional `level` badge overlay in the corner)
+- `src/routes/achievements.tsx`, `src/routes/profile.tsx` (family cards)
+- `src/routes/game.tsx` (mount banners above/below board, drop the chip strip, resize intro banners)
 
-1. **Bot's displayed name in-match**: Keep showing a fresh `randomGamerName()` each match (current behavior), or show the bot's actual stored name (e.g. "phaseShift") so repeat matches feel like recurring rivals? I'd recommend **the actual stored name** now that there are 100 of them — makes ranked feel populated.
-2. Any specific rating spread you want (e.g. more bots at 1000–1400 where most players sit), or leave it roughly uniform 400–2200?
+**No DB migration required.** All state already exists (`players.country`, `players.showcased_achievements`, `player_stats.rating`, `player_achievements`). Family mapping is client-side. Old peer clients still connect.
+
+## Out of scope
+
+- Changing which slugs the DB grants (no changes to `evaluate_match_achievements`).
+- Reworking the showcase picker UI in profile — already exists per `set_showcased_achievements` RPC.
+- Adding new badge slugs.
