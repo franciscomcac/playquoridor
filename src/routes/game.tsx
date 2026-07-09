@@ -169,13 +169,11 @@ function Home() {
     if (bootRan.current) return;
     bootRan.current = true;
     void (async () => {
-      let stored = getStoredIdentity();
-      if (!stored) {
-        // Prefer the signed-in account's players row if we can find one
-        // (new browser / cleared storage / incognito) — otherwise mint a
-        // temporary gamer-style username so anonymous visitors can play.
-        stored = await restoreIdentityFromAuth();
-      }
+      // Prefer the signed-in account's players row so a real login always
+      // wins over a stale random gamer name minted during an earlier anon
+      // session. Falls back to local storage, then to a fresh gamer name.
+      let stored = await restoreIdentityFromAuth();
+      if (!stored) stored = getStoredIdentity();
       if (!stored) {
         stored = setStoredIdentity(randomGamerName());
       }
