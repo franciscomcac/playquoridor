@@ -2270,6 +2270,38 @@ function IntroBadgeSlots({ playerId, size, count }: { playerId: string | null; s
   );
 }
 
+// Avatar disc used by the intro banners. Renders the player's uploaded
+// profile picture when available, falling back to initials on a color disc.
+function IntroAvatar({ playerId, name, color, size, borderWidth = 2 }: {
+  playerId: string | null; name: string; color: string; size: number; borderWidth?: number;
+}) {
+  const [banner, setBanner] = useState<BannerData | null>(null);
+  useEffect(() => {
+    if (!playerId) { setBanner(null); return; }
+    let cancel = false;
+    void fetchBannerDataMany([playerId]).then((m) => { if (!cancel) setBanner(m.get(playerId) ?? null); });
+    return () => { cancel = true; };
+  }, [playerId]);
+  const avatarUrl = banner?.avatarUrl ?? null;
+  const avatarColor = banner?.avatarColor ?? color;
+  return (
+    <div
+      className="grid flex-none place-items-center rounded-full font-extrabold"
+      style={{
+        width: size, height: size,
+        fontSize: Math.round(size * 0.36),
+        background: avatarUrl
+          ? `url(${avatarUrl}) center/cover`
+          : `radial-gradient(circle at 32% 28%, color-mix(in oklab, ${avatarColor} 55%, white 50%), ${avatarColor} 55%, color-mix(in oklab, ${avatarColor} 60%, black 40%) 100%)`,
+        border: `${borderWidth}px solid ${color}`,
+        color: "oklch(0.15 0.02 55)",
+      }}
+    >
+      {!avatarUrl && initialsOf(name)}
+    </div>
+  );
+}
+
 function CoinflipOverlay({ starter, you, mode, nameOf, playerIdOf }: {
   starter: PlayerId; you: PlayerId; mode: Mode; nameOf: (s: PlayerId) => string;
   playerIdOf?: (s: PlayerId) => string | null;
