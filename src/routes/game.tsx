@@ -1872,7 +1872,6 @@ function GameScreen({
         </div>
 
         <ScoreCard state={state} you={you} nameOf={nameOf} />
-        <PlayersCard state={state} you={you} nameOf={nameOf} />
         <MoveHistoryPanel state={state} nameOf={nameOf} compact defaultOpen onView={setReview} />
         <EventLog entries={log} />
 
