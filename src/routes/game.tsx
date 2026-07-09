@@ -2960,8 +2960,10 @@ export const ROUND_END_ANIM_MS_2P = 3700;
 export const ROUND_END_ANIM_MS_4P = 3850;
 function roundEndAnimMs(mode: Mode): number { return mode === 4 ? ROUND_END_ANIM_MS_4P : ROUND_END_ANIM_MS_2P; }
 
-function RoundEndScoreAnim({ state, nameOf, onDone }: {
-  state: GameState; nameOf: (s: PlayerId) => string; onDone: () => void;
+function RoundEndScoreAnim({ state, nameOf, playerIdOf, onDone }: {
+  state: GameState; nameOf: (s: PlayerId) => string;
+  playerIdOf?: (s: PlayerId) => string | null;
+  onDone: () => void;
 }) {
   const winner = state.winner as PlayerId;
   const [phase, setPhase] = useState<"idle" | "show" | "bump" | "exit">("idle");
