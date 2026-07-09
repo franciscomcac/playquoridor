@@ -49,6 +49,7 @@ import { humanThinkTimeMs, pickBotMove, pickRankedBotForRating, randomDifficulty
 import { randomGamerName } from "@/lib/names";
 import { PlayerBanner } from "@/components/PlayerBanner";
 import { fetchBannerDataMany, fetchAchievementMeta, type BannerData } from "@/lib/stats";
+import { ConstellationSigil, type SigilTier } from "@/components/ConstellationSigil";
 import {
   DEFAULT_CLOCK_MS, endTurn, formatClock, initClocks, liveRemaining,
   type ClockState,
