@@ -1,10 +1,10 @@
 // Server-rendered clip export modal.
 //
-// Live client-side canvas preview with Speed / POV / Sound controls (no
-// network calls). Download: POST snapshot + options to the sign endpoint,
-// get a short-lived signed token, then GET the render endpoint with that
-// token. Server renders + streams the file back as a direct download.
-// Sound is preview-only; the exported file has no audio track.
+// Fully client-side: replay is rendered into a canvas on a fixed 30fps
+// tick loop for both the live preview and the MP4/WebM export. MediaRecorder
+// only samples a canvas.captureStream when the canvas actually changes, so
+// we redraw every tick — that's what keeps the exported video smooth.
+// Scene timeline includes round title cards and a confetti finale.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MatchSnapshot } from "@/lib/matchHistory";
 import { drawState, replay, type ReplayFrame } from "@/lib/matchReplay";
@@ -24,6 +24,9 @@ const EXPORT_W = 1080;
 const EXPORT_H = 1920;
 const BASE_MS = 500;
 const FINALE_MS = 1800;
+const ROUND_TITLE_MS = 1300;
+const FPS = 30;
+const TICK_MS = Math.round(1000 / FPS);
 const CONFETTI_COLORS = ["#f59e0b", "#ec4899", "#8b5cf6", "#22d3ee", "#34d399", "#f43f5e", "#fbbf24"];
 
 type Confetto = { x: number; vx: number; vy: number; g: number; rot: number; vr: number; size: number; color: string; shape: 0 | 1; };
@@ -84,16 +87,12 @@ function beep(ctx: AudioContext, freq = 620, ms = 55) {
   osc.stop(t + ms / 1000 + 0.02);
 }
 
-function drawRotated(canvas: HTMLCanvasElement, frame: ReplayFrame, pov: "bottom" | "top") {
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
-  // Black 9:16 backdrop
+function drawBoard(ctx: CanvasRenderingContext2D, w: number, h: number, frame: ReplayFrame, pov: "bottom" | "top") {
   ctx.fillStyle = "#000";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  // Square board centered vertically
-  const size = Math.min(canvas.width, canvas.height);
-  const ox = (canvas.width - size) / 2;
-  const oy = (canvas.height - size) / 2;
+  ctx.fillRect(0, 0, w, h);
+  const size = Math.min(w, h);
+  const ox = (w - size) / 2;
+  const oy = (h - size) / 2;
   ctx.save();
   ctx.translate(ox, oy);
   if (pov === "top") {
@@ -102,6 +101,104 @@ function drawRotated(canvas: HTMLCanvasElement, frame: ReplayFrame, pov: "bottom
   }
   drawState(ctx, frame.state, size, size);
   ctx.restore();
+}
+
+function drawRoundTitle(ctx: CanvasRenderingContext2D, w: number, h: number, roundIndex: number, totalRounds: number, progress: number) {
+  // Solid black backdrop
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, w, h);
+  // Fade in + slight scale
+  const alpha = progress < 0.15 ? progress / 0.15 : progress > 0.85 ? (1 - progress) / 0.15 : 1;
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  // Small kicker
+  ctx.fillStyle = "rgba(245, 158, 11, 0.85)";
+  ctx.font = `700 ${Math.round(w * 0.055)}px ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto`;
+  ctx.fillText(`ROUND ${roundIndex + 1}`, w / 2, h / 2 - w * 0.06);
+  // Big divider
+  ctx.strokeStyle = "rgba(255,255,255,0.15)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(w * 0.25, h / 2 - w * 0.01);
+  ctx.lineTo(w * 0.75, h / 2 - w * 0.01);
+  ctx.stroke();
+  // Sub label
+  ctx.fillStyle = "rgba(255,255,255,0.55)";
+  ctx.font = `500 ${Math.round(w * 0.032)}px ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto`;
+  ctx.fillText(`of ${totalRounds}`, w / 2, h / 2 + w * 0.035);
+  ctx.restore();
+}
+
+type Scene =
+  | { kind: "roundTitle"; roundIndex: number; totalRounds: number; ms: number }
+  | { kind: "frame"; frame: ReplayFrame; ms: number; playSound: boolean; soundKey: number }
+  | { kind: "finale"; frame: ReplayFrame; ms: number };
+
+function buildTimeline(frames: ReplayFrame[], speed: number): { scenes: Scene[]; totalMs: number } {
+  const scenes: Scene[] = [];
+  if (frames.length === 0) return { scenes, totalMs: 0 };
+  const totalRounds = (frames[frames.length - 1].roundIndex ?? 0) + 1;
+  let prevRound = -1;
+  let soundKey = 0;
+  for (let i = 0; i < frames.length; i++) {
+    const f = frames[i];
+    if (f.roundIndex !== prevRound) {
+      scenes.push({ kind: "roundTitle", roundIndex: f.roundIndex, totalRounds, ms: Math.round(ROUND_TITLE_MS / speed) });
+      prevRound = f.roundIndex;
+    }
+    const isStart = f.plyIndex === -1;
+    const isLast = i === frames.length - 1;
+    if (isLast) {
+      scenes.push({ kind: "finale", frame: f, ms: Math.round(FINALE_MS / speed) });
+    } else {
+      scenes.push({
+        kind: "frame",
+        frame: f,
+        ms: Math.round((isStart ? BASE_MS * 2 : BASE_MS) / speed),
+        playSound: !isStart,
+        soundKey: soundKey++,
+      });
+    }
+  }
+  const totalMs = scenes.reduce((s, x) => s + x.ms, 0);
+  return { scenes, totalMs };
+}
+
+function renderAt(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  scenes: Scene[],
+  elapsed: number,
+  pov: "bottom" | "top",
+  confetti: Confetto[],
+  speed: number,
+): { sceneIndex: number; sceneLocalMs: number } {
+  let acc = 0;
+  for (let i = 0; i < scenes.length; i++) {
+    const s = scenes[i];
+    if (elapsed < acc + s.ms) {
+      const local = elapsed - acc;
+      if (s.kind === "roundTitle") {
+        drawRoundTitle(ctx, w, h, s.roundIndex, s.totalRounds, local / s.ms);
+      } else if (s.kind === "frame") {
+        drawBoard(ctx, w, h, s.frame, pov);
+      } else {
+        drawBoard(ctx, w, h, s.frame, pov);
+        drawConfetti(ctx, w, h, (local / 1000) * speed, confetti);
+      }
+      return { sceneIndex: i, sceneLocalMs: local };
+    }
+    acc += s.ms;
+  }
+  // past end: render last scene fully
+  const s = scenes[scenes.length - 1];
+  if (s.kind === "roundTitle") drawRoundTitle(ctx, w, h, s.roundIndex, s.totalRounds, 1);
+  else if (s.kind === "frame") drawBoard(ctx, w, h, s.frame, pov);
+  else { drawBoard(ctx, w, h, s.frame, pov); drawConfetti(ctx, w, h, (s.ms / 1000) * speed, confetti); }
+  return { sceneIndex: scenes.length - 1, sceneLocalMs: s.ms };
 }
 
 function pickMime(): { mime: string; ext: string } {
@@ -127,62 +224,47 @@ export function ExportClipModal({ open, snapshot, onClose, filename }: Props) {
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const audioRef = useRef<AudioContext | null>(null);
-  const confettiRafRef = useRef<number | null>(null);
+  const rafRef = useRef<number | null>(null);
 
   const frames = useMemo<ReplayFrame[]>(() => (snapshot ? replay(snapshot) : []), [snapshot]);
-  const [idx, setIdx] = useState(0);
+  const timeline = useMemo(() => buildTimeline(frames, speed), [frames, speed]);
 
   useEffect(() => {
     if (!open) return;
     setPhase("preview");
     setErrorMsg(null);
-    setIdx(0);
   }, [open]);
 
+  // Preview rAF loop — drives the same timeline the exporter uses.
   useEffect(() => {
-    if (!open || frames.length === 0) return;
+    if (!open || phase === "rendering") return;
     const c = canvasRef.current;
     if (!c) return;
-    drawRotated(c, frames[idx], pov);
-
-    if (idx >= frames.length - 1) {
-      // Play confetti finale on the preview canvas
-      const ctx = c.getContext("2d");
-      const parts = ctx ? makeConfetti(c.width) : [];
-      const start = performance.now();
-      const duration = Math.round(FINALE_MS / speed);
-      const loop = (now: number) => {
-        const elapsed = now - start;
-        if (!ctx) return;
-        drawRotated(c, frames[idx], pov);
-        drawConfetti(ctx, c.width, c.height, (elapsed / 1000) * speed, parts);
-        if (elapsed < duration) {
-          confettiRafRef.current = requestAnimationFrame(loop);
-        }
-      };
-      confettiRafRef.current = requestAnimationFrame(loop);
-      const restart = window.setTimeout(() => setIdx(0), duration);
-      return () => {
-        window.clearTimeout(restart);
-        if (confettiRafRef.current !== null) cancelAnimationFrame(confettiRafRef.current);
-      };
-    }
-    const isStart = frames[idx].plyIndex === -1;
-    const delay = Math.round((isStart ? BASE_MS * 2 : BASE_MS) / speed);
-    const t = window.setTimeout(() => {
-      setIdx((i) => i + 1);
-      if (sound && !isStart) {
+    const ctx = c.getContext("2d");
+    if (!ctx || timeline.scenes.length === 0) return;
+    const confetti = makeConfetti(c.width);
+    const start = performance.now();
+    let lastSoundKey = -1;
+    const loop = (now: number) => {
+      const elapsed = (now - start) % Math.max(1, timeline.totalMs);
+      const { sceneIndex } = renderAt(ctx, c.width, c.height, timeline.scenes, elapsed, pov, confetti, speed);
+      // Sound triggers on scene entry
+      const scene = timeline.scenes[sceneIndex];
+      if (sound && scene.kind === "frame" && scene.playSound && scene.soundKey !== lastSoundKey) {
+        lastSoundKey = scene.soundKey;
         try {
           if (!audioRef.current) {
             const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
             if (AC) audioRef.current = new AC();
           }
-          if (audioRef.current) beep(audioRef.current, 520 + (idx % 5) * 40);
+          if (audioRef.current) beep(audioRef.current, 520 + (scene.soundKey % 5) * 40);
         } catch { /* ignore */ }
       }
-    }, delay);
-    return () => window.clearTimeout(t);
-  }, [open, idx, frames, speed, pov, sound]);
+      rafRef.current = requestAnimationFrame(loop);
+    };
+    rafRef.current = requestAnimationFrame(loop);
+    return () => { if (rafRef.current !== null) cancelAnimationFrame(rafRef.current); };
+  }, [open, phase, timeline, pov, speed, sound]);
 
   const download = useCallback(async () => {
     if (!snapshot) return;
@@ -193,62 +275,44 @@ export function ExportClipModal({ open, snapshot, onClose, filename }: Props) {
         throw new Error("Your browser doesn't support video recording. Try Chrome, Edge, or Safari.");
       }
       const { mime, ext } = pickMime();
-      // Offscreen high-res canvas
       const canvas = document.createElement("canvas");
       canvas.width = EXPORT_W;
       canvas.height = EXPORT_H;
       const ctx = canvas.getContext("2d");
       if (!ctx) throw new Error("Canvas unavailable");
 
-      const fps = 30;
-      const stream = canvas.captureStream(fps);
+      const stream = canvas.captureStream(FPS);
       const rec = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 8_000_000 } : { videoBitsPerSecond: 8_000_000 });
       const chunks: BlobPart[] = [];
       rec.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
       const stopped = new Promise<void>((resolve) => { rec.onstop = () => resolve(); });
 
-      const drawFrame = (frame: ReplayFrame) => {
-        ctx.fillStyle = "#000";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        const size = Math.min(canvas.width, canvas.height);
-        const ox = (canvas.width - size) / 2;
-        const oy = (canvas.height - size) / 2;
-        ctx.save();
-        ctx.translate(ox, oy);
-        if (pov === "top") {
-          ctx.translate(size, size);
-          ctx.rotate(Math.PI);
-        }
-        drawState(ctx, frame.state, size, size);
-        ctx.restore();
-      };
-
-      // Prime first frame before starting recorder so it captures a keyframe
-      drawFrame(frames[0]);
+      const { scenes, totalMs } = buildTimeline(frames, speed);
+      const confetti = makeConfetti(canvas.width);
+      // Prime first frame so recorder gets a keyframe.
+      renderAt(ctx, canvas.width, canvas.height, scenes, 0, pov, confetti, speed);
       rec.start();
 
-      const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-      for (let i = 0; i < frames.length; i++) {
-        drawFrame(frames[i]);
-        const isStart = frames[i].plyIndex === -1;
-        const isLast = i === frames.length - 1;
-        if (isLast) {
-          // Confetti finale — animate at 30fps for FINALE_MS
-          const parts = makeConfetti(canvas.width);
-          const totalMs = Math.round(FINALE_MS / speed);
-          const step = Math.round(1000 / fps);
-          const steps = Math.max(1, Math.round(totalMs / step));
-          for (let f = 0; f < steps; f++) {
-            drawFrame(frames[i]);
-            drawConfetti(ctx, canvas.width, canvas.height, (f * step / 1000) * speed, parts);
-            await wait(step);
+      // Drive at real time using rAF so MediaRecorder sees ~30 unique frames/sec.
+      const startTs = performance.now();
+      await new Promise<void>((resolve) => {
+        const tick = () => {
+          const now = performance.now();
+          const elapsed = now - startTs;
+          if (elapsed >= totalMs) {
+            // Ensure final scene fully drawn
+            renderAt(ctx, canvas.width, canvas.height, scenes, totalMs - 1, pov, confetti, speed);
+            resolve();
+            return;
           }
-        } else {
-          const delay = Math.round((isStart ? BASE_MS * 2 : BASE_MS) / speed);
-          await wait(delay);
-        }
-      }
+          renderAt(ctx, canvas.width, canvas.height, scenes, elapsed, pov, confetti, speed);
+          // requestFrame nudges MediaRecorder in case content is judged unchanged
+          const track = stream.getVideoTracks()[0] as (MediaStreamTrack & { requestFrame?: () => void }) | undefined;
+          track?.requestFrame?.();
+          setTimeout(tick, TICK_MS);
+        };
+        tick();
+      });
 
       rec.stop();
       await stopped;
