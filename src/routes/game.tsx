@@ -1799,11 +1799,11 @@ function GameScreen({
         {afk && state.winner === null && state.matchWinner === null && (
           <AfkBanner slot={afk.slot} deadline={afk.deadline} name={nameOf(afk.slot)} />
         )}
-        <MobileMatchStrip state={state} you={you} nameOf={nameOf} />
+        <PlayerBanners state={state} you={you} nameOf={nameOf} playerIdOf={playerIdOf} placement="top" />
         <div className="flex gap-2 sm:gap-3">
           <div className="relative min-w-0 flex-1">
             <QuoridorBoard state={displayState} you={you} onMove={handleMove} interactive={boardInteractive} onActivity={() => markActivity(you)} />
-            {coinflip?.animating && <CoinflipOverlay starter={coinflip.starter} you={you} mode={state.mode as Mode} nameOf={nameOf} />}
+            {coinflip?.animating && <CoinflipOverlay starter={coinflip.starter} you={you} mode={state.mode as Mode} nameOf={nameOf} playerIdOf={playerIdOf} />}
             {!usesRadar && status === "waiting" && presence.count < presence.expected && (
               <WaitingOverlay count={presence.count} expected={presence.expected} isHost={isHost} onStart={hostStartMatch} />
             )}
@@ -1826,6 +1826,7 @@ function GameScreen({
             <BoardSideClocks state={state} you={you} nameOf={nameOf} />
           </div>
         </div>
+        <PlayerBanners state={state} you={you} nameOf={nameOf} playerIdOf={playerIdOf} placement="bottom" />
       </div>
 
       {matchOver && (
