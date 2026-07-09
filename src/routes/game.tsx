@@ -2731,14 +2731,14 @@ function BoardSideClocks({ state, you, nameOf }: {
   for (let i = 0; i < state.mode; i++) if (i !== you) others.push(i as PlayerId);
   const showYou = you >= 0 && you < state.mode;
   return (
-    <div className="flex w-20 shrink-0 flex-col justify-between gap-2 sm:w-24 md:w-28">
+    <div className="flex w-24 shrink-0 flex-col justify-between gap-2 sm:w-28 md:w-32">
       <div className="flex flex-col gap-2">
         {others.map((o) => (
-          <ChessClock key={o} state={state} playerId={o} nameOf={nameOf} compact />
+          <ChessClock key={o} state={state} playerId={o} nameOf={nameOf} />
         ))}
       </div>
       {showYou && (
-        <ChessClock state={state} playerId={you} nameOf={nameOf} compact />
+        <ChessClock state={state} playerId={you} nameOf={nameOf} />
       )}
     </div>
   );
