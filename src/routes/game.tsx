@@ -2061,7 +2061,7 @@ function PlayerBanners({ state, you, nameOf, playerIdOf, placement }: {
   const relevant = placement === "top" ? seats.filter((s) => s !== you) : [you];
   if (relevant.length === 0) return null;
   return (
-    <div className={"grid gap-2 sm:gap-3 sm:ml-auto sm:w-full sm:max-w-[560px] " + (relevant.length === 1 ? "grid-cols-1" : relevant.length === 2 ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-3")}>
+    <div className={"grid gap-2 sm:gap-3 " + (relevant.length === 1 ? "grid-cols-1" : relevant.length === 2 ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-3")}>
       {relevant.map((s) => {
         const isTurn = state.turn === s && state.winner === null && state.matchWinner === null && state.active[s];
         return (
@@ -2075,10 +2075,37 @@ function PlayerBanners({ state, you, nameOf, playerIdOf, placement }: {
             wallsLeft={state.wallsLeft[s] ?? 0}
             playerId={playerIdOf(s)}
             align={placement}
+            clock={state.clocks ? <PlateClock state={state} playerId={s} /> : undefined}
           />
         );
       })}
     </div>
+  );
+}
+
+// Compact monospace clock merged into the trailing edge of a PlayerBanner.
+function PlateClock({ state, playerId }: { state: GameState; playerId: PlayerId }) {
+  const [now, setNow] = useState<number>(() => Date.now());
+  const active = state.turn === playerId && state.winner === null
+    && state.matchWinner === null && state.active[playerId];
+  useEffect(() => {
+    if (!state.clocks) return;
+    const iv = window.setInterval(() => setNow(Date.now()), 200);
+    return () => window.clearInterval(iv);
+  }, [state.clocks]);
+  if (!state.clocks) return null;
+  const remaining = liveRemaining(state.clocks, state.turn, playerId, now);
+  const seconds = remaining / 1000;
+  const danger = seconds <= 15;
+  return (
+    <span
+      className="font-mono text-base font-semibold tabular-nums leading-none sm:text-lg"
+      style={{
+        color: danger ? "var(--destructive)" : active ? "var(--foreground)" : "var(--muted-foreground)",
+      }}
+    >
+      {formatClock(remaining)}
+    </span>
   );
 }
 
