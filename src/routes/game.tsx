@@ -1799,8 +1799,11 @@ function GameScreen({
   }
 
   return (
-    <div className="grid w-full gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-      <div className="order-1 flex min-w-0 flex-col gap-3 pb-20 lg:pb-0">
+    <div className="grid w-full items-start gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_340px]">
+      <div
+        className="order-1 mx-auto flex w-full min-w-0 flex-col gap-2 pb-20 sm:gap-3 lg:pb-0"
+        style={{ maxWidth: "min(740px, calc(100vh - 15rem))" }}
+      >
         {state.mode === 4 && <ChaosBanner />}
         {afk && state.winner === null && state.matchWinner === null && (
           <AfkBanner slot={afk.slot} deadline={afk.deadline} name={nameOf(afk.slot)} />
