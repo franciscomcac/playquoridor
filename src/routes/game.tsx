@@ -2041,6 +2041,41 @@ function WallCounter({ count, color }: { count: number; color: string }) {
   );
 }
 
+// ================ In-game top/bottom player banners =================
+// Opponent banners render above the board; the local player's banner
+// renders below. In 4P mode the top row shows all 3 opponents side by side.
+function PlayerBanners({ state, you, nameOf, playerIdOf, placement }: {
+  state: GameState; you: PlayerId;
+  nameOf: (s: PlayerId) => string;
+  playerIdOf: (s: PlayerId) => string | null;
+  placement: "top" | "bottom";
+}) {
+  const seats: PlayerId[] = [];
+  for (let i = 0; i < state.mode; i++) seats.push(i as PlayerId);
+  const relevant = placement === "top" ? seats.filter((s) => s !== you) : [you];
+  if (relevant.length === 0) return null;
+  return (
+    <div className={"grid gap-2 sm:gap-3 " + (relevant.length === 1 ? "grid-cols-1" : relevant.length === 2 ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-3")}>
+      {relevant.map((s) => {
+        const isTurn = state.turn === s && state.winner === null && state.matchWinner === null && state.active[s];
+        return (
+          <PlayerBanner
+            key={s}
+            slot={s as number}
+            color={PLAYER_COLORS[s]}
+            name={nameOf(s)}
+            isYou={s === you}
+            isTurn={isTurn}
+            wallsLeft={state.wallsLeft[s] ?? 0}
+            playerId={playerIdOf(s)}
+            align={placement}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 function EventLog({ entries }: { entries: EventEntry[] }) {
   if (entries.length === 0) return null;
   return (
