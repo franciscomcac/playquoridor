@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ConstellationSigil, type SigilTier } from "@/components/ConstellationSigil";
 import { COUNTRIES } from "@/lib/countries";
 import type { BannerData } from "@/lib/stats";
-import { fetchAchievementMeta } from "@/lib/stats";
+import { fetchAchievementMeta, fetchBannerDataMany } from "@/lib/stats";
 
 type Props = {
   slot: number;                 // 0..3 (drives seat number + color)
@@ -17,8 +17,8 @@ type Props = {
   isTurn: boolean;
   wallsLeft: number;
   totalWalls?: number;          // default 10
-  banner: BannerData | null;    // async-loaded; null until it arrives
-  align?: "top" | "bottom";     // affects avatar position on very narrow widths
+  playerId?: string | null;     // for looking up country/ELO/showcased
+  align?: "top" | "bottom";
 };
 
 const COUNTRY_MAP: Map<string, { flag: string; name: string }> = (() => {
@@ -27,7 +27,17 @@ const COUNTRY_MAP: Map<string, { flag: string; name: string }> = (() => {
   return m;
 })();
 
-export function PlayerBanner({ slot, color, name, isYou, isTurn, wallsLeft, totalWalls = 10, banner, align = "bottom" }: Props) {
+export function PlayerBanner({ slot, color, name, isYou, isTurn, wallsLeft, totalWalls = 10, playerId, align = "bottom" }: Props) {
+  const [banner, setBanner] = useState<BannerData | null>(null);
+  useEffect(() => {
+    if (!playerId) { setBanner(null); return; }
+    let cancel = false;
+    void fetchBannerDataMany([playerId]).then((m) => {
+      if (!cancel) setBanner(m.get(playerId) ?? null);
+    });
+    return () => { cancel = true; };
+  }, [playerId]);
+
   const country = banner?.country ? COUNTRY_MAP.get(banner.country.toUpperCase()) : null;
   const rating = banner?.rating ?? null;
   const showcased = banner?.showcased ?? [];
