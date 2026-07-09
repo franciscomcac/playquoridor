@@ -1833,6 +1833,10 @@ function GameScreen({
         />
       )}
 
+      {unlockQueue && unlockQueue.length > 0 && !rankUp && (
+        <AchievementUnlockOverlay items={unlockQueue} onDone={() => setUnlockQueue(null)} />
+      )}
+
       <MobileAsideSheet
         chat={<ChatPanel entries={chat} onSend={sendChat} disabled={status !== "connected" || matchMuted || !!chatBan} you={you} />}
       >
