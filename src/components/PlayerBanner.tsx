@@ -64,7 +64,7 @@ export function PlayerBanner({ slot, color, name, isYou, isTurn, wallsLeft, tota
 
   return (
     <div
-      className="flex items-center gap-3 rounded-2xl border px-3 py-2.5 sm:gap-4 sm:px-4 sm:py-3"
+      className="flex items-center gap-2.5 rounded-xl border px-2.5 py-1.5 sm:gap-3 sm:px-3 sm:py-2"
       style={{
         borderColor: isTurn ? color : "color-mix(in oklab, var(--border) 70%, transparent)",
         background: isTurn
@@ -76,12 +76,12 @@ export function PlayerBanner({ slot, color, name, isYou, isTurn, wallsLeft, tota
     >
       {/* Avatar */}
       <div
-        className="grid h-11 w-11 flex-none place-items-center rounded-full text-sm font-extrabold sm:h-12 sm:w-12 sm:text-base"
+        className="grid h-8 w-8 flex-none place-items-center rounded-full text-xs font-extrabold sm:h-9 sm:w-9 sm:text-sm"
         style={{
           background: banner?.avatarUrl
             ? `url(${banner.avatarUrl}) center/cover`
             : `radial-gradient(circle at 32% 28%, color-mix(in oklab, ${banner?.avatarColor ?? color} 55%, white 55%), ${banner?.avatarColor ?? color} 55%, color-mix(in oklab, ${banner?.avatarColor ?? color} 60%, black 40%) 100%)`,
-          border: `2.5px solid ${color}`,
+          border: `2px solid ${color}`,
           color: "oklch(0.15 0.02 55)",
         }}
       >
@@ -89,24 +89,24 @@ export function PlayerBanner({ slot, color, name, isYou, isTurn, wallsLeft, tota
       </div>
 
       {/* Name / country / ELO / showcased */}
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="grid h-5 w-5 flex-none place-items-center rounded-full text-[10px] font-bold" style={{ background: color, color: "oklch(0.15 0.02 55)" }}>
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <span className="grid h-4 w-4 flex-none place-items-center rounded-full text-[9px] font-bold" style={{ background: color, color: "oklch(0.15 0.02 55)" }}>
             {slot + 1}
           </span>
-          <span className="truncate text-[14px] font-extrabold text-foreground sm:text-[15px]">
+          <span className="truncate text-[12px] font-extrabold text-foreground sm:text-[13px]">
             {name}{isYou && <span className="ml-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">you</span>}
           </span>
         </div>
-        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[10px] text-muted-foreground">
           {country && (
-            <span title={country.name} className="inline-flex items-center gap-1 rounded-full border border-white/5 bg-white/5 px-1.5 py-0.5 font-semibold uppercase tracking-[0.14em]">
-              <span aria-hidden className="text-[13px] leading-none">{country.flag}</span>
+            <span title={country.name} className="inline-flex items-center gap-1 rounded-full border border-white/5 bg-white/5 px-1 py-0 font-semibold uppercase tracking-[0.14em]">
+              <span aria-hidden className="text-[11px] leading-none">{country.flag}</span>
               <span>{banner?.country?.toUpperCase()}</span>
             </span>
           )}
           {rating != null && (
-            <span className="rounded-full border border-white/5 bg-white/5 px-1.5 py-0.5 font-mono tabular-nums text-foreground/80">
+            <span className="rounded-full border border-white/5 bg-white/5 px-1 py-0 font-mono tabular-nums text-foreground/80">
               {rating}
             </span>
           )}
@@ -114,13 +114,13 @@ export function PlayerBanner({ slot, color, name, isYou, isTurn, wallsLeft, tota
             <span className="ml-0.5 flex items-center gap-1">
               {showcased.map((slug) => {
                 const meta = sigilMeta.get(slug);
-                if (!meta) return <span key={slug} className="h-5 w-5 rounded-full border border-dashed border-white/10" />;
+                if (!meta) return <span key={slug} className="h-4 w-4 rounded-full border border-dashed border-white/10" />;
                 return (
                   <ConstellationSigil
                     key={slug}
                     sigilKey={meta.sigil_key}
                     tier={meta.tier as SigilTier}
-                    size={22}
+                    size={16}
                   />
                 );
               })}
@@ -130,17 +130,17 @@ export function PlayerBanner({ slot, color, name, isYou, isTurn, wallsLeft, tota
       </div>
 
       {/* Wall counter */}
-      <div className="flex flex-none items-center gap-1.5">
-        <div className="flex items-center gap-[3px]">
+      <div className="flex flex-none items-center gap-1">
+        <div className="flex items-center gap-[2px]">
           {Array.from({ length: totalWalls }).map((_, i) => (
             <span
               key={i}
-              className="block h-3.5 w-1.5 rounded-sm sm:h-4"
+              className="block h-2.5 w-1 rounded-sm sm:h-3"
               style={{ background: i < shown ? color : "var(--border)", opacity: i < shown ? 1 : 0.5 }}
             />
           ))}
         </div>
-        <span className="ml-1 hidden font-mono text-[11px] font-bold tabular-nums sm:inline" style={{ color }}>
+        <span className="ml-0.5 hidden font-mono text-[10px] font-bold tabular-nums sm:inline" style={{ color }}>
           {wallsLeft}
         </span>
       </div>
