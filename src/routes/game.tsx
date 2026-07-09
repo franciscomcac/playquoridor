@@ -2195,7 +2195,7 @@ function RoundStartBanner({ slot, name, side, phase, isWinner, isLoser, playerId
         </p>
       </div>
       {/* Showcased badges */}
-      <IntroBadgeSlots playerId={playerId} size={20} count={3} />
+      <IntroBadgeSlots playerId={playerId} size={28} count={3} />
     </div>
   );
 }
@@ -2354,7 +2354,7 @@ function CoinflipOverlay({ starter, you, mode, nameOf, playerIdOf }: {
 
         {/* Coin (centered over the banners) */}
         <div
-          className="pointer-events-none absolute left-1/2 top-1/2 h-24 w-24"
+          className="pointer-events-none absolute left-1/2 top-1/2 h-32 w-32"
           style={{
             transform: `translate(-50%, -50%) scale(${phase >= 3 ? 1 : 0})`,
             opacity: phase >= 3 ? 1 : 0,
@@ -2371,8 +2371,8 @@ function CoinflipOverlay({ starter, you, mode, nameOf, playerIdOf }: {
               transition: "transform 1.75s cubic-bezier(.16,.85,.24,1)",
             }}
           >
-            <div className="absolute inset-0 grid place-items-center rounded-full text-2xl font-extrabold shadow-[0_10px_30px_rgba(0,0,0,.5)] ring-4 ring-white/25" style={{ ...frontStyle, backfaceVisibility: "hidden" }}>1</div>
-            <div className="absolute inset-0 grid place-items-center rounded-full text-2xl font-extrabold shadow-[0_10px_30px_rgba(0,0,0,.5)] ring-4 ring-white/25" style={{ ...backStyle, backfaceVisibility: "hidden" }}>2</div>
+            <div className="absolute inset-0 grid place-items-center rounded-full text-4xl font-extrabold shadow-[0_10px_30px_rgba(0,0,0,.5)] ring-4 ring-white/25" style={{ ...frontStyle, backfaceVisibility: "hidden" }}>1</div>
+            <div className="absolute inset-0 grid place-items-center rounded-full text-4xl font-extrabold shadow-[0_10px_30px_rgba(0,0,0,.5)] ring-4 ring-white/25" style={{ ...backStyle, backfaceVisibility: "hidden" }}>2</div>
           </div>
         </div>
       </div>
