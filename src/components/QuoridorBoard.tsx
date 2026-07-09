@@ -287,7 +287,7 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity, vis
       const isLegal = legalSet.has(`${r},${c}`);
       const isHovered = hoverCell && hoverCell.r === r && hoverCell.c === c;
       const alt = (r + c) % 2 === 0;
-      const tint = goalTint[`${r},${c}`];
+      const tint = fog ? undefined : goalTint[`${r},${c}`];
       const isOpp = !!oppRowRange && r >= oppRowRange[0] && r <= oppRowRange[1];
       const baseCell = alt ? "var(--board-cell)" : "var(--board-cell-alt)";
       const bg = isOpp
