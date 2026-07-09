@@ -169,13 +169,11 @@ function Home() {
     if (bootRan.current) return;
     bootRan.current = true;
     void (async () => {
-      let stored = getStoredIdentity();
-      if (!stored) {
-        // Prefer the signed-in account's players row if we can find one
-        // (new browser / cleared storage / incognito) — otherwise mint a
-        // temporary gamer-style username so anonymous visitors can play.
-        stored = await restoreIdentityFromAuth();
-      }
+      // Prefer the signed-in account's players row so a real login always
+      // wins over a stale random gamer name minted during an earlier anon
+      // session. Falls back to local storage, then to a fresh gamer name.
+      let stored = await restoreIdentityFromAuth();
+      if (!stored) stored = getStoredIdentity();
       if (!stored) {
         stored = setStoredIdentity(randomGamerName());
       }
@@ -2121,7 +2119,7 @@ function RoundStartBanner({ slot, name, side, phase, isWinner, isLoser, playerId
     : "0 20px 50px rgba(0,0,0,.45)";
   return (
     <div
-      className="relative flex items-center gap-5 rounded-2xl border px-5 py-4 sm:gap-6 sm:px-7 sm:py-6"
+      className="relative flex items-center gap-3 rounded-2xl border px-3 py-2.5 sm:gap-4 sm:px-4 sm:py-3"
       style={{
         borderColor: "color-mix(in oklab, var(--border) 70%, transparent)",
         background: "color-mix(in oklab, var(--card) 92%, black 8%)",
@@ -2148,10 +2146,10 @@ function RoundStartBanner({ slot, name, side, phase, isWinner, isLoser, playerId
       </div>
       {/* Avatar */}
       <div
-        className="grid h-20 w-20 flex-none place-items-center rounded-full text-2xl font-extrabold sm:h-24 sm:w-24 sm:text-3xl"
+        className="grid h-12 w-12 flex-none place-items-center rounded-full text-base font-extrabold sm:h-14 sm:w-14 sm:text-lg"
         style={{
           background: `radial-gradient(circle at 32% 28%, color-mix(in oklab, ${color} 55%, white 50%), ${color} 55%, color-mix(in oklab, ${color} 60%, black 40%) 100%)`,
-          border: `4px solid ${color}`,
+          border: `3px solid ${color}`,
           color: "oklch(0.15 0.02 55)",
         }}
       >
@@ -2159,15 +2157,15 @@ function RoundStartBanner({ slot, name, side, phase, isWinner, isLoser, playerId
       </div>
       {/* Name + title */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <p className="truncate text-xl font-extrabold text-foreground sm:text-2xl" style={{ color: "var(--foreground)" }}>
+        <p className="truncate text-sm font-extrabold text-foreground sm:text-base" style={{ color: "var(--foreground)" }}>
           {name}
         </p>
-        <p className="text-[11.5px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
           {titleFor(name)}
         </p>
       </div>
       {/* Showcased badges */}
-      <IntroBadgeSlots playerId={playerId} size={44} count={3} />
+      <IntroBadgeSlots playerId={playerId} size={28} count={3} />
     </div>
   );
 }
