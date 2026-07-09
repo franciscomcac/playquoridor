@@ -334,6 +334,10 @@ function Home() {
                 opponentNames={view.opponentNames}
                 rankedBot={view.rankedBot}
                 onLeave={goHome}
+                onRequeue={() => {
+                  clearInterruptedGame();
+                  setView({ name: "quick", mode: view.mode, ranked: !!view.rankedBot });
+                }}
               />
             )}
           </div>
@@ -3413,13 +3417,14 @@ function SettingsDrawer({ onClose }: { onClose: () => void }) {
 
 // ---------------- BOT GAME (opponent presented as a human player) ----------------
 
-function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave }: {
+function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, onRequeue }: {
   ident: Identity;
   mode: Mode;
   difficulty: number;
   opponentNames: string[];
   rankedBot?: RankedBot;
   onLeave: () => void;
+  onRequeue?: () => void;
 }) {
   const YOU: PlayerId = 0;
   const BOT_SLOTS = useMemo<PlayerId[]>(
@@ -3767,7 +3772,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave }:
     if (state.winner === null || state.matchWinner !== null) return;
     if (roundEndAnim) return;
     const r = state.endReason;
-    if (r === "time" || r === "afk" || r === "forfeit") requestReady();
+    if (r === "time" || r === "afk") requestReady();
   }, [state.winner, state.matchWinner, state.endReason, roundEndAnim, requestReady]);
 
   // Reset ready roster whenever a new round begins.
@@ -3848,7 +3853,10 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave }:
       {matchOver && (
         <EndScreen state={state} you={YOU} nameOf={nameOf}
           snapshot={botMatchHistory.getSnapshot()}
-          onRematch={startMatch} onNewMatch={startMatch} onLeave={onLeave} />
+          onRematch={startMatch}
+          onNewMatch={onRequeue ?? startMatch}
+          onRequeue={onRequeue}
+          onLeave={onLeave} />
       )}
 
       {rankUp && (
