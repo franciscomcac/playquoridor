@@ -575,3 +575,36 @@ function CpuRow({ onClick, color, lvl, name, desc }: { onClick: () => void; colo
     </button>
   );
 }
+
+function FogLtmButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="ltm-btn group relative block w-full overflow-hidden rounded-2xl border border-fuchsia-400/40 bg-[#120820] p-[1px] text-left"
+    >
+      <span aria-hidden className="ltm-conic pointer-events-none absolute inset-0 rounded-2xl opacity-70" />
+      <span aria-hidden className="ltm-sheen pointer-events-none absolute inset-0 rounded-2xl" />
+      <span className="relative flex items-center gap-3 rounded-[15px] bg-gradient-to-br from-[#1a0f24] via-[#150a1f] to-[#0b0514] px-4 py-4">
+        <span aria-hidden className="ltm-orb relative grid h-11 w-11 flex-none place-items-center rounded-xl border border-fuchsia-400/50 bg-[radial-gradient(circle_at_30%_30%,#c084fc,#7e22ce_60%,#3b0764)] text-[20px] shadow-[0_0_18px_rgba(192,132,252,0.55)]">
+          🌫️
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-2">
+            <span className="inline-flex items-center rounded-full border border-fuchsia-400/60 bg-fuchsia-500/15 px-1.5 py-[1px] font-[IBM_Plex_Mono,monospace] text-[9px] font-black uppercase tracking-[0.18em] text-fuchsia-200">
+              LTM
+            </span>
+            <span className="ltm-live inline-flex items-center gap-1 font-[IBM_Plex_Mono,monospace] text-[9.5px] uppercase tracking-[0.14em] text-fuchsia-300/80">
+              <span className="h-[6px] w-[6px] rounded-full bg-fuchsia-400 shadow-[0_0_8px_#e879f9]" />
+              Live now
+            </span>
+          </span>
+          <span className="mt-1 block text-[15px] font-bold text-[#f5e9ff]">Fog of Walls</span>
+          <span className="mt-[2px] block text-[11px] leading-snug text-[#b8a5cf]">
+            Enemy walls hidden until seen.
+          </span>
+        </span>
+        <span className="flex-none text-[18px] text-fuchsia-300 transition-transform group-hover:translate-x-1">→</span>
+      </span>
+    </button>
+  );
+}
