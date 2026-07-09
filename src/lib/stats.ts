@@ -2,7 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { ensureAuthSession, getStoredIdentity } from "@/lib/identity";
 import { PLACEMENT_GAMES } from "@/components/LobbyChrome";
-import { RANKED_BOT_PLAYER_IDS } from "@/lib/bot";
+// Bot rows are excluded from the leaderboard via the `players.is_bot` flag.
 
 export type MatchResult = {
   mode: 2 | 4;
@@ -143,21 +143,26 @@ export async function fetchLeaderboard(limit = 20, rankedOnly = true): Promise<L
   let q = supabase.from("player_stats").select("*");
   // Only players who have finished placement appear on the ladder.
   if (rankedOnly) q = q.gte("ranked_matches", PLACEMENT_GAMES);
-  q = q.not("player_id", "in", `(${RANKED_BOT_PLAYER_IDS.join(",")})`);
   const { data: stats } = await q
     .order("rating", { ascending: false })
     .order("wins", { ascending: false })
-    .limit(limit);
+    .limit(limit + 100);
   if (!stats?.length) return [];
   const ids = stats.map((s) => s.player_id);
-  const { data: players } = await supabase.from("players").select("id, name").in("id", ids);
-  const nameById = new Map((players ?? []).map((p) => [p.id, p.name]));
-  return stats.map((s) => ({
-    id: s.player_id, name: nameById.get(s.player_id) ?? "Unknown",
-    rating: (s as { rating?: number }).rating ?? 1000,
-    wins: s.wins, matches: s.matches, losses: s.losses,
-    walls_placed: s.walls_placed, pawns_eliminated: s.pawns_eliminated,
-  }));
+  const { data: players } = await supabase.from("players").select("id, name, is_bot").in("id", ids);
+  const meta = new Map((players ?? []).map((p) => [p.id, p]));
+  return stats
+    .filter((s) => {
+      const p = meta.get(s.player_id);
+      return p && p.is_bot !== true;
+    })
+    .slice(0, limit)
+    .map((s) => ({
+      id: s.player_id, name: meta.get(s.player_id)?.name ?? "Unknown",
+      rating: (s as { rating?: number }).rating ?? 1000,
+      wins: s.wins, matches: s.matches, losses: s.losses,
+      walls_placed: s.walls_placed, pawns_eliminated: s.pawns_eliminated,
+    }));
 }
 
 export async function registerOpenRoom(code: string, mode: 2 | 4, hostName: string, ranked = false) {
