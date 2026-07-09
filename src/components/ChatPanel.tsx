@@ -37,14 +37,14 @@ export function ChatPanel({ entries, onSend, disabled, you }: Props) {
   };
 
   return (
-    <div className="flex flex-col rounded-xl border border-border bg-card p-3 sm:p-4">
+    <div className="flex flex-col rounded-xl border border-border bg-card p-4 sm:p-5">
       <div className="flex items-baseline justify-between">
-        <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Chat</p>
-        <p className="text-[10px] text-muted-foreground">{entries.length} msg{entries.length === 1 ? "" : "s"}</p>
+        <p className="text-[11px] uppercase tracking-[0.25em] text-muted-foreground">Chat</p>
+        <p className="text-[11px] text-muted-foreground">{entries.length} msg{entries.length === 1 ? "" : "s"}</p>
       </div>
       <div
         ref={scrollRef}
-        className="mt-2 flex h-32 flex-col gap-1 overflow-y-auto rounded-md border border-border bg-background/40 p-2 text-xs"
+        className="mt-3 flex h-64 flex-col gap-1.5 overflow-y-auto rounded-md border border-border bg-background/40 p-3 text-sm"
       >
         {entries.length === 0 && (
           <p className="m-auto text-muted-foreground">No messages yet</p>
@@ -52,7 +52,7 @@ export function ChatPanel({ entries, onSend, disabled, you }: Props) {
         {entries.map((m) => {
           if (m.slot === null) {
             return (
-              <p key={m.key} className="text-[10px] italic text-muted-foreground">{m.text}</p>
+              <p key={m.key} className="text-xs italic text-muted-foreground">{m.text}</p>
             );
           }
           const color = PLAYER_COLORS[m.slot as PlayerId] ?? "var(--muted-foreground)";
@@ -65,7 +65,7 @@ export function ChatPanel({ entries, onSend, disabled, you }: Props) {
           );
         })}
       </div>
-      <form onSubmit={submit} className="mt-2 flex gap-2">
+      <form onSubmit={submit} className="mt-3 flex gap-2">
         <input
           type="text"
           value={draft}
@@ -73,12 +73,12 @@ export function ChatPanel({ entries, onSend, disabled, you }: Props) {
           onChange={(e) => setDraft(e.target.value)}
           placeholder={disabled ? "Chat unavailable" : "Say something…"}
           disabled={disabled}
-          className="min-w-0 flex-1 rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground outline-none focus:border-primary disabled:opacity-50"
+          className="min-w-0 flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary disabled:opacity-50"
         />
         <button
           type="submit"
           disabled={disabled || draft.trim().length === 0}
-          className="rounded-md bg-primary px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-primary-foreground disabled:opacity-50"
+          className="rounded-md bg-primary px-4 py-2 text-xs font-semibold uppercase tracking-widest text-primary-foreground disabled:opacity-50"
         >
           Send
         </button>
