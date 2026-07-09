@@ -1605,10 +1605,10 @@ function GameScreen({
   // Recompute visibility whenever the board changes.
   useEffect(() => {
     if (!fogOn) { setVisibleWallKeys(undefined); return; }
-    const next = computeVisibleWalls(state, YOU, revealedRef.current);
+    const next = computeVisibleWalls(state, you, revealedRef.current);
     revealedRef.current = next;
     setVisibleWallKeys(next);
-  }, [state.walls, state.pawns, fogOn]);
+  }, [state.walls, state.pawns, fogOn, you]);
   useEffect(() => {
     if (state.winner !== null && prevWinnerRef.current === null) {
       const r = state.endReason;
@@ -1836,7 +1836,7 @@ function GameScreen({
         <PlayerBanners state={state} you={you} nameOf={nameOf} playerIdOf={playerIdOf} placement="top" />
         <div className="flex">
           <div className="relative min-w-0 flex-1">
-            <QuoridorBoard state={displayState} you={you} onMove={handleMove} interactive={boardInteractive} onActivity={() => markActivity(you)} />
+            <QuoridorBoard state={displayState} you={you} onMove={handleMove} interactive={boardInteractive} onActivity={() => markActivity(you)} visibleWallKeys={visibleWallKeys} />
             {coinflip?.animating && <CoinflipOverlay starter={coinflip.starter} you={you} mode={state.mode as Mode} nameOf={nameOf} playerIdOf={playerIdOf} />}
             {!usesRadar && status === "waiting" && presence.count < presence.expected && (
               <WaitingOverlay count={presence.count} expected={presence.expected} isHost={isHost} onStart={hostStartMatch} />
@@ -1905,6 +1905,18 @@ function GameScreen({
             onConfirm={forfeit}
             disabled={status !== "connected" || state.winner !== null || state.matchWinner !== null || !state.active[you]}
           />
+          <button
+            onClick={() => setFogOn((v) => !v)}
+            className={
+              "rounded-lg border px-3 py-2 text-xs font-medium uppercase tracking-widest transition " +
+              (fogOn
+                ? "border-primary bg-primary/15 text-primary"
+                : "border-border bg-secondary/30 hover:bg-secondary")
+            }
+            title="Client-side fog: opponent walls hide until your pawn sees them"
+          >
+            Fog of Walls: {fogOn ? "On" : "Off"}
+          </button>
           <div className="flex gap-2">
             <button onClick={rematchAction} disabled={status !== "connected" || !!coinflip?.animating}
               className="flex-1 rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary disabled:opacity-40">
