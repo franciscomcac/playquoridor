@@ -24,7 +24,6 @@ export const PLAYER_NAMES = ["Gold", "Slate", "Crimson", "Jade"];
 
 type HoverTarget = { kind: "cell"; r: number; c: number } | { kind: "wall"; wall: WallSpec };
 const WALL_SNAP_RADIUS = 0.2;
-const WALL_SNAP_RADIUS_TOUCH = 0.34;
 
 type Pop = { key: number; player: PlayerId; r: number; c: number };
 
@@ -162,20 +161,23 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity }: P
     const x = (px / rect.width) * BOARD;
     const y = (py / rect.height) * BOARD;
     if (x < 0 || x > BOARD || y < 0 || y > BOARD) return null;
-    const gy = Math.min(BOARD - 1, Math.max(1, Math.round(y)));
-    const gx = Math.min(BOARD - 1, Math.max(1, Math.round(x)));
-    const dy = Math.abs(y - gy);
-    const dx = Math.abs(x - gx);
-    const snap = touch ? WALL_SNAP_RADIUS_TOUCH : WALL_SNAP_RADIUS;
-    if (Math.min(dx, dy) < snap) {
-      if (dy <= dx) {
-        const r = gy - 1;
-        const c = Math.min(BOARD - 2, Math.max(0, Math.round(x) - 1));
-        return { kind: "wall", wall: { r, c, o: "h" as Orient } };
-      } else {
-        const c = gx - 1;
-        const r = Math.min(BOARD - 2, Math.max(0, Math.round(y) - 1));
-        return { kind: "wall", wall: { r, c, o: "v" as Orient } };
+    // Touch users place walls only via the H/V drag handles — never by
+    // tapping the board. Only mouse gets a wall-snap target here.
+    if (!touch) {
+      const gy = Math.min(BOARD - 1, Math.max(1, Math.round(y)));
+      const gx = Math.min(BOARD - 1, Math.max(1, Math.round(x)));
+      const dy = Math.abs(y - gy);
+      const dx = Math.abs(x - gx);
+      if (Math.min(dx, dy) < WALL_SNAP_RADIUS) {
+        if (dy <= dx) {
+          const r = gy - 1;
+          const c = Math.min(BOARD - 2, Math.max(0, Math.round(x) - 1));
+          return { kind: "wall", wall: { r, c, o: "h" as Orient } };
+        } else {
+          const c = gx - 1;
+          const r = Math.min(BOARD - 2, Math.max(0, Math.round(y) - 1));
+          return { kind: "wall", wall: { r, c, o: "v" as Orient } };
+        }
       }
     }
     const c = Math.min(BOARD - 1, Math.max(0, Math.floor(x)));
