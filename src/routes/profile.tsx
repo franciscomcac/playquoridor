@@ -370,24 +370,7 @@ function ProfilePage() {
               <div className="h-full rounded-full bg-[linear-gradient(90deg,#f5a524,#f5c542)]" style={{ width: `${Math.round((badgeCounts.unlocked / badgeCounts.total) * 100)}%` }} />
             </div>
           )}
-          <div className="mt-5 grid grid-cols-3 gap-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8">
-            {badges.slice(0, 16).map((b) => (
-              <Link
-                key={b.slug}
-                to="/achievements"
-                title={`${b.name} — ${b.description}${b.unlocked_at ? "" : " (locked)"}`}
-                className="group flex flex-col items-center rounded-[12px] border border-[#1f1f25] bg-[#0d0d10] px-2 py-3 transition hover:border-[rgba(245,165,36,0.35)]"
-              >
-                <ConstellationSigil sigilKey={b.sigil_key} tier={b.tier} size={54} locked={!b.unlocked_at} />
-                <div className={"mt-2 line-clamp-1 text-[10.5px] font-semibold uppercase tracking-[0.06em] " + (b.unlocked_at ? "text-[#ececf1]" : "text-[#5c5c66]")}>
-                  {b.name}
-                </div>
-              </Link>
-            ))}
-            {badges.length === 0 && (
-              <div className="col-span-full text-[12.5px] text-[#5c5c66]">Play a ranked or casual match to start unlocking badges.</div>
-            )}
-          </div>
+          <BadgesGrid catalog={catalog} unlocked={unlockedSet} />
         </section>
 
         {/* Match history */}
