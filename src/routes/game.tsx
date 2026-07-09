@@ -1314,24 +1314,28 @@ function GameScreen({
   // bot game; (b) 4p with 2-3 humans in → fill the empty seats with bots so
   // the group can start instead of waiting forever.
   useEffect(() => {
-    if (!quickMatch || !isHost) return;
+    if (!quickMatch) return;
     // Ranked 1v1: if nobody joins in 5s, drop into a ranked bot game with a
     // bot matched to the player's rating. Falls back to onRankedTimeout only
     // if no bot handler was provided (e.g. 4p ranked, unsupported).
     if (ranked) {
       const handler = onBotFallback ?? onRankedTimeout;
       if (!handler) return;
-      const rankedTimeoutMs = 5_000;
+      // Cap the ranked queue wait — as host OR guest — at ~8s. If the
+      // match hasn't actually started (all seats filled) by then, drop
+      // into a bot game so the player never sits staring at "Searching…".
+      const rankedTimeoutMs = 8_000;
       const t = window.setTimeout(() => {
         if (presenceRef.current.count >= presenceRef.current.expected) return;
         if (stateRef.current.matchWinner !== null) return;
-        void removeOpenRoom(code);
+        if (isHost) void removeOpenRoom(code);
         roomRef.current?.close();
         roomRef.current = null;
         handler();
       }, rankedTimeoutMs);
       return () => window.clearTimeout(t);
     }
+    if (!isHost) return;
     // 4p: after 60s with 2-3 humans, fill the empty seats with bots.
     const partialFillT = initialMode === 4 ? window.setTimeout(() => {
       const cur = presenceRef.current;
