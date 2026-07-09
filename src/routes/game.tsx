@@ -1590,7 +1590,7 @@ function GameScreen({
       if (r === "time" || r === "afk" || r === "forfeit") play("afkWarn");
       // Score animation owns the win SFX (whoosh + point). Fall back to
       // the classic chime only for non-goal endings (time/afk/forfeit).
-      if (r === "time" || r === "afk" || r === "forfeit") play("roundWin");
+      if (r === "time" || r === "afk") play("roundWin");
       else setRoundEndAnim(true);
     }
     if (state.winner === null) setRoundEndAnim(false);
@@ -1605,7 +1605,7 @@ function GameScreen({
     if (state.winner === null || state.matchWinner !== null) return;
     if (roundEndAnim) return;
     const r = state.endReason;
-    if (r === "time" || r === "afk" || r === "forfeit") requestReady();
+    if (r === "time" || r === "afk") requestReady();
   }, [state.winner, state.matchWinner, state.endReason, roundEndAnim, requestReady]);
 
   // ---------- Record match to Supabase (host only, once per match) ----------
@@ -3648,7 +3648,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave }:
     if (state.winner !== null && prevWinnerRef.current === null) {
       const r = state.endReason;
       if (r === "time" || r === "afk" || r === "forfeit") play("afkWarn");
-      if (r === "time" || r === "afk" || r === "forfeit") play("roundWin");
+      if (r === "time" || r === "afk") play("roundWin");
       else setRoundEndAnim(true);
     }
     if (state.winner === null) setRoundEndAnim(false);
