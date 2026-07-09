@@ -3695,6 +3695,25 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
     prevMatchWinnerRef.current = state.matchWinner;
   }, [state.winner, state.matchWinner, state.endReason]);
 
+  // Fog of Walls — same behaviour as GameScreen but scoped to bot games.
+  const [fogOn, setFogOn] = useState<boolean>(() => {
+    try { return localStorage.getItem("quoridor:fogOfWalls") === "1"; } catch { return false; }
+  });
+  const revealedRef = useRef<Set<string>>(new Set());
+  const [visibleWallKeys, setVisibleWallKeys] = useState<Set<string> | undefined>(undefined);
+  useEffect(() => {
+    try { localStorage.setItem("quoridor:fogOfWalls", fogOn ? "1" : "0"); } catch { /* ignore */ }
+  }, [fogOn]);
+  useEffect(() => {
+    if ((state.moveCount ?? 0) === 0) revealedRef.current = new Set();
+  }, [state.moveCount]);
+  useEffect(() => {
+    if (!fogOn) { setVisibleWallKeys(undefined); return; }
+    const next = computeVisibleWalls(state, YOU, revealedRef.current);
+    revealedRef.current = next;
+    setVisibleWallKeys(next);
+  }, [state.walls, state.pawns, fogOn]);
+
   // Helper: apply a move and roll the clock over to the next player.
   const applyLocalMove = useCallback((mover: PlayerId, move: Move): GameState | null => {
     const cur = stateRef.current;
