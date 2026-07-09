@@ -1855,6 +1855,7 @@ function GameScreen({
               <RoundEndScoreAnim
                 state={state}
                 nameOf={nameOf}
+                playerIdOf={playerIdOf}
                 onDone={() => { setRoundEndAnim(false); requestReady(); }}
               />
             )}
