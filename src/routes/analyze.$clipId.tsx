@@ -471,10 +471,10 @@ function CoachPanel({ snapshot, frame, analysis }: {
             <p className={"mt-1 text-2xl font-extrabold leading-tight tracking-tight " + (verdict ? QUIP_COLOR[verdict] : "text-zinc-100")}>
               {quip}
             </p>
-            <p className="mt-1.5 text-[12.5px] leading-snug text-zinc-400">
+            <p className="mt-1.5 text-sm leading-relaxed text-white">
               {busy
-                ? <span className="italic text-zinc-500">Thinking…</span>
-                : note ?? <span className="italic text-zinc-500">…</span>}
+                ? <span className="italic text-zinc-300">Thinking…</span>
+                : note ?? <span className="italic text-zinc-300">…</span>}
             </p>
           </>
         )}
