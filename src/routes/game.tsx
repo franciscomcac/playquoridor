@@ -930,6 +930,10 @@ function GameScreen({
     return () => { cancel = true; };
   }, [ranked, initialMode, ident.id]);
 
+  // Post-match badge unlock queue (shared between online & bot flows).
+  const unlockFiredRef = useRef(false);
+  const [unlockQueue, setUnlockQueue] = useState<UnlockItem[] | null>(null);
+
   // Ready-up state for the between-rounds flow (replaces "Next round" button).
   const [readySlots, setReadySlots] = useState<PlayerId[]>([]);
   const [merging, setMerging] = useState(false);
