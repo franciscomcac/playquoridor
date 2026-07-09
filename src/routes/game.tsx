@@ -1799,20 +1799,17 @@ function GameScreen({
   }
 
   return (
-    <div className="grid w-full items-start gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_380px] xl:grid-cols-[minmax(0,1fr)_420px]">
+    <div className="mx-auto grid w-full max-w-[1120px] items-start gap-6 px-4 sm:px-6 lg:grid-cols-[minmax(0,720px)_360px]">
       <div
-        className="order-1 mx-auto flex w-full min-w-0 flex-col gap-2 pb-20 sm:gap-3 lg:mx-0 lg:pb-0"
-        style={{ maxWidth: "min(700px, calc(100vh - 15rem))" }}
+        className="order-1 mx-auto flex w-full min-w-0 flex-col gap-3 pb-20 lg:mx-0 lg:pb-0"
+        style={{ maxWidth: "min(720px, calc(100vh - 12rem))" }}
       >
         {state.mode === 4 && <ChaosBanner />}
         {afk && state.winner === null && state.matchWinner === null && (
           <AfkBanner slot={afk.slot} deadline={afk.deadline} name={nameOf(afk.slot)} />
         )}
         <PlayerBanners state={state} you={you} nameOf={nameOf} playerIdOf={playerIdOf} placement="top" />
-        <div className="flex gap-2 sm:gap-3">
-          <div className="hidden sm:contents">
-            <BoardSideClocks state={state} you={you} nameOf={nameOf} />
-          </div>
+        <div className="flex">
           <div className="relative min-w-0 flex-1">
             <QuoridorBoard state={displayState} you={you} onMove={handleMove} interactive={boardInteractive} onActivity={() => markActivity(you)} />
             {coinflip?.animating && <CoinflipOverlay starter={coinflip.starter} you={you} mode={state.mode as Mode} nameOf={nameOf} playerIdOf={playerIdOf} />}
