@@ -24,7 +24,6 @@ export const PLAYER_NAMES = ["Gold", "Slate", "Crimson", "Jade"];
 
 type HoverTarget = { kind: "cell"; r: number; c: number } | { kind: "wall"; wall: WallSpec };
 const WALL_SNAP_RADIUS = 0.2;
-const WALL_SNAP_RADIUS_TOUCH = 0.34;
 
 type Pop = { key: number; player: PlayerId; r: number; c: number };
 
