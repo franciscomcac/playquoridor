@@ -1855,6 +1855,7 @@ function GameScreen({
               <RoundEndScoreAnim
                 state={state}
                 nameOf={nameOf}
+                playerIdOf={playerIdOf}
                 onDone={() => { setRoundEndAnim(false); requestReady(); }}
               />
             )}
@@ -2206,16 +2207,7 @@ function RoundStartBanner({ slot, name, side, phase, isWinner, isLoser, playerId
         Goes first
       </div>
       {/* Avatar */}
-      <div
-        className="grid h-9 w-9 flex-none place-items-center rounded-full text-xs font-extrabold sm:h-10 sm:w-10 sm:text-sm"
-        style={{
-          background: `radial-gradient(circle at 32% 28%, color-mix(in oklab, ${color} 55%, white 50%), ${color} 55%, color-mix(in oklab, ${color} 60%, black 40%) 100%)`,
-          border: `2px solid ${color}`,
-          color: "oklch(0.15 0.02 55)",
-        }}
-      >
-        {initialsOf(name)}
-      </div>
+      <IntroAvatar playerId={playerId} name={name} color={color} size={40} borderWidth={2} />
       {/* Name + title */}
       <div className="flex min-w-0 flex-1 flex-col">
         <p className="truncate text-[13px] font-extrabold text-foreground sm:text-sm" style={{ color: "var(--foreground)" }}>
@@ -2266,6 +2258,38 @@ function IntroBadgeSlots({ playerId, size, count }: { playerId: string | null; s
         }
         return <ConstellationSigil key={i} sigilKey={m.sigil_key} tier={m.tier as SigilTier} size={size} />;
       })}
+    </div>
+  );
+}
+
+// Avatar disc used by the intro banners. Renders the player's uploaded
+// profile picture when available, falling back to initials on a color disc.
+function IntroAvatar({ playerId, name, color, size, borderWidth = 2 }: {
+  playerId: string | null; name: string; color: string; size: number; borderWidth?: number;
+}) {
+  const [banner, setBanner] = useState<BannerData | null>(null);
+  useEffect(() => {
+    if (!playerId) { setBanner(null); return; }
+    let cancel = false;
+    void fetchBannerDataMany([playerId]).then((m) => { if (!cancel) setBanner(m.get(playerId) ?? null); });
+    return () => { cancel = true; };
+  }, [playerId]);
+  const avatarUrl = banner?.avatarUrl ?? null;
+  const avatarColor = banner?.avatarColor ?? color;
+  return (
+    <div
+      className="grid flex-none place-items-center rounded-full font-extrabold"
+      style={{
+        width: size, height: size,
+        fontSize: Math.round(size * 0.36),
+        background: avatarUrl
+          ? `url(${avatarUrl}) center/cover`
+          : `radial-gradient(circle at 32% 28%, color-mix(in oklab, ${avatarColor} 55%, white 50%), ${avatarColor} 55%, color-mix(in oklab, ${avatarColor} 60%, black 40%) 100%)`,
+        border: `${borderWidth}px solid ${color}`,
+        color: "oklch(0.15 0.02 55)",
+      }}
+    >
+      {!avatarUrl && initialsOf(name)}
     </div>
   );
 }
@@ -2620,16 +2644,7 @@ function FourPlayerRoundStart({ starter, you, nameOf, playerIdOf }: {
                   Goes first
                 </div>
                 {/* Avatar */}
-                <div
-                  className="grid h-16 w-16 flex-none place-items-center rounded-full text-lg font-extrabold sm:h-20 sm:w-20 sm:text-xl"
-                  style={{
-                    background: `radial-gradient(circle at 32% 28%, color-mix(in oklab, ${color} 55%, white 50%), ${color} 55%, color-mix(in oklab, ${color} 60%, black 40%) 100%)`,
-                    border: `3.5px solid ${color}`,
-                    color: "oklch(0.15 0.02 55)",
-                  }}
-                >
-                  {initialsOf(name)}
-                </div>
+                <IntroAvatar playerId={playerIdOf?.(slot) ?? null} name={name} color={color} size={80} borderWidth={3.5} />
                 {/* Name + title */}
                 <div className="flex min-w-0 flex-1 flex-col">
                   <p className="truncate text-base font-extrabold text-foreground sm:text-lg">{name}</p>
@@ -2946,8 +2961,10 @@ export const ROUND_END_ANIM_MS_2P = 3700;
 export const ROUND_END_ANIM_MS_4P = 3850;
 function roundEndAnimMs(mode: Mode): number { return mode === 4 ? ROUND_END_ANIM_MS_4P : ROUND_END_ANIM_MS_2P; }
 
-function RoundEndScoreAnim({ state, nameOf, onDone }: {
-  state: GameState; nameOf: (s: PlayerId) => string; onDone: () => void;
+function RoundEndScoreAnim({ state, nameOf, playerIdOf, onDone }: {
+  state: GameState; nameOf: (s: PlayerId) => string;
+  playerIdOf?: (s: PlayerId) => string | null;
+  onDone: () => void;
 }) {
   const winner = state.winner as PlayerId;
   const [phase, setPhase] = useState<"idle" | "show" | "bump" | "exit">("idle");
@@ -3063,16 +3080,13 @@ function RoundEndScoreAnim({ state, nameOf, onDone }: {
                   }}
                 >
                   <div className="relative">
-                    <div
-                      className={"grid place-items-center rounded-full text-base font-extrabold " + (isFourP ? "h-16 w-16 sm:h-20 sm:w-20 sm:text-lg" : "h-20 w-20 sm:h-24 sm:w-24 sm:text-xl")}
-                      style={{
-                        background: `radial-gradient(circle at 32% 28%, color-mix(in oklab, ${color} 55%, white 50%), ${color} 55%, color-mix(in oklab, ${color} 60%, black 40%) 100%)`,
-                        border: `3px solid ${color}`,
-                        color: "oklch(0.15 0.02 55)",
-                      }}
-                    >
-                      {initialsOf(name)}
-                    </div>
+                    <IntroAvatar
+                      playerId={playerIdOf?.(slot) ?? null}
+                      name={name}
+                      color={color}
+                      size={isFourP ? 80 : 96}
+                      borderWidth={3}
+                    />
                     {bumping && (
                       <span
                         key={`glow-${phase}`}
@@ -3912,6 +3926,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
               <RoundEndScoreAnim
                 state={state}
                 nameOf={nameOf}
+                playerIdOf={playerIdOf}
                 onDone={() => { setRoundEndAnim(false); requestReady(); }}
               />
             )}
