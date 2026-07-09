@@ -1646,10 +1646,34 @@ function GameScreen({
     const walls = state.wallsPlacedByPlayer[you] ?? 0;
     const pops = state.pawnsEliminatedByPlayer[you] ?? 0;
     const forfeited = state.leftMatch[you] ?? false;
-    void bumpMyStats(ident.id, {
-      matches: 1, wins: iWon ? 1 : 0, losses: iWon ? 0 : 1,
-      walls_placed: walls, pawns_eliminated: pops, forfeits: forfeited ? 1 : 0,
-    });
+    void (async () => {
+      await bumpMyStats(ident.id, {
+        matches: 1, wins: iWon ? 1 : 0, losses: iWon ? 0 : 1,
+        walls_placed: walls, pawns_eliminated: pops, forfeits: forfeited ? 1 : 0,
+      });
+      if (unlockFiredRef.current) return;
+      unlockFiredRef.current = true;
+      // Give recordMatch + applyElo a moment to settle so the evaluator sees
+      // fresh stats (wins/rating) when picking thresholds.
+      await new Promise((r) => window.setTimeout(r, 1400));
+      const roster = rosterRef.current;
+      const opp = roster.find((e) => e.slot !== you);
+      let oppRating: number | null = null;
+      if (ranked && state.mode === 2 && opp?.playerId) {
+        const s = await fetchMyStats(opp.playerId).catch(() => null);
+        oppRating = (s as { rating?: number } | null)?.rating ?? null;
+      }
+      const unlocked = await evaluatePostMatch({
+        playerId: ident.id,
+        mode: state.mode as 2 | 4,
+        ranked: !!ranked,
+        iWon, forfeited,
+        wallsThisMatch: walls,
+        pawnsThisMatch: pops,
+        opponentRating: oppRating,
+      });
+      if (unlocked.length) setUnlockQueue(unlocked);
+    })();
     // Only fire once per match end
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.matchWinner]);
