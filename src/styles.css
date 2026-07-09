@@ -598,3 +598,42 @@ button:not([data-no-press]):active:not(:disabled) {
   width: 14px; height: 14px; border-radius: 50%;
   background: var(--scrub-accent, #f0a63d); border: 2px solid #0a0a0d; cursor: pointer;
 }
+
+/* Fog of Walls LTM button */
+@keyframes ltm-conic-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+@keyframes ltm-sheen-sweep {
+  0% { transform: translateX(-120%) skewX(-20deg); }
+  60%, 100% { transform: translateX(220%) skewX(-20deg); }
+}
+@keyframes ltm-orb-float {
+  0%, 100% { transform: translateY(0) rotate(-4deg); }
+  50% { transform: translateY(-2px) rotate(4deg); }
+}
+@keyframes ltm-live-pulse {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 0.45; }
+}
+.ltm-btn { transition: transform .25s ease, box-shadow .25s ease; }
+.ltm-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(192,132,252,0.28); }
+.ltm-conic {
+  background: conic-gradient(from 0deg,
+    rgba(232,121,249,0) 0deg,
+    rgba(232,121,249,0.9) 60deg,
+    rgba(168,85,247,0.2) 120deg,
+    rgba(232,121,249,0) 200deg,
+    rgba(217,70,239,0.85) 300deg,
+    rgba(232,121,249,0) 360deg);
+  filter: blur(6px);
+  animation: ltm-conic-spin 6s linear infinite;
+}
+.ltm-sheen::before {
+  content: "";
+  position: absolute; inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.18) 50%, transparent 70%);
+  animation: ltm-sheen-sweep 3.2s ease-in-out infinite;
+}
+.ltm-orb { animation: ltm-orb-float 3s ease-in-out infinite; }
+.ltm-live { animation: ltm-live-pulse 1.6s ease-in-out infinite; }
