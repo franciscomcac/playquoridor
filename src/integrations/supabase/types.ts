@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      achievements: {
+        Row: {
+          category: string
+          created_at: string
+          criteria: Json
+          description: string
+          is_hidden: boolean
+          name: string
+          sigil_key: string
+          slug: string
+          sort_order: number
+          tier: Database["public"]["Enums"]["achievement_tier"]
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          criteria?: Json
+          description: string
+          is_hidden?: boolean
+          name: string
+          sigil_key: string
+          slug: string
+          sort_order?: number
+          tier?: Database["public"]["Enums"]["achievement_tier"]
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          criteria?: Json
+          description?: string
+          is_hidden?: boolean
+          name?: string
+          sigil_key?: string
+          slug?: string
+          sort_order?: number
+          tier?: Database["public"]["Enums"]["achievement_tier"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       friendships: {
         Row: {
           addressee_auth: string
@@ -281,6 +323,45 @@ export type Database = {
         }
         Relationships: []
       }
+      player_achievements: {
+        Row: {
+          achievement_slug: string
+          id: string
+          player_id: string
+          progress: Json
+          unlocked_at: string
+        }
+        Insert: {
+          achievement_slug: string
+          id?: string
+          player_id: string
+          progress?: Json
+          unlocked_at?: string
+        }
+        Update: {
+          achievement_slug?: string
+          id?: string
+          player_id?: string
+          progress?: Json
+          unlocked_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_achievements_achievement_slug_fkey"
+            columns: ["achievement_slug"]
+            isOneToOne: false
+            referencedRelation: "achievements"
+            referencedColumns: ["slug"]
+          },
+          {
+            foreignKeyName: "player_achievements_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_stats: {
         Row: {
           auth_user_id: string | null
@@ -349,6 +430,7 @@ export type Database = {
           name: string
           name_changed_at: string | null
           onboarded_at: string | null
+          showcased_achievements: string[]
           updated_at: string
         }
         Insert: {
@@ -362,6 +444,7 @@ export type Database = {
           name: string
           name_changed_at?: string | null
           onboarded_at?: string | null
+          showcased_achievements?: string[]
           updated_at?: string
         }
         Update: {
@@ -375,6 +458,7 @@ export type Database = {
           name?: string
           name_changed_at?: string | null
           onboarded_at?: string | null
+          showcased_achievements?: string[]
           updated_at?: string
         }
         Relationships: []
@@ -482,6 +566,10 @@ export type Database = {
         Args: { _country: string; _name: string; _player_id: string }
         Returns: undefined
       }
+      grant_achievement: {
+        Args: { _player_id: string; _progress?: Json; _slug: string }
+        Returns: boolean
+      }
       my_active_chat_ban: {
         Args: never
         Returns: {
@@ -507,9 +595,13 @@ export type Database = {
           player_id: string
         }[]
       }
+      set_showcased_achievements: {
+        Args: { _player_id: string; _slugs: string[] }
+        Returns: undefined
+      }
     }
     Enums: {
-      [_ in never]: never
+      achievement_tier: "bronze" | "silver" | "gold" | "platinum" | "mythic"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -636,6 +728,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      achievement_tier: ["bronze", "silver", "gold", "platinum", "mythic"],
+    },
   },
 } as const
