@@ -3720,6 +3720,9 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
   // Per-bot last-known opponent pawn positions (fog mode). Bot only "sees"
   // opponents in its own line of sight; otherwise plans against stale info.
   const botKnownPawnsRef = useRef<Map<PlayerId, Map<PlayerId, [number, number]>>>(new Map());
+  // Per-bot move-count of the game state at the moment it last "saw" each
+  // opponent — used to infer how many hidden turns to advance the guess by.
+  const botKnownMoveCountRef = useRef<Map<PlayerId, Map<PlayerId, number>>>(new Map());
   useEffect(() => {
     try { localStorage.setItem("quoridor:fogOfWalls", fogOn ? "1" : "0"); } catch { /* ignore */ }
   }, [fogOn]);
@@ -3727,6 +3730,8 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
     if ((state.moveCount ?? 0) === 0) {
       revealedRef.current = new Set();
       botRevealedRef.current = new Map();
+      botKnownPawnsRef.current = new Map();
+      botKnownMoveCountRef.current = new Map();
     }
   }, [state.moveCount]);
   useEffect(() => {
