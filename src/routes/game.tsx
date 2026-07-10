@@ -27,6 +27,29 @@ const WARM_CONFETTI = [
   "oklch(0.88 0.06 80)",   // pale cream
   "oklch(0.66 0.14 70)",   // amber
 ];
+
+// Best neighbour step toward `goal` under `walls` — returns undefined if
+// no legal neighbour reduces the shortest-path distance.
+function stepTowardGoal(
+  from: [number, number],
+  goal: Goal,
+  walls: Wall[],
+): [number, number] | undefined {
+  if (reachedGoal(from, goal)) return from;
+  const baseD = shortestPathToGoal(from, goal, walls);
+  if (!isFinite(baseD)) return undefined;
+  const dirs: Array<[number, number]> = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+  let best: [number, number] | undefined;
+  let bestD = baseD;
+  for (const [dr, dc] of dirs) {
+    const nr = from[0] + dr, nc = from[1] + dc;
+    if (nr < 0 || nr >= BOARD || nc < 0 || nc >= BOARD) continue;
+    if (isBlocked(from[0], from[1], nr, nc, walls)) continue;
+    const d = shortestPathToGoal([nr, nc], goal, walls);
+    if (d < bestD) { bestD = d; best = [nr, nc]; }
+  }
+  return best;
+}
 import {
   applyForfeit, applyMove, defaultWallsFor, initialState, legalPawnMoves, newRound, winsNeeded,
   goalsFor, reachedGoal, shortestPathToGoal, isBlocked, BOARD,
