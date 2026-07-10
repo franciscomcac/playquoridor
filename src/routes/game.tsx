@@ -38,6 +38,17 @@ import {
   type SavedGame,
 } from "@/lib/interruptedGame";
 import {
+  WallCounter, AfkBanner, ChaosBanner, EventLog, Footer,
+  type EventEntry,
+} from "@/features/game/panels";
+import {
+  AbortedOverlay, WaitingOverlay, ErrorOverlay, MessageOverlay,
+  SignUpNudge, SettingsDrawer,
+} from "@/features/game/overlays";
+import { ForfeitButton, ResumeMatchPrompt } from "@/features/game/forfeit";
+import { CreateRoom, JoinRoom, SpectateRoom } from "@/features/lobby/rooms";
+import { Header } from "@/features/lobby/Header";
+import {
   createGuestRoom, createHostRoom, createSpectatorRoom, makeRoomCode,
   type PeerMessage, type Room, type RosterEntry,
 } from "@/lib/peer-room";
@@ -315,42 +326,6 @@ function Home() {
       {settingsOpen && <SettingsDrawer onClose={() => setSettingsOpen(false)} />}
       {aborting && <AbortedOverlay />}
     </main>
-  );
-}
-
-function AbortedOverlay() {
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-sm aborted-fade">
-      <div className="flex flex-col items-center gap-4 text-center">
-        <div className="aborted-ring relative flex h-24 w-24 items-center justify-center rounded-full border-2 border-rose-500/60">
-          <svg className="h-12 w-12 text-rose-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <circle cx="12" cy="12" r="10" />
-            <line x1="8" y1="8" x2="16" y2="16" />
-          </svg>
-        </div>
-        <div className="aborted-text">
-          <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-rose-400">Match ended</p>
-          <h2 className="mt-2 text-3xl font-black tracking-tight text-white sm:text-4xl">Game Aborted</h2>
-          <p className="mt-2 text-sm text-zinc-400">Returning to lobby…</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ChaosBanner() {
-  return (
-    <div className="relative overflow-hidden rounded-xl border border-fuchsia-500/40 bg-gradient-to-r from-fuchsia-600/25 via-rose-600/20 to-amber-500/20 px-4 py-2.5 shadow-lg shadow-fuchsia-900/30">
-      <div className="pointer-events-none absolute inset-0 animate-pulse bg-gradient-to-r from-transparent via-fuchsia-500/10 to-transparent" />
-      <div className="relative flex items-center gap-3">
-        <span className="text-lg">⚡</span>
-        <div className="flex-1">
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-fuchsia-300">Chaos Mode</p>
-          <p className="text-xs font-semibold text-white">4 players. One board. All bets are off.</p>
-        </div>
-        <span className="rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-white">FFA</span>
-      </div>
-    </div>
   );
 }
 
