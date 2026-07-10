@@ -38,6 +38,17 @@ import {
   type SavedGame,
 } from "@/lib/interruptedGame";
 import {
+  WallCounter, AfkBanner, ChaosBanner, EventLog, Footer,
+  type EventEntry,
+} from "@/features/game/panels";
+import {
+  AbortedOverlay, WaitingOverlay, ErrorOverlay, MessageOverlay,
+  SignUpNudge, SettingsDrawer,
+} from "@/features/game/overlays";
+import { ForfeitButton, ResumeMatchPrompt } from "@/features/game/forfeit";
+import { CreateRoom, JoinRoom, SpectateRoom } from "@/features/lobby/rooms";
+import { Header } from "@/features/lobby/Header";
+import {
   createGuestRoom, createHostRoom, createSpectatorRoom, makeRoomCode,
   type PeerMessage, type Room, type RosterEntry,
 } from "@/lib/peer-room";
@@ -318,42 +329,6 @@ function Home() {
   );
 }
 
-function AbortedOverlay() {
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-sm aborted-fade">
-      <div className="flex flex-col items-center gap-4 text-center">
-        <div className="aborted-ring relative flex h-24 w-24 items-center justify-center rounded-full border-2 border-rose-500/60">
-          <svg className="h-12 w-12 text-rose-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <circle cx="12" cy="12" r="10" />
-            <line x1="8" y1="8" x2="16" y2="16" />
-          </svg>
-        </div>
-        <div className="aborted-text">
-          <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-rose-400">Match ended</p>
-          <h2 className="mt-2 text-3xl font-black tracking-tight text-white sm:text-4xl">Game Aborted</h2>
-          <p className="mt-2 text-sm text-zinc-400">Returning to lobby…</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ChaosBanner() {
-  return (
-    <div className="relative overflow-hidden rounded-xl border border-fuchsia-500/40 bg-gradient-to-r from-fuchsia-600/25 via-rose-600/20 to-amber-500/20 px-4 py-2.5 shadow-lg shadow-fuchsia-900/30">
-      <div className="pointer-events-none absolute inset-0 animate-pulse bg-gradient-to-r from-transparent via-fuchsia-500/10 to-transparent" />
-      <div className="relative flex items-center gap-3">
-        <span className="text-lg">⚡</span>
-        <div className="flex-1">
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-fuchsia-300">Chaos Mode</p>
-          <p className="text-xs font-semibold text-white">4 players. One board. All bets are off.</p>
-        </div>
-        <span className="rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-white">FFA</span>
-      </div>
-    </div>
-  );
-}
-
 function SaveClipButton({ state, you, nameOf, snapshot }: {
   state: GameState; you: PlayerId; nameOf: (s: PlayerId) => string;
   snapshot: MatchSnapshot | null;
@@ -437,200 +412,6 @@ function AnalyzeGameButton({ snapshot }: { snapshot: MatchSnapshot | null }) {
       className="rounded-lg border border-primary/60 bg-primary/10 px-5 py-2 text-sm font-medium text-primary hover:bg-primary/20 disabled:opacity-60">
       Analyze with engine
     </button>
-  );
-}
-
-function Header({ ident, onOpenSettings }: { ident: Identity | null; onOpenSettings: () => void }) {
-  return (
-    <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-      <Link to="/" className="flex min-w-0 items-center gap-3" aria-label="playquoridor.online — home">
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[9px] border border-[#2a2a31] bg-gradient-to-br from-[#1d1d22] to-[#101013]">
-          <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden>
-            <rect x="1" y="1" width="7" height="7" rx="1.5" fill="#f5a524" />
-            <rect x="10" y="1" width="7" height="7" rx="1.5" fill="#2e2e36" />
-            <rect x="1" y="10" width="7" height="7" rx="1.5" fill="#2e2e36" />
-            <rect x="10" y="10" width="7" height="7" rx="1.5" fill="#2e2e36" />
-          </svg>
-        </span>
-        <span className="truncate text-[15px] font-bold">
-          playquoridor<span className="text-[#5c5c66]">.online</span>
-        </span>
-      </Link>
-      <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-        {ident && <StreakBadge playerId={ident.id} />}
-        <AccountNav compact />
-        <button onClick={onOpenSettings} aria-label="Settings" className="rounded-md border border-border bg-secondary/40 px-2.5 py-1.5 text-[10px] uppercase tracking-widest hover:bg-secondary sm:px-3">
-          <span className="hidden sm:inline">Settings</span>
-          <span className="sm:hidden" aria-hidden>⚙</span>
-        </button>
-      </div>
-    </header>
-  );
-}
-
-function StreakBadge({ playerId }: { playerId: string }) {
-  const [streak, setStreak] = useState<number | null>(null);
-  useEffect(() => { void fetchMyWinStreak(playerId).then(setStreak); }, [playerId]);
-  if (streak === null) return null;
-  const hot = streak >= 3;
-  return (
-    <span className={
-      "hidden items-center gap-1 rounded-md border px-2.5 py-1 text-[10px] uppercase tracking-widest sm:inline-flex " +
-      (hot
-        ? "border-orange-500/50 bg-orange-500/10"
-        : "border-border bg-card")
-    }>
-      <span aria-hidden>{hot ? "🔥" : "✦"}</span>
-      <span className="text-muted-foreground">Streak</span>
-      <span className={"ml-0.5 font-semibold " + (hot ? "text-orange-300" : "text-primary")}>{streak}</span>
-    </span>
-  );
-}
-
-function Footer() {
-  return (
-    <footer className="pt-6 text-center text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
-      Peer-to-peer · no accounts · your browser only
-    </footer>
-  );
-}
-
-function ForfeitButton({ onConfirm, disabled }: { onConfirm: () => void; disabled?: boolean }) {
-  const [armed, setArmed] = useState(false);
-  const timerRef = useRef<number | null>(null);
-  useEffect(() => () => { if (timerRef.current) window.clearTimeout(timerRef.current); }, []);
-  useEffect(() => { if (disabled) setArmed(false); }, [disabled]);
-  const click = () => {
-    if (disabled) return;
-    if (!armed) {
-      setArmed(true);
-      if (timerRef.current) window.clearTimeout(timerRef.current);
-      timerRef.current = window.setTimeout(() => setArmed(false), 3000);
-      return;
-    }
-    if (timerRef.current) { window.clearTimeout(timerRef.current); timerRef.current = null; }
-    setArmed(false);
-    onConfirm();
-  };
-  return (
-    <button
-      onClick={click}
-      disabled={disabled}
-      className={
-        "rounded-lg border px-3 py-2 text-xs font-medium uppercase tracking-widest transition-colors disabled:opacity-40 " +
-        (armed ? "bg-[color:var(--destructive)] text-white hover:opacity-90" : "hover:bg-secondary/50")
-      }
-      style={armed ? { borderColor: "var(--destructive)" } : { borderColor: "var(--destructive)", color: "var(--destructive)" }}
-    >
-      {armed ? "Click again to confirm" : "Forfeit round"}
-    </button>
-  );
-}
-
-function ResumeMatchPrompt({ game, onReturn, onAbort }: { game: SavedGame; onReturn: () => void; onAbort: () => void }) {
-  return (
-    <div className="fixed inset-0 z-[100] grid place-items-center bg-background px-4">
-      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl sm:p-8">
-        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary">Interrupted match</p>
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight">Return to game?</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Room {game.code} is still reserved. Choose one action before continuing.
-        </p>
-        <div className="mt-6 grid gap-3">
-          <button
-            onClick={onReturn}
-            autoFocus
-            className="rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground"
-          >
-            Return to game
-          </button>
-          <button
-            onClick={onAbort}
-            className="rounded-lg border border-border bg-secondary/30 px-5 py-3 text-sm font-semibold hover:bg-secondary"
-          >
-            Abort game
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CreateRoom({ mode, walls, rounds, setMode, setWalls, setRounds, onBack, onStart }: {
-  mode: Mode; walls: number; rounds: number;
-  setMode: (m: Mode) => void; setWalls: (n: number) => void; setRounds: (n: number) => void;
-  onBack: () => void; onStart: (code: string) => void;
-}) {
-  const [code] = useState(() => makeRoomCode());
-  const [copied, setCopied] = useState(false);
-  const copy = () => {
-    navigator.clipboard?.writeText(code).catch(() => {});
-    setCopied(true); window.setTimeout(() => setCopied(false), 1400);
-  };
-  // Series length is fixed for every match: best of 3, first to 2, max 3 rounds.
-  void rounds; void setRounds;
-  return (
-    <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl sm:p-8">
-      <button onClick={onBack} className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground hover:text-foreground">← Back</button>
-      <h2 className="mt-3 text-2xl">Create a room</h2>
-      <div className="mt-6">
-        <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Players</p>
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          {[2, 4].map((m) => (
-            <button key={m} onClick={() => setMode(m as Mode)}
-              className={"rounded-lg border px-4 py-3 text-sm font-medium " +
-                (mode === m ? "border-primary bg-primary/10" : "border-border bg-secondary/30 text-muted-foreground hover:text-foreground")}>
-              {m} Players
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="mt-6">
-        <label className="flex items-baseline justify-between text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-          Walls per player <span className="text-base font-semibold text-foreground">{walls}</span>
-        </label>
-        <input type="range" min={0} max={20} step={1} value={walls} onChange={(e) => setWalls(Number(e.target.value))}
-          className="mt-2 w-full accent-[color:var(--primary)]" />
-      </div>
-      <div className="mt-6 rounded-lg border border-border bg-secondary/20 px-4 py-3 text-xs text-muted-foreground">
-        <p className="text-[10px] uppercase tracking-[0.2em]">Format</p>
-        <p className="mt-1 text-sm font-semibold text-foreground">
-          {mode === 4
-            ? "4 players · first to 2 wins · max 5 rounds"
-            : "Best of 3 · first to 2 · max 3 rounds"}
-        </p>
-      </div>
-      <div className="mt-6 rounded-lg border border-dashed border-border bg-background/40 p-4">
-        <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Room code</p>
-        <div className="mt-1 flex items-center justify-between gap-3">
-          <p className="font-mono text-3xl tracking-[0.3em] text-primary">{code}</p>
-          <button onClick={copy} className="rounded-md border border-border px-3 py-2 text-[10px] uppercase tracking-widest text-muted-foreground hover:bg-secondary">
-            {copied ? "Copied!" : "Copy"}
-          </button>
-        </div>
-      </div>
-      <button onClick={() => onStart(code)}
-        className="mt-6 w-full rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5">
-        Open room →
-      </button>
-    </div>
-  );
-}
-
-function JoinRoom({ onBack, onJoin }: { onBack: () => void; onJoin: (code: string) => void }) {
-  const [code, setCode] = useState("");
-  const clean = code.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5);
-  return (
-    <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl sm:p-8">
-      <button onClick={onBack} className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground hover:text-foreground">← Back</button>
-      <h2 className="mt-3 text-2xl">Join a room</h2>
-      <input value={clean} onChange={(e) => setCode(e.target.value)} placeholder="K7M2Q" autoFocus
-        className="mt-6 w-full rounded-lg border border-border bg-background/40 px-4 py-3 text-center font-mono text-2xl uppercase tracking-[0.3em] text-primary focus:border-primary focus:outline-none" />
-      <button disabled={clean.length !== 5} onClick={() => onJoin(clean)}
-        className="mt-6 w-full rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50">
-        Join →
-      </button>
-    </div>
   );
 }
 
@@ -835,8 +616,6 @@ function SearchingAnimation({ status, ranked, mode, onBack, compact = false }: {
 // ---------------- GAME ----------------
 
 type Status = "connecting" | "waiting" | "connected" | "disconnected" | "error";
-
-type EventEntry = { key: number; text: string };
 
 type AfkState = { slot: PlayerId; deadline: number } | null;
 
@@ -1928,23 +1707,6 @@ function TurnBar({ state, you, status, presence, coinAnimating, nameOf }: {
   );
 }
 
-function AfkBanner({ deadline, name }: { slot: PlayerId; deadline: number; name: string }) {
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    const iv = window.setInterval(() => setNow(Date.now()), 500);
-    return () => window.clearInterval(iv);
-  }, []);
-  const remain = Math.max(0, deadline - now);
-  const mm = Math.floor(remain / 60000);
-  const ss = Math.floor((remain % 60000) / 1000).toString().padStart(2, "0");
-  return (
-    <div className="afk-pulse rounded-xl border px-4 py-2 text-sm font-medium"
-      style={{ borderColor: "var(--destructive)", color: "var(--destructive)", background: "oklch(0.6 0.2 25 / 0.08)" }}>
-      {name} is AFK — forfeiting in {mm}:{ss}
-    </div>
-  );
-}
-
 function ScoreCard({ state, you, nameOf }: { state: GameState; you: PlayerId; nameOf: (s: PlayerId) => string }) {
   const target = winsNeeded(state.totalRounds, state.mode);
   const prevScoreRef = useRef<number[]>(state.score);
@@ -2027,18 +1789,6 @@ function PlayersCard({ state, you, nameOf }: { state: GameState; you: PlayerId; 
   );
 }
 
-function WallCounter({ count, color }: { count: number; color: string }) {
-  const shown = Math.min(count, 10);
-  return (
-    <div className="flex items-center gap-[3px]">
-      {Array.from({ length: 10 }, (_, i) => (
-        <span key={i} className="block h-3 w-1.5 rounded-sm" style={{ background: i < shown ? color : "var(--border)" }} />
-      ))}
-      {count > 10 && <span className="ml-1 text-[10px] text-muted-foreground">+{count - 10}</span>}
-    </div>
-  );
-}
-
 // ================ In-game top/bottom player banners =================
 // Opponent banners render above the board; the local player's banner
 // renders below. In 4P mode the top row shows all 3 opponents side by side.
@@ -2098,18 +1848,6 @@ function PlateClock({ state, playerId }: { state: GameState; playerId: PlayerId 
     >
       {formatClock(remaining)}
     </span>
-  );
-}
-
-function EventLog({ entries }: { entries: EventEntry[] }) {
-  if (entries.length === 0) return null;
-  return (
-    <div className="rounded-xl border border-border bg-card p-4">
-      <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Log</p>
-      <ul className="mt-2 max-h-32 space-y-1 overflow-y-auto text-[11px] text-muted-foreground">
-        {entries.slice().reverse().map((e) => (<li key={e.key}>· {e.text}</li>))}
-      </ul>
-    </div>
   );
 }
 
@@ -3104,58 +2842,6 @@ function RoundEndScoreAnim({ state, nameOf, playerIdOf, onDone }: {
   );
 }
 
-function WaitingOverlay({ count, expected, isHost, onStart }: { count: number; expected: number; isHost: boolean; onStart: () => void }) {
-  return (
-    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-background/55 backdrop-blur-[3px]">
-      <div className="relative grid h-16 w-16 place-items-center">
-        {[0, 1].map((i) => (
-          <span
-            key={i}
-            className="absolute inset-0 rounded-full border border-emerald-400/50"
-            style={{ animation: `qm-ping 2.2s cubic-bezier(0,0,0.2,1) ${i * 1.1}s infinite` }}
-          />
-        ))}
-        <span className="relative z-10 h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_16px_4px_rgba(16,185,129,0.6)]" />
-      </div>
-      <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.32em] text-emerald-400 drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
-        <span className="qm-dots">Waiting for players</span>
-      </p>
-      <p className="mt-1.5 font-[IBM_Plex_Mono,monospace] text-[11px] text-zinc-300/85 drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
-        {count}/{expected} connected
-      </p>
-      {isHost && count >= 2 && count < expected && (
-        <button onClick={onStart} className="mt-4 rounded-lg bg-emerald-500 px-4 py-2 text-[11px] font-semibold uppercase tracking-widest text-emerald-950 shadow-[0_15px_40px_-15px_rgba(16,185,129,0.7)]">
-          Start with {count}
-        </button>
-      )}
-    </div>
-  );
-}
-
-function ErrorOverlay({ msg, onLeave }: { msg: string | null; onLeave: () => void }) {
-  return (
-    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-background/90 p-6 text-center">
-      <p className="text-lg font-semibold">Something went wrong</p>
-      <p className="mt-2 max-w-xs text-sm text-muted-foreground">{msg ?? "Unknown error"}</p>
-      <button onClick={onLeave} className="mt-4 rounded-lg border border-border bg-secondary/40 px-4 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary">
-        Back to menu
-      </button>
-    </div>
-  );
-}
-
-function MessageOverlay({ title, body, onLeave }: { title: string; body: string; onLeave: () => void }) {
-  return (
-    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-background/85 p-6 text-center">
-      <p className="text-2xl">{title}</p>
-      <p className="mt-2 text-sm text-muted-foreground">{body}</p>
-      <button onClick={onLeave} className="mt-4 rounded-lg border border-border bg-secondary/40 px-4 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary">
-        Back to menu
-      </button>
-    </div>
-  );
-}
-
 function WinOverlay({ state, you, matchOver, onPrimary, primaryLabel, onLeave, nameOf }: {
   state: GameState; you: PlayerId; matchOver: boolean;
   onPrimary: () => void; primaryLabel: string; onLeave: () => void;
@@ -3360,60 +3046,6 @@ function ShareResultButton({ state, you, nameOf, matchOver }: {
       className="rounded-lg border border-border bg-accent/70 px-5 py-2 text-sm font-medium text-accent-foreground transition-transform hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-70">
       {label}
     </button>
-  );
-}
-
-function SignUpNudge() {
-  const [show, setShow] = useState(false);
-  useEffect(() => {
-    let alive = true;
-    void supabase.auth.getUser().then(({ data }) => {
-      if (!alive) return;
-      const u = data.user;
-      const anon = !u || u.is_anonymous === true || (u.app_metadata?.provider ?? "") === "anonymous";
-      setShow(anon);
-    });
-    return () => { alive = false; };
-  }, []);
-  if (!show) return null;
-  return (
-    <div className="mt-3 w-full max-w-md rounded-lg border border-border bg-secondary/30 px-4 py-3 text-center">
-      <p className="text-sm font-semibold">Create a free account</p>
-      <p className="mt-1 text-xs text-muted-foreground">Save your games, chat in-match, and get a rating.</p>
-      <Link to="/auth"
-        className="mt-2 inline-block rounded-md bg-primary px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-primary-foreground hover:-translate-y-0.5 transition-transform">
-        Sign up
-      </Link>
-    </div>
-  );
-}
-
-function SettingsDrawer({ onClose }: { onClose: () => void }) {
-  const [muted, setMutedS] = useState(isMuted());
-  const [vol, setVolS] = useState(getVolume());
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-t-2xl border border-border bg-card p-6 shadow-2xl sm:rounded-2xl">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl">Settings</h2>
-          <button onClick={onClose} className="text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground">Close</button>
-        </div>
-        <div className="mt-4 flex items-center justify-between">
-          <label className="text-sm">Mute all sounds</label>
-          <input type="checkbox" checked={muted} onChange={(e) => { setMutedS(e.target.checked); setMuted(e.target.checked); }} />
-        </div>
-        <div className="mt-4">
-          <label className="text-[10px] uppercase tracking-widest text-muted-foreground">Master volume</label>
-          <input type="range" min={0} max={1} step={0.05} value={vol}
-            onChange={(e) => { const v = Number(e.target.value); setVolS(v); setVolume(v); }}
-            className="mt-2 w-full accent-[color:var(--primary)]" />
-        </div>
-        <p className="mt-4 text-[11px] text-muted-foreground">
-          Sounds initialize on your first click and are stored in this browser.
-        </p>
-      </div>
-    </div>
   );
 }
 
@@ -4001,34 +3633,6 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
 }
 
 // ---------------- SPECTATE ----------------
-
-function SpectateRoom({ onBack, onJoin }: { onBack: () => void; onJoin: (code: string) => void }) {
-  const [code, setCode] = useState("");
-  const clean = code.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5);
-  return (
-    <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl sm:p-8">
-      <button onClick={onBack} className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground hover:text-foreground">← Back</button>
-      <h2 className="mt-3 text-2xl">Spectate a match</h2>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Enter the code of a match already in progress. You'll watch the board update live — no seat, no wall placement, just the show.
-      </p>
-      <input
-        value={clean}
-        onChange={(e) => setCode(e.target.value)}
-        placeholder="K7M2Q"
-        autoFocus
-        className="mt-6 w-full rounded-lg border border-border bg-background/40 px-4 py-3 text-center font-mono text-2xl uppercase tracking-[0.3em] text-primary focus:border-primary focus:outline-none"
-      />
-      <button
-        disabled={clean.length !== 5}
-        onClick={() => onJoin(clean)}
-        className="mt-6 w-full rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
-      >
-        Watch →
-      </button>
-    </div>
-  );
-}
 
 type SpectateStatus = "connecting" | "waiting" | "watching" | "disconnected" | "error";
 
