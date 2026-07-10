@@ -203,12 +203,16 @@ export async function fetchMyWinStreak(playerId: string): Promise<number> {
     .from("match_players")
     .select("result, matches!inner(ended_at)")
     .eq("player_id", playerId)
-    .order("ended_at", { referencedTable: "matches", ascending: false })
-    .limit(50);
+    .limit(100);
   if (!data?.length) return 0;
+  const rows = [...data].sort((a: any, b: any) => {
+    const ta = new Date(a.matches?.ended_at ?? 0).getTime();
+    const tb = new Date(b.matches?.ended_at ?? 0).getTime();
+    return tb - ta;
+  });
   let streak = 0;
-  for (const row of data) {
-    if (row.result === "win") streak++;
+  for (const row of rows) {
+    if ((row as any).result === "win") streak++;
     else break;
   }
   return streak;
