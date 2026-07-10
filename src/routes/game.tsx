@@ -3712,6 +3712,9 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
   const [visibleCells, setVisibleCells] = useState<Set<number> | undefined>(undefined);
   // Per-bot reveal memory — each bot only "knows" walls it has personally seen.
   const botRevealedRef = useRef<Map<PlayerId, Set<string>>>(new Map());
+  // Per-bot last-known opponent pawn positions (fog mode). Bot only "sees"
+  // opponents in its own line of sight; otherwise plans against stale info.
+  const botKnownPawnsRef = useRef<Map<PlayerId, Record<PlayerId, [number, number]>>>(new Map());
   useEffect(() => {
     try { localStorage.setItem("quoridor:fogOfWalls", fogOn ? "1" : "0"); } catch { /* ignore */ }
   }, [fogOn]);
@@ -3764,7 +3767,24 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
       const filteredWalls = state.walls.filter((w) =>
         seen.has(`${w.o}-${w.r}-${w.c}`),
       );
-      botState = { ...state, walls: filteredWalls };
+      // Compute bot's own sight cells to decide which opponents it can see.
+      const sight = computeVisibleCells(state, slot);
+      const known = { ...(botKnownPawnsRef.current.get(slot) ?? {}) } as Record<PlayerId, [number, number]>;
+      const pawns = { ...state.pawns } as Record<PlayerId, [number, number]>;
+      (Object.keys(state.pawns) as unknown as PlayerId[]).forEach((pid) => {
+        const p = state.pawns[pid];
+        if (!p) return;
+        if (pid === slot) { known[pid] = p; return; }
+        const idx = p[0] * 9 + p[1];
+        if (sight.has(idx)) {
+          known[pid] = p; // currently visible → update memory
+        } else if (known[pid]) {
+          pawns[pid] = known[pid]; // use stale last-known position
+        }
+        // If never seen, leave actual position (unavoidable at game start).
+      });
+      botKnownPawnsRef.current.set(slot, known);
+      botState = { ...state, walls: filteredWalls, pawns };
       botDifficulty = Math.min(difficulty, 0.35);
     }
     const move = pickBotMove(botState, slot, botDifficulty);
