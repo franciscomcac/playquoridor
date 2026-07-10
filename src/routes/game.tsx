@@ -193,6 +193,10 @@ function Home() {
 
   useEffect(() => {
     if (!ident || !pending) return;
+    // Clear any lingering Fog of Walls flag; only fog2 turns it back on.
+    if (pending !== "fog2") {
+      try { localStorage.setItem("quoridor:fogOfWalls", "0"); } catch { /* ignore */ }
+    }
     if (pending === "quick2") setView({ name: "quick", mode: 2 });
     else if (pending === "quick4") setView({ name: "quick", mode: 4 });
     else if (pending === "ranked2") setView({ name: "quick", mode: 2, ranked: true });
