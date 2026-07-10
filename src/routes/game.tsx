@@ -3780,20 +3780,45 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
       // Compute bot's own sight cells to decide which opponents it can see.
       const sight = computeVisibleCells(state, slot);
       const known = new Map(botKnownPawnsRef.current.get(slot) ?? new Map());
+      const knownMc = new Map(botKnownMoveCountRef.current.get(slot) ?? new Map());
       const pawns = state.pawns.slice() as [number, number][];
+      const goals = goalsFor(state.mode);
       for (let pid = 0; pid < state.pawns.length; pid++) {
         const p = state.pawns[pid];
         if (!p) continue;
-        if (pid === slot) { known.set(pid as PlayerId, p); continue; }
+        if (pid === slot) {
+          known.set(pid as PlayerId, p);
+          knownMc.set(pid as PlayerId, state.moveCount ?? 0);
+          continue;
+        }
         const idx = p[0] * 9 + p[1];
         if (sight.has(idx)) {
           known.set(pid as PlayerId, p);
+          knownMc.set(pid as PlayerId, state.moveCount ?? 0);
         } else {
-          const last = known.get(pid as PlayerId);
-          if (last) pawns[pid] = last;
+          // Not visible — infer position by advancing the last-known
+          // spot along its shortest path to its goal, using only walls
+          // the bot has personally seen. Rough logic: bot assumes the
+          // opponent shuffled toward its goal each hidden turn.
+          const last = known.get(pid as PlayerId) as [number, number] | undefined;
+          if (last) {
+            const goal = goals[pid];
+            const lastMc = knownMc.get(pid as PlayerId) ?? state.moveCount ?? 0;
+            const hiddenTurns = Math.max(0, Math.min(6, (state.moveCount ?? 0) - lastMc));
+            let guess: [number, number] = last;
+            if (goal) {
+              for (let s = 0; s < hiddenTurns; s++) {
+                const next = stepTowardGoal(guess, goal, filteredWalls);
+                if (!next || (next[0] === guess[0] && next[1] === guess[1])) break;
+                guess = next;
+              }
+            }
+            pawns[pid] = guess;
+          }
         }
       }
       botKnownPawnsRef.current.set(slot, known);
+      botKnownMoveCountRef.current.set(slot, knownMc);
       botState = { ...state, walls: filteredWalls, pawns };
       botDifficulty = Math.min(difficulty, 0.35);
     }
