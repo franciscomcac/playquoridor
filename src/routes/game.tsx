@@ -617,8 +617,6 @@ function SearchingAnimation({ status, ranked, mode, onBack, compact = false }: {
 
 type Status = "connecting" | "waiting" | "connected" | "disconnected" | "error";
 
-type EventEntry = { key: number; text: string };
-
 type AfkState = { slot: PlayerId; deadline: number } | null;
 
 // After 45s of no input we surface the AFK banner as a warning, then forfeit
@@ -1709,23 +1707,6 @@ function TurnBar({ state, you, status, presence, coinAnimating, nameOf }: {
   );
 }
 
-function AfkBanner({ deadline, name }: { slot: PlayerId; deadline: number; name: string }) {
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    const iv = window.setInterval(() => setNow(Date.now()), 500);
-    return () => window.clearInterval(iv);
-  }, []);
-  const remain = Math.max(0, deadline - now);
-  const mm = Math.floor(remain / 60000);
-  const ss = Math.floor((remain % 60000) / 1000).toString().padStart(2, "0");
-  return (
-    <div className="afk-pulse rounded-xl border px-4 py-2 text-sm font-medium"
-      style={{ borderColor: "var(--destructive)", color: "var(--destructive)", background: "oklch(0.6 0.2 25 / 0.08)" }}>
-      {name} is AFK — forfeiting in {mm}:{ss}
-    </div>
-  );
-}
-
 function ScoreCard({ state, you, nameOf }: { state: GameState; you: PlayerId; nameOf: (s: PlayerId) => string }) {
   const target = winsNeeded(state.totalRounds, state.mode);
   const prevScoreRef = useRef<number[]>(state.score);
@@ -1808,18 +1789,6 @@ function PlayersCard({ state, you, nameOf }: { state: GameState; you: PlayerId; 
   );
 }
 
-function WallCounter({ count, color }: { count: number; color: string }) {
-  const shown = Math.min(count, 10);
-  return (
-    <div className="flex items-center gap-[3px]">
-      {Array.from({ length: 10 }, (_, i) => (
-        <span key={i} className="block h-3 w-1.5 rounded-sm" style={{ background: i < shown ? color : "var(--border)" }} />
-      ))}
-      {count > 10 && <span className="ml-1 text-[10px] text-muted-foreground">+{count - 10}</span>}
-    </div>
-  );
-}
-
 // ================ In-game top/bottom player banners =================
 // Opponent banners render above the board; the local player's banner
 // renders below. In 4P mode the top row shows all 3 opponents side by side.
@@ -1879,18 +1848,6 @@ function PlateClock({ state, playerId }: { state: GameState; playerId: PlayerId 
     >
       {formatClock(remaining)}
     </span>
-  );
-}
-
-function EventLog({ entries }: { entries: EventEntry[] }) {
-  if (entries.length === 0) return null;
-  return (
-    <div className="rounded-xl border border-border bg-card p-4">
-      <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Log</p>
-      <ul className="mt-2 max-h-32 space-y-1 overflow-y-auto text-[11px] text-muted-foreground">
-        {entries.slice().reverse().map((e) => (<li key={e.key}>· {e.text}</li>))}
-      </ul>
-    </div>
   );
 }
 
@@ -2885,58 +2842,6 @@ function RoundEndScoreAnim({ state, nameOf, playerIdOf, onDone }: {
   );
 }
 
-function WaitingOverlay({ count, expected, isHost, onStart }: { count: number; expected: number; isHost: boolean; onStart: () => void }) {
-  return (
-    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-background/55 backdrop-blur-[3px]">
-      <div className="relative grid h-16 w-16 place-items-center">
-        {[0, 1].map((i) => (
-          <span
-            key={i}
-            className="absolute inset-0 rounded-full border border-emerald-400/50"
-            style={{ animation: `qm-ping 2.2s cubic-bezier(0,0,0.2,1) ${i * 1.1}s infinite` }}
-          />
-        ))}
-        <span className="relative z-10 h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_16px_4px_rgba(16,185,129,0.6)]" />
-      </div>
-      <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.32em] text-emerald-400 drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
-        <span className="qm-dots">Waiting for players</span>
-      </p>
-      <p className="mt-1.5 font-[IBM_Plex_Mono,monospace] text-[11px] text-zinc-300/85 drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
-        {count}/{expected} connected
-      </p>
-      {isHost && count >= 2 && count < expected && (
-        <button onClick={onStart} className="mt-4 rounded-lg bg-emerald-500 px-4 py-2 text-[11px] font-semibold uppercase tracking-widest text-emerald-950 shadow-[0_15px_40px_-15px_rgba(16,185,129,0.7)]">
-          Start with {count}
-        </button>
-      )}
-    </div>
-  );
-}
-
-function ErrorOverlay({ msg, onLeave }: { msg: string | null; onLeave: () => void }) {
-  return (
-    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-background/90 p-6 text-center">
-      <p className="text-lg font-semibold">Something went wrong</p>
-      <p className="mt-2 max-w-xs text-sm text-muted-foreground">{msg ?? "Unknown error"}</p>
-      <button onClick={onLeave} className="mt-4 rounded-lg border border-border bg-secondary/40 px-4 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary">
-        Back to menu
-      </button>
-    </div>
-  );
-}
-
-function MessageOverlay({ title, body, onLeave }: { title: string; body: string; onLeave: () => void }) {
-  return (
-    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-background/85 p-6 text-center">
-      <p className="text-2xl">{title}</p>
-      <p className="mt-2 text-sm text-muted-foreground">{body}</p>
-      <button onClick={onLeave} className="mt-4 rounded-lg border border-border bg-secondary/40 px-4 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary">
-        Back to menu
-      </button>
-    </div>
-  );
-}
-
 function WinOverlay({ state, you, matchOver, onPrimary, primaryLabel, onLeave, nameOf }: {
   state: GameState; you: PlayerId; matchOver: boolean;
   onPrimary: () => void; primaryLabel: string; onLeave: () => void;
@@ -3141,60 +3046,6 @@ function ShareResultButton({ state, you, nameOf, matchOver }: {
       className="rounded-lg border border-border bg-accent/70 px-5 py-2 text-sm font-medium text-accent-foreground transition-transform hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-70">
       {label}
     </button>
-  );
-}
-
-function SignUpNudge() {
-  const [show, setShow] = useState(false);
-  useEffect(() => {
-    let alive = true;
-    void supabase.auth.getUser().then(({ data }) => {
-      if (!alive) return;
-      const u = data.user;
-      const anon = !u || u.is_anonymous === true || (u.app_metadata?.provider ?? "") === "anonymous";
-      setShow(anon);
-    });
-    return () => { alive = false; };
-  }, []);
-  if (!show) return null;
-  return (
-    <div className="mt-3 w-full max-w-md rounded-lg border border-border bg-secondary/30 px-4 py-3 text-center">
-      <p className="text-sm font-semibold">Create a free account</p>
-      <p className="mt-1 text-xs text-muted-foreground">Save your games, chat in-match, and get a rating.</p>
-      <Link to="/auth"
-        className="mt-2 inline-block rounded-md bg-primary px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-primary-foreground hover:-translate-y-0.5 transition-transform">
-        Sign up
-      </Link>
-    </div>
-  );
-}
-
-function SettingsDrawer({ onClose }: { onClose: () => void }) {
-  const [muted, setMutedS] = useState(isMuted());
-  const [vol, setVolS] = useState(getVolume());
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-t-2xl border border-border bg-card p-6 shadow-2xl sm:rounded-2xl">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl">Settings</h2>
-          <button onClick={onClose} className="text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground">Close</button>
-        </div>
-        <div className="mt-4 flex items-center justify-between">
-          <label className="text-sm">Mute all sounds</label>
-          <input type="checkbox" checked={muted} onChange={(e) => { setMutedS(e.target.checked); setMuted(e.target.checked); }} />
-        </div>
-        <div className="mt-4">
-          <label className="text-[10px] uppercase tracking-widest text-muted-foreground">Master volume</label>
-          <input type="range" min={0} max={1} step={0.05} value={vol}
-            onChange={(e) => { const v = Number(e.target.value); setVolS(v); setVolume(v); }}
-            className="mt-2 w-full accent-[color:var(--primary)]" />
-        </div>
-        <p className="mt-4 text-[11px] text-muted-foreground">
-          Sounds initialize on your first click and are stored in this browser.
-        </p>
-      </div>
-    </div>
   );
 }
 
@@ -3782,34 +3633,6 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
 }
 
 // ---------------- SPECTATE ----------------
-
-function SpectateRoom({ onBack, onJoin }: { onBack: () => void; onJoin: (code: string) => void }) {
-  const [code, setCode] = useState("");
-  const clean = code.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5);
-  return (
-    <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl sm:p-8">
-      <button onClick={onBack} className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground hover:text-foreground">← Back</button>
-      <h2 className="mt-3 text-2xl">Spectate a match</h2>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Enter the code of a match already in progress. You'll watch the board update live — no seat, no wall placement, just the show.
-      </p>
-      <input
-        value={clean}
-        onChange={(e) => setCode(e.target.value)}
-        placeholder="K7M2Q"
-        autoFocus
-        className="mt-6 w-full rounded-lg border border-border bg-background/40 px-4 py-3 text-center font-mono text-2xl uppercase tracking-[0.3em] text-primary focus:border-primary focus:outline-none"
-      />
-      <button
-        disabled={clean.length !== 5}
-        onClick={() => onJoin(clean)}
-        className="mt-6 w-full rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
-      >
-        Watch →
-      </button>
-    </div>
-  );
-}
 
 type SpectateStatus = "connecting" | "waiting" | "watching" | "disconnected" | "error";
 
