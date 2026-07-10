@@ -9,11 +9,11 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 
-import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
-import { ensureAuthSession, linkAuthToPlayer } from "../lib/identity";
-import { supabase } from "../integrations/supabase/client";
-import { play, initSoundOnGesture } from "../lib/sound";
+import appCss from "@/styles.css?url";
+import { reportLovableError } from "@/lib/lovable-error-reporting";
+import { ensureAuthSession, linkAuthToPlayer } from "@/lib/identity";
+import { supabase } from "@/integrations/supabase/client";
+import { play, initSoundOnGesture } from "@/lib/sound";
 
 function NotFoundComponent() {
   return (

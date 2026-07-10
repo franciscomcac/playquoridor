@@ -169,6 +169,30 @@ export function reachedGoal(pos: Pos, goal: Goal): boolean {
   return goal.kind === "row" ? pos[0] === goal.value : pos[1] === goal.value;
 }
 
+// Best neighbour step toward `goal` under `walls` — returns undefined if
+// no legal neighbour reduces the shortest-path distance. Used by bots and
+// by fog-of-walls opponent inference to advance a stale last-seen pawn.
+export function stepTowardGoal(
+  from: Pos,
+  goal: Goal,
+  walls: Wall[],
+): Pos | undefined {
+  if (reachedGoal(from, goal)) return from;
+  const baseD = shortestPathToGoal(from, goal, walls);
+  if (!isFinite(baseD)) return undefined;
+  const dirs: Array<[number, number]> = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+  let best: Pos | undefined;
+  let bestD = baseD;
+  for (const [dr, dc] of dirs) {
+    const nr = from[0] + dr, nc = from[1] + dc;
+    if (nr < 0 || nr >= BOARD || nc < 0 || nc >= BOARD) continue;
+    if (isBlocked(from[0], from[1], nr, nc, walls)) continue;
+    const d = shortestPathToGoal([nr, nc], goal, walls);
+    if (d < bestD) { bestD = d; best = [nr, nc]; }
+  }
+  return best;
+}
+
 // Pawn-only shortest path length to the goal, ignoring other pawns.
 // Returns Infinity if unreachable.
 export function shortestPathToGoal(from: Pos, goal: Goal, walls: Wall[]): number {

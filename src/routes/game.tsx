@@ -28,33 +28,15 @@ const WARM_CONFETTI = [
   "oklch(0.66 0.14 70)",   // amber
 ];
 
-// Best neighbour step toward `goal` under `walls` — returns undefined if
-// no legal neighbour reduces the shortest-path distance.
-function stepTowardGoal(
-  from: [number, number],
-  goal: Goal,
-  walls: Wall[],
-): [number, number] | undefined {
-  if (reachedGoal(from, goal)) return from;
-  const baseD = shortestPathToGoal(from, goal, walls);
-  if (!isFinite(baseD)) return undefined;
-  const dirs: Array<[number, number]> = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-  let best: [number, number] | undefined;
-  let bestD = baseD;
-  for (const [dr, dc] of dirs) {
-    const nr = from[0] + dr, nc = from[1] + dc;
-    if (nr < 0 || nr >= BOARD || nc < 0 || nc >= BOARD) continue;
-    if (isBlocked(from[0], from[1], nr, nc, walls)) continue;
-    const d = shortestPathToGoal([nr, nc], goal, walls);
-    if (d < bestD) { bestD = d; best = [nr, nc]; }
-  }
-  return best;
-}
 import {
   applyForfeit, applyMove, defaultWallsFor, initialState, legalPawnMoves, newRound, winsNeeded,
-  goalsFor, reachedGoal, shortestPathToGoal, isBlocked, BOARD,
+  goalsFor, reachedGoal, shortestPathToGoal, stepTowardGoal, isBlocked, BOARD,
   type GameState, type Goal, type Mode, type Move, type PlayerId, type Wall,
 } from "@/lib/quoridor";
+import {
+  loadInterruptedGame, saveInterruptedGame, clearInterruptedGame,
+  type SavedGame,
+} from "@/lib/interruptedGame";
 import {
   createGuestRoom, createHostRoom, createSpectatorRoom, makeRoomCode,
   type PeerMessage, type Room, type RosterEntry,
@@ -119,55 +101,6 @@ type View =
   | { name: "spectate" }
   | { name: "spectating"; code: string };
 
-type SavedGame = {
-  isHost: boolean;
-  code: string;
-  mode: Mode;
-  walls: number;
-  rounds: number;
-  quickMatch?: boolean;
-  ranked?: boolean;
-  savedAt: number;
-};
-
-const ACTIVE_GAME_KEY = "quoridor:activeGame";
-const ACTIVE_GAME_TTL_MS = 2 * 60 * 60 * 1000;
-
-function saveInterruptedGame(game: SavedGame) {
-  try { localStorage.setItem(ACTIVE_GAME_KEY, JSON.stringify({ ...game, savedAt: Date.now() })); } catch { /* ignore */ }
-}
-
-function clearInterruptedGame() {
-  try { localStorage.removeItem(ACTIVE_GAME_KEY); } catch { /* ignore */ }
-}
-
-function loadInterruptedGame(): SavedGame | null {
-  try {
-    const raw = localStorage.getItem(ACTIVE_GAME_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<SavedGame>;
-    const code = typeof parsed.code === "string" ? parsed.code.toUpperCase() : "";
-    const mode = parsed.mode === 4 ? 4 : parsed.mode === 2 ? 2 : null;
-    const savedAt = typeof parsed.savedAt === "number" ? parsed.savedAt : 0;
-    if (!mode || code.length !== 5 || Date.now() - savedAt > ACTIVE_GAME_TTL_MS) {
-      clearInterruptedGame();
-      return null;
-    }
-    return {
-      isHost: !!parsed.isHost,
-      code,
-      mode,
-      walls: typeof parsed.walls === "number" ? parsed.walls : defaultWallsFor(mode),
-      rounds: typeof parsed.rounds === "number" ? parsed.rounds : 3,
-      quickMatch: !!parsed.quickMatch,
-      ranked: !!parsed.ranked,
-      savedAt,
-    };
-  } catch {
-    clearInterruptedGame();
-    return null;
-  }
-}
 
 function Home() {
   const [ident, setIdent] = useState<Identity | null>(null);
