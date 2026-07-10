@@ -29,7 +29,8 @@ const WARM_CONFETTI = [
 ];
 import {
   applyForfeit, applyMove, defaultWallsFor, initialState, legalPawnMoves, newRound, winsNeeded,
-  type GameState, type Mode, type Move, type PlayerId,
+  goalsFor, reachedGoal, shortestPathToGoal, isBlocked, BOARD,
+  type GameState, type Goal, type Mode, type Move, type PlayerId, type Wall,
 } from "@/lib/quoridor";
 import {
   createGuestRoom, createHostRoom, createSpectatorRoom, makeRoomCode,
