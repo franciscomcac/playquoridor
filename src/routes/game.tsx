@@ -27,9 +27,33 @@ const WARM_CONFETTI = [
   "oklch(0.88 0.06 80)",   // pale cream
   "oklch(0.66 0.14 70)",   // amber
 ];
+
+// Best neighbour step toward `goal` under `walls` — returns undefined if
+// no legal neighbour reduces the shortest-path distance.
+function stepTowardGoal(
+  from: [number, number],
+  goal: Goal,
+  walls: Wall[],
+): [number, number] | undefined {
+  if (reachedGoal(from, goal)) return from;
+  const baseD = shortestPathToGoal(from, goal, walls);
+  if (!isFinite(baseD)) return undefined;
+  const dirs: Array<[number, number]> = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+  let best: [number, number] | undefined;
+  let bestD = baseD;
+  for (const [dr, dc] of dirs) {
+    const nr = from[0] + dr, nc = from[1] + dc;
+    if (nr < 0 || nr >= BOARD || nc < 0 || nc >= BOARD) continue;
+    if (isBlocked(from[0], from[1], nr, nc, walls)) continue;
+    const d = shortestPathToGoal([nr, nc], goal, walls);
+    if (d < bestD) { bestD = d; best = [nr, nc]; }
+  }
+  return best;
+}
 import {
   applyForfeit, applyMove, defaultWallsFor, initialState, legalPawnMoves, newRound, winsNeeded,
-  type GameState, type Mode, type Move, type PlayerId,
+  goalsFor, reachedGoal, shortestPathToGoal, isBlocked, BOARD,
+  type GameState, type Goal, type Mode, type Move, type PlayerId, type Wall,
 } from "@/lib/quoridor";
 import {
   createGuestRoom, createHostRoom, createSpectatorRoom, makeRoomCode,
@@ -3719,6 +3743,9 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
   // Per-bot last-known opponent pawn positions (fog mode). Bot only "sees"
   // opponents in its own line of sight; otherwise plans against stale info.
   const botKnownPawnsRef = useRef<Map<PlayerId, Map<PlayerId, [number, number]>>>(new Map());
+  // Per-bot move-count of the game state at the moment it last "saw" each
+  // opponent — used to infer how many hidden turns to advance the guess by.
+  const botKnownMoveCountRef = useRef<Map<PlayerId, Map<PlayerId, number>>>(new Map());
   useEffect(() => {
     try { localStorage.setItem("quoridor:fogOfWalls", fogOn ? "1" : "0"); } catch { /* ignore */ }
   }, [fogOn]);
@@ -3726,6 +3753,8 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
     if ((state.moveCount ?? 0) === 0) {
       revealedRef.current = new Set();
       botRevealedRef.current = new Map();
+      botKnownPawnsRef.current = new Map();
+      botKnownMoveCountRef.current = new Map();
     }
   }, [state.moveCount]);
   useEffect(() => {
@@ -3774,20 +3803,45 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
       // Compute bot's own sight cells to decide which opponents it can see.
       const sight = computeVisibleCells(state, slot);
       const known = new Map(botKnownPawnsRef.current.get(slot) ?? new Map());
+      const knownMc = new Map(botKnownMoveCountRef.current.get(slot) ?? new Map());
       const pawns = state.pawns.slice() as [number, number][];
+      const goals = goalsFor(state.mode);
       for (let pid = 0; pid < state.pawns.length; pid++) {
         const p = state.pawns[pid];
         if (!p) continue;
-        if (pid === slot) { known.set(pid as PlayerId, p); continue; }
+        if (pid === slot) {
+          known.set(pid as PlayerId, p);
+          knownMc.set(pid as PlayerId, state.moveCount ?? 0);
+          continue;
+        }
         const idx = p[0] * 9 + p[1];
         if (sight.has(idx)) {
           known.set(pid as PlayerId, p);
+          knownMc.set(pid as PlayerId, state.moveCount ?? 0);
         } else {
-          const last = known.get(pid as PlayerId);
-          if (last) pawns[pid] = last;
+          // Not visible — infer position by advancing the last-known
+          // spot along its shortest path to its goal, using only walls
+          // the bot has personally seen. Rough logic: bot assumes the
+          // opponent shuffled toward its goal each hidden turn.
+          const last = known.get(pid as PlayerId) as [number, number] | undefined;
+          if (last) {
+            const goal = goals[pid];
+            const lastMc = knownMc.get(pid as PlayerId) ?? state.moveCount ?? 0;
+            const hiddenTurns = Math.max(0, Math.min(6, (state.moveCount ?? 0) - lastMc));
+            let guess: [number, number] = last;
+            if (goal) {
+              for (let s = 0; s < hiddenTurns; s++) {
+                const next = stepTowardGoal(guess, goal, filteredWalls);
+                if (!next || (next[0] === guess[0] && next[1] === guess[1])) break;
+                guess = next;
+              }
+            }
+            pawns[pid] = guess;
+          }
         }
       }
       botKnownPawnsRef.current.set(slot, known);
+      botKnownMoveCountRef.current.set(slot, knownMc);
       botState = { ...state, walls: filteredWalls, pawns };
       botDifficulty = Math.min(difficulty, 0.35);
     }
