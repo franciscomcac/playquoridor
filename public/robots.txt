@@ -1,4 +1,6 @@
 User-agent: *
 Allow: /
+Disallow: /accounts/
+Disallow: /register
 
 Sitemap: https://playquoridor.online/sitemap.xml

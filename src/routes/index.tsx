@@ -250,7 +250,11 @@ function Lobby() {
           className="pointer-events-none absolute left-1/2 top-[16%] h-[340px] w-[620px] -translate-x-1/2"
           style={{ background: "radial-gradient(closest-side,rgba(245,165,36,0.14),transparent 68%)", opacity: 0.6 }}
         />
-        <h1 className="relative m-0 inline-flex items-start gap-2 text-[44px] font-bold leading-none tracking-[-0.035em] sm:gap-4 sm:text-[66px]">
+        <h1 className="sr-only">Play Quoridor Online — Free Multiplayer Board Game</h1>
+        <div
+          role="presentation"
+          className="relative m-0 inline-flex items-start gap-2 text-[44px] font-bold leading-none tracking-[-0.035em] sm:gap-4 sm:text-[66px]"
+        >
           <span>play<span className="text-[#f5a524]">quoridor</span>.online</span>
           <span
             aria-label="Beta"
@@ -258,7 +262,7 @@ function Lobby() {
           >
             Beta
           </span>
-        </h1>
+        </div>
         {/* Desktop / signed-in mobile: green Play Now. Signed-out mobile gets a Sign in CTA instead. */}
         <div className={"relative " + (signedIn ? "" : "hidden sm:block")}>
           <button
