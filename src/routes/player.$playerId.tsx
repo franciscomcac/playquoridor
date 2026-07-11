@@ -8,7 +8,7 @@ export const Route = createFileRoute("/player/$playerId")({
     meta: [
       { title: "Player profile · playquoridor.online" },
       { name: "description", content: "Public Quoridor player profile: rating, record, and recent matches." },
-      { name: "robots", content: "noindex" },
+      { name: "robots", content: "noindex,follow" },
     ],
   }),
   component: PlayerPage,
