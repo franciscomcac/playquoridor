@@ -42,6 +42,56 @@ export function familyOf(slug: string): { familyId: string; level: number; maxLe
   return SLUG_INDEX.get(slug) ?? null;
 }
 
+// Extract the numeric threshold from a slug like "win_100" → 100. Returns
+// null if no trailing number is present.
+export function slugThreshold(slug: string): number | null {
+  const m = slug.match(/_(\d+)$/);
+  return m ? Number(m[1]) : null;
+}
+
+export type PlayerProgressStats = {
+  wins: number;
+  walls_placed: number;
+  matches: number;
+  rating: number;
+};
+
+// Compute progress toward the next tier of a family. Returns null when we
+// don't have a metric for this family (e.g. puzzles, social).
+export type FamilyProgress = {
+  current: number;    // player's current stat value
+  prev: number;       // threshold of the last unlocked tier (0 if none)
+  next: number;       // threshold of the next tier
+  pct: number;        // 0..100 progress between prev and next
+  unit: string;       // display label (e.g. "walls", "wins", "ELO")
+};
+
+export function familyProgress(
+  familyId: string,
+  slugs: string[],
+  currentLevel: number,
+  stats: PlayerProgressStats | null,
+): FamilyProgress | null {
+  if (!stats) return null;
+  if (currentLevel >= slugs.length) return null; // fully maxed
+  const nextSlug = slugs[currentLevel];
+  const next = slugThreshold(nextSlug);
+  if (next == null) return null;
+  const prev = currentLevel > 0 ? (slugThreshold(slugs[currentLevel - 1]) ?? 0) : 0;
+  let current: number;
+  let unit: string;
+  switch (familyId) {
+    case "wins":    current = stats.wins;         unit = "wins";  break;
+    case "walls":   current = stats.walls_placed; unit = "walls"; break;
+    case "matches": current = stats.matches;      unit = "played"; break;
+    case "rank":    current = stats.rating;       unit = "ELO";   break;
+    default: return null;
+  }
+  const span = Math.max(1, next - prev);
+  const pct = Math.max(0, Math.min(100, ((current - prev) / span) * 100));
+  return { current, prev, next, pct, unit };
+}
+
 export type FamilyView = {
   family: Family;
   currentLevel: number;              // 0 if none unlocked yet
