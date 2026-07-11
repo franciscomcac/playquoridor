@@ -4,7 +4,7 @@ import { LobbyChrome } from "@/components/LobbyChrome";
 import { ConstellationSigil, type SigilTier } from "@/components/ConstellationSigil";
 import { supabase } from "@/integrations/supabase/client";
 import { requireRealUser } from "@/lib/auth-gate";
-import { FAMILIES, familyOf, type Family } from "@/lib/achievement-families";
+import { FAMILIES, familyOf, familyProgress, type Family, type PlayerProgressStats } from "@/lib/achievement-families";
 
 type Achievement = {
   slug: string;
@@ -62,6 +62,7 @@ function AchievementsPage() {
   const [meLoading, setMeLoading] = useState(true);
   const [signedIn, setSignedIn] = useState(false);
   const [filter, setFilter] = useState<"all" | "unlocked" | "locked">("all");
+  const [stats, setStats] = useState<PlayerProgressStats | null>(null);
 
   useEffect(() => {
     void supabase
@@ -83,6 +84,12 @@ function AchievementsPage() {
       const m = new Map<string, string>();
       for (const u of (data ?? []) as Unlock[]) m.set(u.achievement_slug, u.unlocked_at);
       setUnlocks(m);
+      const { data: s } = await supabase
+        .from("player_stats")
+        .select("wins,walls_placed,matches,rating")
+        .eq("player_id", me.playerId)
+        .maybeSingle();
+      if (s) setStats(s as PlayerProgressStats);
     });
   }, []);
 
@@ -199,6 +206,7 @@ function AchievementsPage() {
               {familyCards.map(({ fam, src, currentLevel, maxLevel, nextSlug }) => {
                 const unlocked = currentLevel > 0;
                 const nextMeta = nextSlug ? (catalog!.find((c) => c.slug === nextSlug) ?? null) : null;
+                const progress = familyProgress(fam.id, fam.slugs, currentLevel, stats);
                 return (
                   <div
                     key={fam.id}
@@ -228,6 +236,23 @@ function AchievementsPage() {
                     <span className="mt-1 font-mono text-[10px] uppercase tracking-widest text-zinc-500">
                       Lv {currentLevel} / {maxLevel}
                     </span>
+                    {progress && (
+                      <div className="mt-2 w-full">
+                        <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-white/[0.06]">
+                          <div
+                            className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400 transition-all"
+                            style={{ width: `${progress.pct}%` }}
+                          />
+                        </div>
+                        <div className="mt-1 flex items-center justify-between font-mono text-[9px] uppercase tracking-widest text-zinc-500">
+                          <span>{Math.min(progress.current, progress.next).toLocaleString()} / {progress.next.toLocaleString()}</span>
+                          <span className="text-zinc-600">{progress.unit}</span>
+                        </div>
+                      </div>
+                    )}
+                    {!progress && currentLevel >= maxLevel && (
+                      <span className="mt-2 font-mono text-[9px] uppercase tracking-widest text-emerald-400/80">Maxed</span>
+                    )}
                   </div>
                 );
               })}
