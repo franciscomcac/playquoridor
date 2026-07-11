@@ -10,14 +10,7 @@ export function Header({ ident, onOpenSettings }: { ident: Identity | null; onOp
   return (
     <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
       <Link to="/" className="flex min-w-0 items-center gap-3" aria-label="playquoridor.online — home">
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[9px] border border-[#2a2a31] bg-gradient-to-br from-[#1d1d22] to-[#101013]">
-          <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden>
-            <rect x="1" y="1" width="7" height="7" rx="1.5" fill="#f5a524" />
-            <rect x="10" y="1" width="7" height="7" rx="1.5" fill="#2e2e36" />
-            <rect x="1" y="10" width="7" height="7" rx="1.5" fill="#2e2e36" />
-            <rect x="10" y="10" width="7" height="7" rx="1.5" fill="#2e2e36" />
-          </svg>
-        </span>
+        <img src="/favicon.svg" alt="playquoridor.online logo" width={36} height={36} className="h-9 w-9 shrink-0" />
         <span className="truncate text-[15px] font-bold">
           playquoridor<span className="text-[#5c5c66]">.online</span>
         </span>

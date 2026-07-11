@@ -1613,7 +1613,8 @@ function GameScreen({
           onRematch={rematchAction}
           onRequeue={onRequeue}
           onNewMatch={onRequeue ?? newMatchAction}
-          onLeave={onLeave} />
+          onLeave={onLeave}
+          showRematch={false} />
       )}
 
       {rankUp && (
@@ -1652,15 +1653,9 @@ function GameScreen({
             onConfirm={forfeit}
             disabled={status !== "connected" || state.winner !== null || state.matchWinner !== null || !state.active[you]}
           />
-          <div className="flex gap-2">
-            <button onClick={rematchAction} disabled={status !== "connected" || !!coinflip?.animating}
-              className="flex-1 rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary disabled:opacity-40">
-              Rematch
-            </button>
-            <button onClick={handleLeave} className="flex-1 rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary">
-              Leave
-            </button>
-          </div>
+          <button onClick={handleLeave} className="rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary">
+            Leave
+          </button>
           {onRequeue && (
             <button onClick={onRequeue}
               className="rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-primary hover:bg-primary/20">
@@ -2929,12 +2924,13 @@ function WinOverlay({ state, you, matchOver, onPrimary, primaryLabel, onLeave, n
   );
 }
 
-function EndScreen({ state, you, onRematch, onNewMatch, onRequeue, onLeave, nameOf, snapshot }: {
+function EndScreen({ state, you, onRematch, onNewMatch, onRequeue, onLeave, nameOf, snapshot, showRematch = true }: {
   state: GameState; you: PlayerId;
   onRematch: () => void; onNewMatch: () => void; onRequeue?: () => void;
   onLeave: () => void;
   nameOf: (s: PlayerId) => string;
   snapshot: MatchSnapshot | null;
+  showRematch?: boolean;
 }) {
   const winner = state.matchWinner as PlayerId;
   const youWon = winner === you;
@@ -2996,9 +2992,11 @@ function EndScreen({ state, you, onRematch, onNewMatch, onRequeue, onLeave, name
           <button onClick={onNewMatch} className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5">
             {onRequeue ? "Find new match" : "New match"}
           </button>
-          <button onClick={onRematch} className="rounded-lg border border-primary/50 bg-primary/10 px-5 py-2 text-sm font-semibold text-primary transition-transform hover:-translate-y-0.5 hover:bg-primary/20">
-            Rematch 🔁
-          </button>
+          {showRematch && (
+            <button onClick={onRematch} className="rounded-lg border border-primary/50 bg-primary/10 px-5 py-2 text-sm font-semibold text-primary transition-transform hover:-translate-y-0.5 hover:bg-primary/20">
+              Rematch 🔁
+            </button>
+          )}
           <ShareResultButton state={state} you={you} nameOf={nameOf} matchOver />
           <DownloadGifButton snapshot={snapshot} />
           <AnalyzeGameButton snapshot={snapshot} />

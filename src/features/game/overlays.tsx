@@ -27,25 +27,80 @@ export function AbortedOverlay() {
 
 export function WaitingOverlay({ count, expected, isHost, onStart }: { count: number; expected: number; isHost: boolean; onStart: () => void }) {
   return (
-    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-background/55 backdrop-blur-[3px]">
-      <div className="relative grid h-16 w-16 place-items-center">
-        {[0, 1].map((i) => (
+    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-background/60 backdrop-blur-[4px] overflow-hidden">
+      {/* Sweeping radar glow */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-60"
+        style={{
+          background:
+            "conic-gradient(from 0deg at 50% 50%, rgba(16,185,129,0) 0deg, rgba(16,185,129,0.18) 40deg, rgba(16,185,129,0) 80deg, rgba(16,185,129,0) 360deg)",
+          animation: "wo-sweep 3.6s linear infinite",
+          maskImage: "radial-gradient(circle at center, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 55%)",
+          WebkitMaskImage: "radial-gradient(circle at center, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 55%)",
+        }}
+      />
+
+      <div className="relative grid h-28 w-28 place-items-center">
+        {/* Concentric ripples */}
+        {[0, 1, 2].map((i) => (
           <span
             key={i}
-            className="absolute inset-0 rounded-full border border-emerald-400/50"
-            style={{ animation: `qm-ping 2.2s cubic-bezier(0,0,0.2,1) ${i * 1.1}s infinite` }}
+            className="absolute inset-0 rounded-full border border-emerald-400/60"
+            style={{ animation: `wo-ripple 2.6s cubic-bezier(0,0.2,0.2,1) ${i * 0.86}s infinite` }}
           />
         ))}
-        <span className="relative z-10 h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_16px_4px_rgba(16,185,129,0.6)]" />
+        {/* Rotating dashed ring */}
+        <span
+          aria-hidden
+          className="absolute inset-1 rounded-full border-2 border-dashed border-emerald-400/50"
+          style={{ animation: "wo-spin 8s linear infinite" }}
+        />
+        {/* Orbiting pawn dots */}
+        <span
+          aria-hidden
+          className="absolute inset-0"
+          style={{ animation: "wo-spin 3.2s linear infinite" }}
+        >
+          <span className="absolute left-1/2 top-0 h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-emerald-400 shadow-[0_0_14px_3px_rgba(16,185,129,0.75)]" />
+          <span className="absolute bottom-0 left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-emerald-300/80 shadow-[0_0_10px_2px_rgba(16,185,129,0.5)]" />
+        </span>
+        {/* Center core */}
+        <span
+          className="relative z-10 grid h-8 w-8 place-items-center rounded-full bg-emerald-400/15"
+          style={{ animation: "wo-pulse 1.6s ease-in-out infinite" }}
+        >
+          <span className="h-3 w-3 rounded-full bg-emerald-400 shadow-[0_0_18px_5px_rgba(16,185,129,0.75)]" />
+        </span>
       </div>
-      <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.32em] text-emerald-400 drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
+
+      <p className="mt-6 text-[11px] font-semibold uppercase tracking-[0.4em] text-emerald-400 drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
         <span className="qm-dots">Waiting for players</span>
       </p>
-      <p className="mt-1.5 font-[IBM_Plex_Mono,monospace] text-[11px] text-zinc-300/85 drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
+
+      {/* Slot pips */}
+      <div className="mt-3 flex items-center gap-2">
+        {Array.from({ length: expected }, (_, i) => {
+          const filled = i < count;
+          return (
+            <span
+              key={i}
+              className={
+                "h-2.5 w-2.5 rounded-full transition-colors " +
+                (filled
+                  ? "bg-emerald-400 shadow-[0_0_10px_2px_rgba(16,185,129,0.7)]"
+                  : "border border-emerald-400/40 bg-transparent")
+              }
+              style={filled ? undefined : { animation: `wo-pulse 1.6s ease-in-out ${i * 0.18}s infinite` }}
+            />
+          );
+        })}
+      </div>
+      <p className="mt-2 font-[IBM_Plex_Mono,monospace] text-[11px] text-zinc-300/85 drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
         {count}/{expected} connected
       </p>
       {isHost && count >= 2 && count < expected && (
-        <button onClick={onStart} className="mt-4 rounded-lg bg-emerald-500 px-4 py-2 text-[11px] font-semibold uppercase tracking-widest text-emerald-950 shadow-[0_15px_40px_-15px_rgba(16,185,129,0.7)]">
+        <button onClick={onStart} className="mt-4 rounded-lg bg-emerald-500 px-4 py-2 text-[11px] font-semibold uppercase tracking-widest text-emerald-950 shadow-[0_15px_40px_-15px_rgba(16,185,129,0.7)] transition-transform hover:-translate-y-0.5">
           Start with {count}
         </button>
       )}
