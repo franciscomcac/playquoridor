@@ -158,19 +158,19 @@ function PuzzlePage() {
               disabled={!!transition || !unlocked}
               title={unlocked ? undefined : "Finish the previous puzzle first"}
               className={
-                "flex-1 rounded-xl border px-3 py-1.5 text-left transition disabled:opacity-60 " +
+                "flex-1 min-w-0 rounded-xl border px-2.5 py-1.5 text-left transition disabled:opacity-60 sm:px-3 " +
                 (active
                   ? "border-primary bg-primary/10"
                   : "border-border bg-card hover:bg-secondary/40")
               }
             >
-              <div className="flex items-center justify-between text-[10px] uppercase tracking-widest text-muted-foreground">
-                <span>Puzzle {i + 1}</span>
+              <div className="flex items-center justify-between gap-1 text-[10px] uppercase tracking-[0.15em] text-muted-foreground sm:tracking-widest">
+                <span className="truncate">P{i + 1}<span className="hidden sm:inline">uzzle {""}</span></span>
                 {solved[i]
-                  ? <span className="text-emerald-500">✓ Solved</span>
-                  : !unlocked ? <span>🔒 Locked</span> : null}
+                  ? <span className="text-emerald-500 shrink-0">✓<span className="hidden sm:inline"> Solved</span></span>
+                  : !unlocked ? <span className="shrink-0">🔒</span> : null}
               </div>
-              <div className="text-sm font-semibold">{p.label}</div>
+              <div className="truncate text-sm font-semibold">{p.label}</div>
             </button>
           );
         })}
@@ -326,26 +326,26 @@ function PuzzleBoard({ puzzle, onSolved }: { puzzle: PuzzleEntry; onSolved: () =
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-2">
-      <div className="flex flex-none flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-2">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-none flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-card px-3 py-2 sm:gap-3 sm:px-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Your walls</p>
-            <p className="text-xl font-semibold leading-none">{wallsLeft}</p>
+            <p className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground sm:text-[10px] sm:tracking-[0.25em]">Your walls</p>
+            <p className="text-lg font-semibold leading-none sm:text-xl">{wallsLeft}</p>
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Opp walls</p>
-            <p className="text-xl font-semibold leading-none text-destructive">{oppWallsLeft}</p>
+            <p className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground sm:text-[10px] sm:tracking-[0.25em]">Opp walls</p>
+            <p className="text-lg font-semibold leading-none text-destructive sm:text-xl">{oppWallsLeft}</p>
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Turn</p>
-            <p className={"text-sm font-semibold leading-none " + (oppTurn ? "text-destructive" : "text-emerald-500")}>
+            <p className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground sm:text-[10px] sm:tracking-[0.25em]">Turn</p>
+            <p className={"text-xs font-semibold leading-none sm:text-sm " + (oppTurn ? "text-destructive" : "text-emerald-500")}>
               {oppTurn ? "Opponent…" : "You"}
             </p>
           </div>
         </div>
         <button
           onClick={reset}
-          className="rounded-lg border border-border bg-secondary/40 px-3 py-1.5 text-xs font-medium uppercase tracking-widest hover:bg-secondary"
+          className="ml-auto rounded-lg border border-border bg-secondary/40 px-2.5 py-1 text-[11px] font-medium uppercase tracking-widest hover:bg-secondary sm:px-3 sm:py-1.5 sm:text-xs"
         >
           Reset
         </button>
