@@ -119,9 +119,9 @@ export function pickBotMove(state: GameState, bot: PlayerId, difficulty: number)
   // Titanium engine tier — 2p only, top strength. Falls through on failure.
   if (difficulty >= 0.95 && state.mode === 2) {
     try {
-      const budget = difficulty >= 0.99 ? 550 : 400;
-      const depth = difficulty >= 0.99 ? 5 : 4;
-      const t = pickTitaniumMove(state, bot, { budgetMs: budget, maxDepth: depth, wallBudget: 14 });
+      const budget = difficulty >= 0.99 ? 1200 : 700;
+      const depth = difficulty >= 0.99 ? 6 : 5;
+      const t = pickTitaniumMove(state, bot, { budgetMs: budget, maxDepth: depth, wallBudget: 16 });
       if (t) return t;
     } catch { /* fall through to classic engine */ }
   }
