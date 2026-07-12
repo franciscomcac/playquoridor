@@ -36,7 +36,7 @@ function pickDailyEntries(date: string): PuzzleEntry[] {
   const specs: Array<{ label: string; d: 1 | 2 | 3; seedTag: string }> = [
     { label: "Easy",   d: 1, seedTag: `pool:easy:${idxE}` },
     { label: "Medium", d: 2, seedTag: `pool:med:${idxM}` },
-    { label: "Hard",   d: 3, seedTag: `pool:hard:v2:${idxH}` },
+    { label: "Hard",   d: 3, seedTag: `pool:hard:v3:${idxH}` },
   ];
   return specs.map(({ label, d, seedTag }, i) => {
     const gen = generatePuzzle(seedFromString(`quoridor:${seedTag}`), d);
