@@ -97,16 +97,16 @@ export function generatePuzzle(seed: number, difficulty: 1 | 2 | 3 = 2): Generat
   const goals = goalsFor(mode);
 
   // Wall budget for the human player. Opponent has none (pure race bot).
-  const playerWalls = ({ 1: 4, 2: 3, 3: 2 } as const)[difficulty];
+  const playerWalls = ({ 1: 4, 2: 3, 3: 3 } as const)[difficulty];
   // Opponent bot wall budget. More walls at higher difficulty so the
   // opponent can actively block you back — makes the puzzle interactive
   // rather than a pure race against a straight-line runner.
-  const oppWalls    = ({ 1: 1, 2: 2, 3: 3 } as const)[difficulty];
+  const oppWalls    = ({ 1: 1, 2: 2, 3: 2 } as const)[difficulty];
   // Pre-placed walls to give the board some structure.
   const preWalls    = ({ 1: 2, 2: 4, 3: 6 } as const)[difficulty];
   // How much closer to their goal the opponent starts than you do.
   // Larger = harder (you must wall to catch up in the race).
-  const oppLead     = ({ 1: 0, 2: 1, 3: 2 } as const)[difficulty];
+  const oppLead     = ({ 1: 0, 2: 1, 3: 1 } as const)[difficulty];
 
   const you: Pos = [8, 3 + Math.floor(rng() * 3)];      // row 8, col 3..5
   // Opponent starts oppLead+1 rows below their own start (row 0) to trim
