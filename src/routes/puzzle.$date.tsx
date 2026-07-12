@@ -321,6 +321,7 @@ function PuzzleBoard({ puzzle, onSolved }: { puzzle: PuzzleEntry; onSolved: () =
   };
 
   const wallsLeft = state.wallsLeft[you] ?? 0;
+  const oppWallsLeft = state.wallsLeft[opp] ?? 0;
   const oppTurn = state.turn === opp && status === "playing";
 
   return (
@@ -330,6 +331,10 @@ function PuzzleBoard({ puzzle, onSolved }: { puzzle: PuzzleEntry; onSolved: () =
           <div>
             <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Your walls</p>
             <p className="text-xl font-semibold leading-none">{wallsLeft}</p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Opp walls</p>
+            <p className="text-xl font-semibold leading-none text-destructive">{oppWallsLeft}</p>
           </div>
           <div>
             <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Turn</p>
