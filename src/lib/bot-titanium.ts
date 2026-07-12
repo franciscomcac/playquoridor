@@ -140,7 +140,6 @@ export function pickTitaniumMove(
   const wallBudget = opts.wallBudget ?? 12;
   const maxDepth = opts.maxDepth ?? 4;
   const deadline = Date.now() + budgetMs;
-  const tt = new Map<string, TTEntry>();
   const opp = otherOf(2, me);
 
   const rootMoves = generateMoves(state, me, opp, wallBudget);
@@ -153,9 +152,6 @@ export function pickTitaniumMove(
     if (Date.now() > deadline) throw new Error("timeout");
     if (s.winner !== null) return s.winner === me ? INF / 2 : -INF / 2;
     if (depth === 0) return evalState(s, me);
-    const key = `${depth}:${hashState(s, mover)}`;
-    const cached = tt.get(key);
-    if (cached && cached.depth >= depth) return cached.value;
 
     const isMax = mover === me;
     const opps = isMax ? opp : me;
@@ -163,21 +159,19 @@ export function pickTitaniumMove(
     if (moves.length === 0) return evalState(s, me);
 
     let value = isMax ? -INF : INF;
-    let bestLocal: Move | undefined;
     for (const m of moves) {
       const ns = applyMoveFast(s, mover, m.move);
       if (!ns) continue;
       const v = search(ns, ((mover + 1) % 2) as PlayerId, depth - 1, alpha, beta);
       if (isMax) {
-        if (v > value) { value = v; bestLocal = m.move; }
+        if (v > value) { value = v; }
         if (value > alpha) alpha = value;
       } else {
-        if (v < value) { value = v; bestLocal = m.move; }
+        if (v < value) { value = v; }
         if (value < beta) beta = value;
       }
       if (alpha >= beta) break;
     }
-    tt.set(key, { depth, value, best: bestLocal });
     return value;
   };
 
