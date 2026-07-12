@@ -155,7 +155,7 @@ export function pickBotMove(state: GameState, bot: PlayerId, difficulty: number)
   const bestPawnD = scored[0].d;
   const bestGroup = scored.filter((s) => s.d === bestPawnD);
   const nearBest = scored.filter((s) => s.d <= bestPawnD + 1);
-  const subOptChance = Math.max(0, 0.28 - difficulty * 0.24);
+  const subOptChance = difficulty >= 1 ? 0 : Math.max(0, 0.28 - difficulty * 0.24);
   const pickPawn = (): Move => {
     // Instant win — always take it.
     if (bestPawnD === 0) {
