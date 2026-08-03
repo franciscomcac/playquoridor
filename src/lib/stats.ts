@@ -10,6 +10,9 @@ function openRoomCutoffIso(): string {
   return new Date(Date.now() - OPEN_ROOM_STALE_MS).toISOString();
 }
 
+// Public-safe column list: never selects auth_user_id (account linkage).
+const STATS_COLS = "player_id,matches,wins,losses,pawns_eliminated,walls_placed,forfeits,updated_at,rating,ranked_matches,ranked_wins,ranked_losses";
+
 export type MatchResult = {
   mode: 2 | 4;
   rounds: number;
@@ -172,7 +175,7 @@ export async function bumpMyStats(playerId: string, delta: Partial<{
 }>) {
   try {
     const uid = await ensureAuthSession();
-    const { data: cur } = await supabase.from("player_stats").select("*").eq("player_id", playerId).maybeSingle();
+    const { data: cur } = await supabase.from("player_stats").select(STATS_COLS).eq("player_id", playerId).maybeSingle();
     const base = cur ?? { player_id: playerId, matches: 0, wins: 0, losses: 0, walls_placed: 0, pawns_eliminated: 0, forfeits: 0 };
     const next = {
       player_id: playerId,
@@ -190,7 +193,7 @@ export async function bumpMyStats(playerId: string, delta: Partial<{
 }
 
 export async function fetchMyStats(playerId: string) {
-  const { data } = await supabase.from("player_stats").select("*").eq("player_id", playerId).maybeSingle();
+  const { data } = await supabase.from("player_stats").select(STATS_COLS).eq("player_id", playerId).maybeSingle();
   return data;
 }
 
@@ -219,7 +222,7 @@ export async function fetchMyWinStreak(playerId: string): Promise<number> {
 }
 
 export async function fetchLeaderboard(limit = 20, rankedOnly = true): Promise<LeaderRow[]> {
-  let q = supabase.from("player_stats").select("*");
+  let q = supabase.from("player_stats").select(STATS_COLS);
   // Only players who have finished placement appear on the ladder.
   if (rankedOnly) q = q.gte("ranked_matches", PLACEMENT_GAMES);
   const { data: stats } = await q
@@ -483,7 +486,7 @@ export async function renameMyPlayer(playerId: string, newName: string): Promise
 export async function fetchProfile(playerId: string) {
   const [{ data: p }, { data: s }] = await Promise.all([
     supabase.from("players").select("id,name,country,bio,avatar_color,avatar_url,created_at,name_changed_at").eq("id", playerId).maybeSingle(),
-    supabase.from("player_stats").select("*").eq("player_id", playerId).maybeSingle(),
+    supabase.from("player_stats").select(STATS_COLS).eq("player_id", playerId).maybeSingle(),
   ]);
   let rank: number | null = null;
   if (s && (s as { rating?: number }).rating != null) {
