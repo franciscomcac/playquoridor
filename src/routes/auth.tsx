@@ -7,8 +7,8 @@ import { isOnboarded } from "@/lib/onboarding";
 import { Eye, EyeOff } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
-  validateSearch: (s: Record<string, unknown>) => ({
-    mode: s.mode === "signup" ? ("signup" as const) : ("signin" as const),
+  validateSearch: (s: Record<string, unknown>): { mode?: "signin" | "signup" } => ({
+    mode: s.mode === "signup" ? "signup" : "signin",
   }),
   head: () => ({
     meta: [
@@ -27,7 +27,7 @@ export const Route = createFileRoute("/auth")({
 function AuthPage() {
   const navigate = useNavigate();
   const search = Route.useSearch();
-  const [mode, setMode] = useState<"signin" | "signup">(search.mode);
+  const [mode, setMode] = useState<"signin" | "signup">(search.mode ?? "signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);

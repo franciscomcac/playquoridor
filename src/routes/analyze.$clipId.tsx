@@ -245,7 +245,7 @@ function AnalyzePage() {
         <ExportClipModal open={exportOpen} snapshot={snapshot} onClose={() => setExportOpen(false)} />
       </div>
 
-      <div className="mt-4 grid min-h-0 flex-1 items-start gap-4 lg:grid-cols-[minmax(0,520px)_1fr] lg:overflow-hidden">
+      <div className="mt-4 grid min-h-0 flex-1 content-start items-start gap-4 lg:grid-cols-[minmax(0,520px)_1fr] lg:content-stretch lg:overflow-hidden">
         {/* Board + transport card */}
         <section className="flex min-h-0 flex-col rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.035] to-white/[0.015] p-3 backdrop-blur lg:h-full lg:overflow-hidden">
           <div className="relative mx-auto aspect-square w-full max-w-[480px] overflow-hidden rounded-xl border border-white/10 bg-[#0d0d12]">
