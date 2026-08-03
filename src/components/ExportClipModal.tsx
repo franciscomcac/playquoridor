@@ -345,7 +345,7 @@ export function ExportClipModal({ open, snapshot, onClose, filename }: Props) {
       aria-label="Export clip"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="w-full max-w-lg max-h-[95vh] overflow-y-auto rounded-2xl border border-white/10 bg-zinc-950 p-4 shadow-2xl">
+      <div className="flex max-h-[92dvh] w-full max-w-lg flex-col overflow-y-auto rounded-2xl border border-white/10 bg-zinc-950 p-3 shadow-2xl sm:p-4">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold uppercase tracking-widest text-zinc-300">Export clip</h2>
           <button
@@ -357,17 +357,16 @@ export function ExportClipModal({ open, snapshot, onClose, filename }: Props) {
           </button>
         </div>
 
-        <div className="mt-3 flex flex-col items-center">
-          <div className="rounded-xl border border-white/10 bg-black p-2">
+        <div className="mt-3 flex min-h-0 flex-col items-center">
+          <div className="flex min-h-0 justify-center rounded-xl border border-white/10 bg-black p-2">
             <canvas
               ref={canvasRef}
               width={PREVIEW_W}
               height={PREVIEW_H}
-              className="block rounded-md"
-              style={{ width: PREVIEW_W, height: PREVIEW_H }}
+              className="mx-auto block max-h-[46dvh] w-auto max-w-full rounded-md"
             />
           </div>
-          <p className="mt-2 text-[10px] uppercase tracking-widest text-zinc-500">
+          <p className="mt-2 text-center text-[10px] uppercase tracking-widest text-zinc-500">
             Live preview - 9:16 - {frames.length} frames - Export: 1080x1920 MP4
           </p>
         </div>
