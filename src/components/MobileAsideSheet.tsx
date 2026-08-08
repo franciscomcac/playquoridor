@@ -27,7 +27,7 @@ export function MobileAsideSheet({ chat, chatUnread = 0, children }: Props) {
   return (
     <>
       {/* Desktop: normal aside column */}
-      <aside className="order-2 hidden min-w-0 flex-col gap-3 lg:flex">
+      <aside className="order-2 hidden min-w-0 flex-col gap-3 lg:flex lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:pr-1">
         {children}
         {chat}
       </aside>
@@ -71,7 +71,7 @@ export function MobileAsideSheet({ chat, chatUnread = 0, children }: Props) {
       {sheet !== null && (
         <div className="fixed inset-0 z-40 lg:hidden" aria-modal="true" role="dialog">
           <div className="absolute inset-0 bg-black/60" onClick={() => setSheet(null)} />
-          <div className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl border-t border-border bg-background p-3 shadow-2xl">
+          <div className="absolute inset-x-0 bottom-0 max-h-[85dvh] overflow-y-auto rounded-t-2xl border-t border-border bg-background p-3 shadow-2xl">
             <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-border" />
             <div className="flex items-center justify-between px-1 pb-2">
               <p className="text-[11px] uppercase tracking-[0.3em] text-muted-foreground">
