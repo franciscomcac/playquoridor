@@ -83,6 +83,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:site_name", content: "playquoridor.online" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "google-adsense-account", content: "ca-pub-3338454453132935" },
       { title: "Quoridor Online — Play now, free" },
       { property: "og:title", content: "Quoridor Online — Play now, free" },
       { name: "twitter:title", content: "Quoridor Online — Play now, free" },
