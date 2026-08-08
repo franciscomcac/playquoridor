@@ -38,10 +38,10 @@ export function LobbyChrome({
     <main className="min-h-screen bg-[#09090b] font-[Space_Grotesk,ui-sans-serif,system-ui] text-[#ececf1] antialiased">
       {FONT_LINKS}
       <header className="h-[68px] border-b border-[#1a1a1f]">
-        <div className="mx-auto flex h-full max-w-[1600px] items-center justify-between gap-3 px-4 sm:px-8">
-          <Link to="/" className="flex items-center gap-3">
-            <img src="/favicon.svg" alt="playquoridor.online logo" width={36} height={36} className="h-9 w-9" />
-            <span className="text-[15px] font-bold">
+        <div className="mx-auto grid h-full max-w-[1600px] grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 sm:px-8">
+          <Link to="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <img src="/favicon.svg" alt="playquoridor.online logo" width={36} height={36} className="h-9 w-9 shrink-0" />
+            <span className="truncate text-[14px] font-bold sm:text-[15px]">
               playquoridor<span className="text-[#5c5c66]">.online</span>
             </span>
           </Link>
@@ -64,7 +64,7 @@ export function LobbyChrome({
               );
             })}
           </nav>
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <div className="hidden items-center gap-2 rounded-full border border-[#232329] bg-[#0e0e11] px-3 py-1.5 sm:flex">
               <span className="h-[7px] w-[7px] rounded-full bg-[#2fd575] shadow-[0_0_8px_#2fd575]" />
               <span className="font-[IBM_Plex_Mono,monospace] text-[12px] text-[#a7a7b2]">
@@ -81,15 +81,15 @@ export function LobbyChrome({
           <span className="text-[12px] text-[#5c5c66]">
             © {new Date().getFullYear()} playquoridor.online
           </span>
-          <nav className="flex flex-wrap gap-6 text-[12px]">
-            <Link to="/about" className="text-[#5c5c66] hover:text-[#a7a7b2]">About</Link>
-            <Link to="/blog" className="text-[#5c5c66] hover:text-[#a7a7b2]">Blog</Link>
-            <Link to="/forum" className="text-[#5c5c66] hover:text-[#a7a7b2]">Forum</Link>
-            <Link to="/stats" className="text-[#5c5c66] hover:text-[#a7a7b2]">Leaderboard</Link>
-            <Link to="/puzzle" className="text-[#5c5c66] hover:text-[#a7a7b2]">Puzzles</Link>
-            <a href="mailto:hi@playquoridor.online" className="text-[#5c5c66] hover:text-[#a7a7b2]">Contact</a>
-            <Link to="/terms" className="text-[#5c5c66] hover:text-[#a7a7b2]">Terms</Link>
-            <Link to="/privacy" className="text-[#5c5c66] hover:text-[#a7a7b2]">Privacy</Link>
+          <nav className="-mx-2 flex flex-wrap gap-x-4 gap-y-1 text-[12px] sm:gap-x-5">
+            <Link to="/about" className="px-2 py-2 text-[#5c5c66] hover:text-[#a7a7b2]">About</Link>
+            <Link to="/blog" className="px-2 py-2 text-[#5c5c66] hover:text-[#a7a7b2]">Blog</Link>
+            <Link to="/forum" className="px-2 py-2 text-[#5c5c66] hover:text-[#a7a7b2]">Forum</Link>
+            <Link to="/stats" className="px-2 py-2 text-[#5c5c66] hover:text-[#a7a7b2]">Leaderboard</Link>
+            <Link to="/puzzle" className="px-2 py-2 text-[#5c5c66] hover:text-[#a7a7b2]">Puzzles</Link>
+            <a href="mailto:hi@playquoridor.online" className="px-2 py-2 text-[#5c5c66] hover:text-[#a7a7b2]">Contact</a>
+            <Link to="/terms" className="px-2 py-2 text-[#5c5c66] hover:text-[#a7a7b2]">Terms</Link>
+            <Link to="/privacy" className="px-2 py-2 text-[#5c5c66] hover:text-[#a7a7b2]">Privacy</Link>
           </nav>
         </div>
       </footer>

@@ -1573,7 +1573,7 @@ function GameScreen({
     <div className="mx-auto grid w-full max-w-[1120px] items-start gap-6 px-4 sm:px-6 lg:grid-cols-[minmax(0,720px)_360px]">
       <div
         className="order-1 mx-auto flex w-full min-w-0 flex-col gap-3 pb-20 lg:mx-0 lg:pb-0"
-        style={{ maxWidth: "min(720px, calc(100vh - 12rem))" }}
+        style={{ maxWidth: "min(720px, calc(100dvh - 18rem))" }}
       >
         {state.mode === 4 && <ChaosBanner />}
         {afk && state.winner === null && state.matchWinner === null && (
@@ -2103,7 +2103,7 @@ function CoinflipOverlay({ starter, you, mode, nameOf, playerIdOf }: {
 
         {/* Coin (centered over the banners) */}
         <div
-          className="pointer-events-none absolute left-1/2 top-1/2 h-32 w-32"
+          className="pointer-events-none absolute left-1/2 top-1/2 h-20 w-20 sm:h-32 sm:w-32"
           style={{
             transform: `translate(-50%, -50%) scale(${phase >= 3 ? 1 : 0})`,
             opacity: phase >= 3 ? 1 : 0,
@@ -2120,8 +2120,8 @@ function CoinflipOverlay({ starter, you, mode, nameOf, playerIdOf }: {
               transition: "transform 1.75s cubic-bezier(.16,.85,.24,1)",
             }}
           >
-            <div className="absolute inset-0 grid place-items-center rounded-full text-4xl font-extrabold shadow-[0_10px_30px_rgba(0,0,0,.5)] ring-4 ring-white/25" style={{ ...frontStyle, backfaceVisibility: "hidden" }}>1</div>
-            <div className="absolute inset-0 grid place-items-center rounded-full text-4xl font-extrabold shadow-[0_10px_30px_rgba(0,0,0,.5)] ring-4 ring-white/25" style={{ ...backStyle, backfaceVisibility: "hidden" }}>2</div>
+            <div className="absolute inset-0 grid place-items-center rounded-full text-2xl font-extrabold shadow-[0_10px_30px_rgba(0,0,0,.5)] ring-4 ring-white/25 sm:text-4xl" style={{ ...frontStyle, backfaceVisibility: "hidden" }}>1</div>
+            <div className="absolute inset-0 grid place-items-center rounded-full text-2xl font-extrabold shadow-[0_10px_30px_rgba(0,0,0,.5)] ring-4 ring-white/25 sm:text-4xl" style={{ ...backStyle, backfaceVisibility: "hidden" }}>2</div>
           </div>
         </div>
       </div>
@@ -3554,7 +3554,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
     <div className="mx-auto grid w-full max-w-[1120px] items-start gap-6 px-4 sm:px-6 lg:grid-cols-[minmax(0,720px)_360px]">
       <div
         className="order-1 mx-auto flex w-full min-w-0 flex-col gap-3 pb-20 lg:mx-0 lg:pb-0"
-        style={{ maxWidth: "min(720px, calc(100vh - 12rem))" }}
+        style={{ maxWidth: "min(720px, calc(100dvh - 18rem))" }}
       >
         <PlayerBanners state={state} you={YOU} nameOf={nameOf} playerIdOf={playerIdOf} placement="top" />
         <div className="flex">
