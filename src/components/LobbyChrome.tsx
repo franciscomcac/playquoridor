@@ -1,4 +1,4 @@
-import { Link, useLocation } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AccountNav } from "@/components/AccountNav";
 
@@ -11,8 +11,6 @@ const FONT_LINKS = (
     />
   </>
 );
-
-const NAV: ReadonlyArray<{ to: string; label: string }> = [];
 
 export function LobbyChrome({
   children,
@@ -31,8 +29,6 @@ export function LobbyChrome({
     return () => clearInterval(t);
   }, [online]);
   const shownOnline = online ?? driftOnline;
-  const loc = useLocation();
-  const path = loc.pathname;
 
   return (
     <main className="min-h-screen bg-[#09090b] font-[Space_Grotesk,ui-sans-serif,system-ui] text-[#ececf1] antialiased">
@@ -45,25 +41,6 @@ export function LobbyChrome({
               playquoridor<span className="text-[#5c5c66]">.online</span>
             </span>
           </Link>
-          <nav className="hidden items-center gap-2 md:flex">
-            {NAV.map((n) => {
-              const on = n.to === "/" ? path === "/" : path.startsWith(n.to);
-              return (
-                <Link
-                  key={n.to}
-                  to={n.to}
-                  className={
-                    "rounded-lg px-3 py-2 text-[13.5px] font-medium " +
-                    (on
-                      ? "bg-[#17171b] text-[#f5a524]"
-                      : "text-[#a7a7b2] hover:bg-[#17171b] hover:text-[#ececf1]")
-                  }
-                >
-                  {n.label}
-                </Link>
-              );
-            })}
-          </nav>
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <div className="hidden items-center gap-2 rounded-full border border-[#232329] bg-[#0e0e11] px-3 py-1.5 sm:flex">
               <span className="h-[7px] w-[7px] rounded-full bg-[#2fd575] shadow-[0_0_8px_#2fd575]" />
