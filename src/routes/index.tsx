@@ -536,7 +536,7 @@ function SeoFaq() {
     },
   ];
   return (
-    <section aria-labelledby="faq-heading" className="mx-auto mt-32 max-w-2xl px-8 pb-16 text-[12.5px] text-muted-foreground/80">
+    <section aria-labelledby="faq-heading" className="mx-auto mt-14 max-w-3xl px-4 pb-10 text-[12.5px] text-muted-foreground/80 sm:px-8">
       <h2 id="faq-heading" className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[#5c5c66]">
         Quoridor — frequently asked questions
       </h2>
