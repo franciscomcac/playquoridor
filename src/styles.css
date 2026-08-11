@@ -727,5 +727,69 @@ button:not([data-no-press]):active:not(:disabled) {
   25%  { content: "."; }
   50%  { content: ".."; }
   75%  { content: "..."; }
-  100% { content: ""; }
+}
+
+/* Custom Auth Page Animations */
+.bg-board {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) perspective(1000px) rotateX(60deg) rotateZ(-45deg);
+  width: 200vw;
+  height: 200vh;
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.05) 2px, transparent 2px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 2px, transparent 2px);
+  background-size: 60px 60px;
+  background-position: center center;
+  z-index: 0;
+  opacity: 0.4;
+  animation: boardPan 60s linear infinite;
+  mask-image: radial-gradient(circle at center, black 20%, transparent 60%);
+  -webkit-mask-image: radial-gradient(circle at center, black 20%, transparent 60%);
+}
+
+@keyframes boardPan {
+  0% { background-position: 0 0; }
+  100% { background-position: 600px 600px; }
+}
+
+.glass-panel {
+  background: rgba(15, 15, 20, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.btn-glow {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+.btn-glow::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.8), rgba(168, 85, 247, 0.8));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: -1;
+}
+.btn-glow:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+.btn-glow:hover::before {
+  opacity: 1;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up {
+  opacity: 0;
+  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
