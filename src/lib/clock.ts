@@ -2,9 +2,9 @@
 // callers drive updates on turn transitions and on demand for display.
 
 export type ClockState = {
-  remaining: number[];   // ms left per player, decremented only on turn end
+  remaining: number[]; // ms left per player, decremented only on turn end
   turnStartedAt: number; // wall-clock ms when the current turn began
-  total: number;         // starting budget in ms (used for reset)
+  total: number; // starting budget in ms (used for reset)
 };
 
 export const DEFAULT_CLOCK_MS = 5 * 60 * 1000;
@@ -19,7 +19,12 @@ export function initClocks(mode: number, total = DEFAULT_CLOCK_MS): ClockState {
 
 // Live remaining ms for a given player at time `now`. Only the active
 // player's clock is decremented in real time.
-export function liveRemaining(clocks: ClockState, activeTurn: number, playerId: number, now: number): number {
+export function liveRemaining(
+  clocks: ClockState,
+  activeTurn: number,
+  playerId: number,
+  now: number,
+): number {
   const stored = clocks.remaining[playerId] ?? 0;
   if (playerId !== activeTurn) return Math.max(0, stored);
   return Math.max(0, stored - (now - clocks.turnStartedAt));

@@ -45,8 +45,12 @@ export type ForumPost = {
   author?: ForumAuthor;
 };
 
-async function hydrateAuthors<T extends { author_player_id: string | null; author_id: string }>(rows: T[]): Promise<(T & { author: ForumAuthor })[]> {
-  const ids = Array.from(new Set(rows.map((r) => r.author_player_id).filter((x): x is string => !!x)));
+async function hydrateAuthors<T extends { author_player_id: string | null; author_id: string }>(
+  rows: T[],
+): Promise<(T & { author: ForumAuthor })[]> {
+  const ids = Array.from(
+    new Set(rows.map((r) => r.author_player_id).filter((x): x is string => !!x)),
+  );
   const byId = new Map<string, ForumAuthor>();
   if (ids.length > 0) {
     const { data } = await supabase
@@ -82,7 +86,10 @@ export async function fetchCategories(): Promise<ForumCategory[]> {
   return (data ?? []) as ForumCategory[];
 }
 
-export async function fetchThreadsByCategory(categorySlug: string, limit = 50): Promise<ForumThread[]> {
+export async function fetchThreadsByCategory(
+  categorySlug: string,
+  limit = 50,
+): Promise<ForumThread[]> {
   const { data, error } = await supabase
     .from("forum_threads")
     .select("*")
@@ -105,7 +112,11 @@ export async function fetchRecentThreads(limit = 8): Promise<ForumThread[]> {
 }
 
 export async function fetchThread(id: string): Promise<ForumThread | null> {
-  const { data, error } = await supabase.from("forum_threads").select("*").eq("id", id).maybeSingle();
+  const { data, error } = await supabase
+    .from("forum_threads")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
   if (error) throw error;
   if (!data) return null;
   const [hydrated] = await hydrateAuthors([data as ForumThread]);
@@ -134,7 +145,11 @@ export async function currentPlayerId(): Promise<string | null> {
   return data?.id ?? null;
 }
 
-export async function createThread(input: { categorySlug: string; title: string; body: string }): Promise<{ id: string } | { error: string }> {
+export async function createThread(input: {
+  categorySlug: string;
+  title: string;
+  body: string;
+}): Promise<{ id: string } | { error: string }> {
   const { data: u } = await supabase.auth.getUser();
   const uid = u.user?.id;
   if (!uid) return { error: "You must be signed in to post." };
@@ -142,7 +157,8 @@ export async function createThread(input: { categorySlug: string; title: string;
   const title = input.title.trim();
   const body = input.body.trim();
   if (title.length < 3 || title.length > 140) return { error: "Title must be 3–140 characters." };
-  if (body.length < 1 || body.length > 8000) return { error: "Post body must be 1–8000 characters." };
+  if (body.length < 1 || body.length > 8000)
+    return { error: "Post body must be 1–8000 characters." };
   const { data, error } = await supabase
     .from("forum_threads")
     .insert({
@@ -158,7 +174,10 @@ export async function createThread(input: { categorySlug: string; title: string;
   return { id: data!.id as string };
 }
 
-export async function createReply(input: { threadId: string; body: string }): Promise<{ id: string } | { error: string }> {
+export async function createReply(input: {
+  threadId: string;
+  body: string;
+}): Promise<{ id: string } | { error: string }> {
   const { data: u } = await supabase.auth.getUser();
   const uid = u.user?.id;
   if (!uid) return { error: "You must be signed in to reply." };
@@ -198,10 +217,7 @@ export async function isAdminOrMod(): Promise<boolean> {
   const { data: u } = await supabase.auth.getUser();
   const uid = u.user?.id;
   if (!uid) return false;
-  const { data } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", uid);
+  const { data } = await supabase.from("user_roles").select("role").eq("user_id", uid);
   return (data ?? []).some((r) => r.role === "admin" || r.role === "moderator");
 }
 

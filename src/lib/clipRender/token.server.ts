@@ -42,7 +42,9 @@ export async function signClipToken(req: ClipRequest, ttlSeconds = 300): Promise
     nonce: b64urlEncode(crypto.getRandomValues(new Uint8Array(9))),
   };
   const payloadBytes = enc.encode(JSON.stringify(payload));
-  const sig = new Uint8Array(await crypto.subtle.sign("HMAC", await key(), payloadBytes as BufferSource));
+  const sig = new Uint8Array(
+    await crypto.subtle.sign("HMAC", await key(), payloadBytes as BufferSource),
+  );
   return `${b64urlEncode(payloadBytes)}.${b64urlEncode(sig)}`;
 }
 
@@ -51,7 +53,12 @@ export async function verifyClipToken(token: string): Promise<ClipTokenPayload |
   if (dot <= 0 || dot === token.length - 1) return null;
   const payloadBytes = b64urlDecode(token.slice(0, dot));
   const sig = b64urlDecode(token.slice(dot + 1));
-  const ok = await crypto.subtle.verify("HMAC", await key(), sig as BufferSource, payloadBytes as BufferSource);
+  const ok = await crypto.subtle.verify(
+    "HMAC",
+    await key(),
+    sig as BufferSource,
+    payloadBytes as BufferSource,
+  );
   if (!ok) return null;
   let payload: ClipTokenPayload;
   try {

@@ -20,56 +20,117 @@ import { evaluatePostMatch } from "@/lib/achievements";
 // Warm palette for celebratory confetti — browns, creams, blues, yellows
 // pulled from the app's existing tokens (kept in-sync with styles.css).
 const WARM_CONFETTI = [
-  "oklch(0.82 0.16 85)",   // warm gold
-  "oklch(0.72 0.09 75)",   // cream tan
-  "oklch(0.55 0.09 55)",   // deep brown
-  "oklch(0.62 0.14 250)",  // slate blue
-  "oklch(0.88 0.06 80)",   // pale cream
-  "oklch(0.66 0.14 70)",   // amber
+  "oklch(0.82 0.16 85)", // warm gold
+  "oklch(0.72 0.09 75)", // cream tan
+  "oklch(0.55 0.09 55)", // deep brown
+  "oklch(0.62 0.14 250)", // slate blue
+  "oklch(0.88 0.06 80)", // pale cream
+  "oklch(0.66 0.14 70)", // amber
 ];
 
 import {
-  applyForfeit, applyMove, defaultWallsFor, initialState, legalPawnMoves, newRound, winsNeeded,
-  goalsFor, reachedGoal, shortestPathToGoal, stepTowardGoal, isBlocked, BOARD,
-  type GameState, type Goal, type Mode, type Move, type PlayerId, type Wall,
+  applyForfeit,
+  applyMove,
+  defaultWallsFor,
+  initialState,
+  legalPawnMoves,
+  newRound,
+  winsNeeded,
+  goalsFor,
+  reachedGoal,
+  shortestPathToGoal,
+  stepTowardGoal,
+  isBlocked,
+  BOARD,
+  type GameState,
+  type Goal,
+  type Mode,
+  type Move,
+  type PlayerId,
+  type Wall,
 } from "@/lib/quoridor";
 import {
-  loadInterruptedGame, saveInterruptedGame, clearInterruptedGame,
+  loadInterruptedGame,
+  saveInterruptedGame,
+  clearInterruptedGame,
   type SavedGame,
 } from "@/lib/interruptedGame";
 import {
-  WallCounter, AfkBanner, ChaosBanner, EventLog, Footer,
+  WallCounter,
+  AfkBanner,
+  ChaosBanner,
+  EventLog,
+  Footer,
   type EventEntry,
 } from "@/features/game/panels";
 import {
-  AbortedOverlay, WaitingOverlay, ErrorOverlay, MessageOverlay,
-  SignUpNudge, SettingsDrawer,
+  AbortedOverlay,
+  WaitingOverlay,
+  ErrorOverlay,
+  MessageOverlay,
+  SignUpNudge,
+  SettingsDrawer,
 } from "@/features/game/overlays";
 import { ForfeitButton, ResumeMatchPrompt } from "@/features/game/forfeit";
 import { CreateRoom, JoinRoom, SpectateRoom } from "@/features/lobby/rooms";
 import { Header } from "@/features/lobby/Header";
 import {
-  createGuestRoom, createHostRoom, createSpectatorRoom, makeRoomCode,
-  type PeerMessage, type Room, type RosterEntry,
+  createGuestRoom,
+  createHostRoom,
+  createSpectatorRoom,
+  makeRoomCode,
+  type PeerMessage,
+  type Room,
+  type RosterEntry,
 } from "@/lib/peer-room";
 import {
-  getStoredIdentity, setStoredIdentity, restoreIdentityFromAuth, type Identity,
+  getStoredIdentity,
+  setStoredIdentity,
+  restoreIdentityFromAuth,
+  type Identity,
 } from "@/lib/identity";
 import {
-  bumpMyStats, fetchMyStats, fetchMyWinStreak, findOpenRoom, findOpenRoomOlderThan, recordMatch, setMatchEloDelta,
-  registerOpenRoom, removeOpenRoom, updateOpenRoomSeats, applyElo1v1,
+  bumpMyStats,
+  fetchMyStats,
+  fetchMyWinStreak,
+  findOpenRoom,
+  findOpenRoomOlderThan,
+  recordMatch,
+  setMatchEloDelta,
+  registerOpenRoom,
+  removeOpenRoom,
+  updateOpenRoomSeats,
+  applyElo1v1,
 } from "@/lib/stats";
 import {
-  getVolume, initSoundOnGesture, isMuted, play, playWheelSpin, setMuted, setVolume, startSampleLoop,
+  getVolume,
+  initSoundOnGesture,
+  isMuted,
+  play,
+  playWheelSpin,
+  setMuted,
+  setVolume,
+  startSampleLoop,
 } from "@/lib/sound";
-import { humanThinkTimeMs, pickBotMove, pickRankedBotForRating, randomDifficulty, difficultyForRating, type RankedBot } from "@/lib/bot";
+import {
+  humanThinkTimeMs,
+  pickBotMove,
+  pickRankedBotForRating,
+  randomDifficulty,
+  difficultyForRating,
+  type RankedBot,
+} from "@/lib/bot";
 import { computeVisibleWalls, computeVisibleCells } from "@/lib/fog";
 import { randomGamerName } from "@/lib/names";
 import { PlayerBanner } from "@/components/PlayerBanner";
 import { fetchBannerDataMany, fetchAchievementMeta, type BannerData } from "@/lib/stats";
 import { ConstellationSigil, type SigilTier } from "@/components/ConstellationSigil";
 import {
-  DEFAULT_CLOCK_MS, endTurn, formatClock, initClocks, liveRemaining,
+  DEFAULT_CLOCK_MS,
+  endTurn,
+  formatClock,
+  initClocks,
+  liveRemaining,
   type ClockState,
 } from "@/lib/clock";
 
@@ -107,11 +168,19 @@ type View =
   | { name: "create"; mode: Mode; walls: number; rounds: number }
   | { name: "join" }
   | { name: "quick"; mode: Mode; ranked?: boolean }
-  | { name: "game"; isHost: boolean; code: string; mode: Mode; walls: number; rounds: number; quickMatch?: boolean; ranked?: boolean }
+  | {
+      name: "game";
+      isHost: boolean;
+      code: string;
+      mode: Mode;
+      walls: number;
+      rounds: number;
+      quickMatch?: boolean;
+      ranked?: boolean;
+    }
   | { name: "bot"; mode: Mode; difficulty: number; opponentNames: string[]; rankedBot?: RankedBot }
   | { name: "spectate" }
   | { name: "spectating"; code: string };
-
 
 function Home() {
   const [ident, setIdent] = useState<Identity | null>(null);
@@ -125,7 +194,9 @@ function Home() {
     // Only show the aborted animation if we're leaving mid-game.
     if (view.name === "game" || view.name === "bot" || view.name === "spectating") {
       setAborting(true);
-      window.setTimeout(() => { void navigate({ to: "/" }); }, 1350);
+      window.setTimeout(() => {
+        void navigate({ to: "/" });
+      }, 1350);
     } else {
       void navigate({ to: "/" });
     }
@@ -149,12 +220,21 @@ function Home() {
       setIdent(stored);
       try {
         const saved = loadInterruptedGame();
-        if (saved) { setView({ name: "resume", game: saved }); return; }
+        if (saved) {
+          setView({ name: "resume", game: saved });
+          return;
+        }
         const j = sessionStorage.getItem("quoridor:pendingJoin");
         const a = sessionStorage.getItem("quoridor:pendingAction");
-        if (j) { sessionStorage.removeItem("quoridor:pendingJoin"); setPending(`join:${j}`); }
-        else if (a) { sessionStorage.removeItem("quoridor:pendingAction"); setPending(a); }
-        else { void navigate({ to: "/" }); }
+        if (j) {
+          sessionStorage.removeItem("quoridor:pendingJoin");
+          setPending(`join:${j}`);
+        } else if (a) {
+          sessionStorage.removeItem("quoridor:pendingAction");
+          setPending(a);
+        } else {
+          void navigate({ to: "/" });
+        }
       } catch {}
     })();
   }, [navigate]);
@@ -163,76 +243,112 @@ function Home() {
     if (!ident || !pending) return;
     // Clear any lingering Fog of Walls flag; only fog2 turns it back on.
     if (pending !== "fog2") {
-      try { localStorage.setItem("quoridor:fogOfWalls", "0"); } catch { /* ignore */ }
+      try {
+        localStorage.setItem("quoridor:fogOfWalls", "0");
+      } catch {
+        /* ignore */
+      }
     }
     if (pending === "quick2") setView({ name: "quick", mode: 2 });
     else if (pending === "quick4") setView({ name: "quick", mode: 4 });
     else if (pending === "ranked2") setView({ name: "quick", mode: 2, ranked: true });
     else if (pending === "fog2") {
-      try { localStorage.setItem("quoridor:fogOfWalls", "1"); } catch { /* ignore */ }
+      try {
+        localStorage.setItem("quoridor:fogOfWalls", "1");
+      } catch {
+        /* ignore */
+      }
       setView({ name: "quick", mode: 2 });
-    }
-    else if (pending === "create") setView({ name: "create", mode: 2, walls: defaultWallsFor(2), rounds: 3 });
-    else if (pending === "cpu:easy") setView({ name: "bot", mode: 2, difficulty: 0.22, opponentNames: ["Tom"] });
-    else if (pending === "cpu:medium") setView({ name: "bot", mode: 2, difficulty: 0.6, opponentNames: ["Jackeline"] });
-    else if (pending === "cpu:hard") setView({ name: "bot", mode: 2, difficulty: 0.9, opponentNames: ["Rachel"] });
+    } else if (pending === "create")
+      setView({ name: "create", mode: 2, walls: defaultWallsFor(2), rounds: 3 });
+    else if (pending === "cpu:easy")
+      setView({ name: "bot", mode: 2, difficulty: 0.22, opponentNames: ["Tom"] });
+    else if (pending === "cpu:medium")
+      setView({ name: "bot", mode: 2, difficulty: 0.6, opponentNames: ["Jackeline"] });
+    else if (pending === "cpu:hard")
+      setView({ name: "bot", mode: 2, difficulty: 0.9, opponentNames: ["Rachel"] });
     else if (pending.startsWith("join:")) {
       const code = pending.slice(5).toUpperCase();
-      if (code.length === 5) setView({ name: "game", isHost: false, code, mode: 2, walls: 10, rounds: 3 });
-    }
-    else if (pending.startsWith("spectate:")) {
+      if (code.length === 5)
+        setView({ name: "game", isHost: false, code, mode: 2, walls: 10, rounds: 3 });
+    } else if (pending.startsWith("spectate:")) {
       const code = pending.slice(9).toUpperCase();
       if (code.length === 5) setView({ name: "spectating", code });
       else setView({ name: "spectate" });
-    }
-    else if (pending === "spectate") {
+    } else if (pending === "spectate") {
       setView({ name: "spectate" });
     }
     setPending(null);
   }, [ident, pending]);
 
   return (
-    <main className="min-h-screen lg:h-screen lg:overflow-hidden" onPointerDown={() => initSoundOnGesture()}>
+    <main
+      className="min-h-screen lg:h-screen lg:overflow-hidden"
+      onPointerDown={() => initSoundOnGesture()}
+    >
       <div className="mx-auto flex min-h-screen w-full max-w-[1600px] flex-col px-1 py-2 sm:px-6 sm:py-6 lg:h-full lg:min-h-0 lg:py-4">
         <Header onOpenSettings={() => setSettingsOpen(true)} ident={ident} />
 
         {!ident ? (
-          <div className="flex flex-1 items-center justify-center py-4 sm:py-6 text-sm text-muted-foreground">Opening table…</div>
+          <div className="flex flex-1 items-center justify-center py-4 sm:py-6 text-sm text-muted-foreground">
+            Opening table…
+          </div>
         ) : (
-          <div key={view.name} className="view-fade flex flex-1 items-center justify-center py-1 sm:py-6">
+          <div
+            key={view.name}
+            className="view-fade flex flex-1 items-center justify-center py-1 sm:py-6"
+          >
             {view.name === "boot" && (
               <div className="text-sm text-muted-foreground">Opening table…</div>
             )}
             {view.name === "resume" && (
               <ResumeMatchPrompt
                 game={view.game}
-                onReturn={() => setView({
-                  name: "game",
-                  isHost: view.game.isHost,
-                  code: view.game.code,
-                  mode: view.game.mode,
-                  walls: view.game.walls,
-                  rounds: view.game.rounds,
-                  quickMatch: view.game.quickMatch,
-                  ranked: view.game.ranked,
-                })}
-                onAbort={() => { clearInterruptedGame(); void navigate({ to: "/" }); }}
+                onReturn={() =>
+                  setView({
+                    name: "game",
+                    isHost: view.game.isHost,
+                    code: view.game.code,
+                    mode: view.game.mode,
+                    walls: view.game.walls,
+                    rounds: view.game.rounds,
+                    quickMatch: view.game.quickMatch,
+                    ranked: view.game.ranked,
+                  })
+                }
+                onAbort={() => {
+                  clearInterruptedGame();
+                  void navigate({ to: "/" });
+                }}
               />
             )}
             {view.name === "create" && (
               <CreateRoom
-                mode={view.mode} walls={view.walls} rounds={view.rounds}
+                mode={view.mode}
+                walls={view.walls}
+                rounds={view.rounds}
                 setMode={(m) => setView({ ...view, mode: m, walls: defaultWallsFor(m) })}
                 setWalls={(w) => setView({ ...view, walls: w })}
                 setRounds={(r) => setView({ ...view, rounds: r })}
                 onBack={goHome}
-                onStart={(code) => setView({ name: "game", isHost: true, code, mode: view.mode, walls: view.walls, rounds: view.rounds })}
+                onStart={(code) =>
+                  setView({
+                    name: "game",
+                    isHost: true,
+                    code,
+                    mode: view.mode,
+                    walls: view.walls,
+                    rounds: view.rounds,
+                  })
+                }
               />
             )}
             {view.name === "join" && (
               <JoinRoom
                 onBack={goHome}
-                onJoin={(code) => setView({ name: "game", isHost: false, code, mode: 2, walls: 10, rounds: 3 })}
+                onJoin={(code) =>
+                  setView({ name: "game", isHost: false, code, mode: 2, walls: 10, rounds: 3 })
+                }
               />
             )}
             {view.name === "spectate" && (
@@ -255,8 +371,30 @@ function Home() {
                 ranked={!!view.ranked}
                 ident={ident}
                 onBack={goHome}
-                onJoin={(code) => setView({ name: "game", isHost: false, code, mode: view.mode, walls: defaultWallsFor(view.mode), rounds: 3, quickMatch: true, ranked: !!view.ranked })}
-                onHost={(code) => setView({ name: "game", isHost: true, code, mode: view.mode, walls: defaultWallsFor(view.mode), rounds: 3, quickMatch: true, ranked: !!view.ranked })}
+                onJoin={(code) =>
+                  setView({
+                    name: "game",
+                    isHost: false,
+                    code,
+                    mode: view.mode,
+                    walls: defaultWallsFor(view.mode),
+                    rounds: 3,
+                    quickMatch: true,
+                    ranked: !!view.ranked,
+                  })
+                }
+                onHost={(code) =>
+                  setView({
+                    name: "game",
+                    isHost: true,
+                    code,
+                    mode: view.mode,
+                    walls: defaultWallsFor(view.mode),
+                    rounds: 3,
+                    quickMatch: true,
+                    ranked: !!view.ranked,
+                  })
+                }
               />
             )}
             {view.name === "game" && (
@@ -270,37 +408,62 @@ function Home() {
                 initialRounds={view.rounds}
                 quickMatch={view.quickMatch}
                 ranked={view.ranked}
-                onBotFallback={view.ranked && view.mode === 2 ? async () => {
-                  // Ranked queue empty → drop into a ranked bot game whose
-                  // difficulty and stored ELO match the player's rating.
-                  const stats = await fetchMyStats(ident.id).catch(() => null);
-                  const rating = (stats as { rating?: number } | null)?.rating ?? 1000;
-                  const bot = await pickRankedBotForRating(rating);
-                  if (!bot) {
-                    // Extremely defensive fallback — should never happen with 100 seeded bots.
-                    setView({ name: "bot", mode: 2, difficulty: difficultyForRating(rating), opponentNames: [randomGamerName()] });
-                    return;
-                  }
-                  setView({
-                    name: "bot",
-                    mode: 2,
-                    difficulty: bot.difficulty,
-                    // Show the bot's actual stored gamertag so repeat encounters feel real.
-                    opponentNames: [bot.name],
-                    rankedBot: bot,
-                  });
-                } : view.ranked ? undefined : () => setView({
-                  name: "bot",
-                  mode: view.mode,
-                  difficulty: randomDifficulty().value,
-                  opponentNames: Array.from({ length: view.mode - 1 }, () => randomGamerName()),
-                })}
-                onRankedTimeout={view.quickMatch ? () => setView({ name: "quick", mode: view.mode, ranked: view.ranked }) : undefined}
-                onRequeue={view.quickMatch ? () => {
+                onBotFallback={
+                  view.ranked && view.mode === 2
+                    ? async () => {
+                        // Ranked queue empty → drop into a ranked bot game whose
+                        // difficulty and stored ELO match the player's rating.
+                        const stats = await fetchMyStats(ident.id).catch(() => null);
+                        const rating = (stats as { rating?: number } | null)?.rating ?? 1000;
+                        const bot = await pickRankedBotForRating(rating);
+                        if (!bot) {
+                          // Extremely defensive fallback — should never happen with 100 seeded bots.
+                          setView({
+                            name: "bot",
+                            mode: 2,
+                            difficulty: difficultyForRating(rating),
+                            opponentNames: [randomGamerName()],
+                          });
+                          return;
+                        }
+                        setView({
+                          name: "bot",
+                          mode: 2,
+                          difficulty: bot.difficulty,
+                          // Show the bot's actual stored gamertag so repeat encounters feel real.
+                          opponentNames: [bot.name],
+                          rankedBot: bot,
+                        });
+                      }
+                    : view.ranked
+                      ? undefined
+                      : () =>
+                          setView({
+                            name: "bot",
+                            mode: view.mode,
+                            difficulty: randomDifficulty().value,
+                            opponentNames: Array.from({ length: view.mode - 1 }, () =>
+                              randomGamerName(),
+                            ),
+                          })
+                }
+                onRankedTimeout={
+                  view.quickMatch
+                    ? () => setView({ name: "quick", mode: view.mode, ranked: view.ranked })
+                    : undefined
+                }
+                onRequeue={
+                  view.quickMatch
+                    ? () => {
+                        clearInterruptedGame();
+                        setView({ name: "quick", mode: view.mode, ranked: view.ranked });
+                      }
+                    : undefined
+                }
+                onLeave={() => {
                   clearInterruptedGame();
-                  setView({ name: "quick", mode: view.mode, ranked: view.ranked });
-                } : undefined}
-                onLeave={() => { clearInterruptedGame(); goHome(); }}
+                  goHome();
+                }}
               />
             )}
             {view.name === "bot" && (
@@ -329,39 +492,66 @@ function Home() {
   );
 }
 
-function SaveClipButton({ state, you, nameOf, snapshot }: {
-  state: GameState; you: PlayerId; nameOf: (s: PlayerId) => string;
+function SaveClipButton({
+  state,
+  you,
+  nameOf,
+  snapshot,
+}: {
+  state: GameState;
+  you: PlayerId;
+  nameOf: (s: PlayerId) => string;
   snapshot: MatchSnapshot | null;
 }) {
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState<"idle" | "ok" | "err" | "nope">("idle");
-  const label = busy ? "Saving…"
-    : saved === "ok" ? "Clip saved"
-    : saved === "err" ? "Try again"
-    : saved === "nope" ? "Sign in to save"
-    : "Save clip";
+  const label = busy
+    ? "Saving…"
+    : saved === "ok"
+      ? "Clip saved"
+      : saved === "err"
+        ? "Try again"
+        : saved === "nope"
+          ? "Sign in to save"
+          : "Save clip";
   const onClick = async () => {
     setBusy(true);
     try {
       const { data: userData } = await supabase.auth.getUser();
       const u = userData.user;
-      const anon = !u || u.is_anonymous === true || (u.app_metadata?.provider ?? "") === "anonymous";
-      if (!u || anon) { setSaved("nope"); return; }
+      const anon =
+        !u || u.is_anonymous === true || (u.app_metadata?.provider ?? "") === "anonymous";
+      if (!u || anon) {
+        setSaved("nope");
+        return;
+      }
       const { data: p } = await supabase
-        .from("players").select("id").eq("auth_user_id", u.id)
-        .not("onboarded_at", "is", null).order("onboarded_at", { ascending: false })
-        .limit(1).maybeSingle();
+        .from("players")
+        .select("id")
+        .eq("auth_user_id", u.id)
+        .not("onboarded_at", "is", null)
+        .order("onboarded_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
       const winnerName = state.matchWinner !== null ? nameOf(state.matchWinner) : "clip";
       const payload = snapshot ?? JSON.parse(JSON.stringify(state));
       const { error } = await supabase.from("saved_clips").insert({
-        owner_auth: u.id, owner_player_id: p?.id ?? null,
-        match_id: null, mode: state.mode,
+        owner_auth: u.id,
+        owner_player_id: p?.id ?? null,
+        match_id: null,
+        mode: state.mode,
         title: `${winnerName} · ${new Date().toLocaleDateString()}`,
         snapshot: payload,
       });
-      if (error) { setSaved("err"); return; }
-      const { data: all } = await supabase.from("saved_clips")
-        .select("id").eq("owner_auth", u.id).order("created_at", { ascending: false });
+      if (error) {
+        setSaved("err");
+        return;
+      }
+      const { data: all } = await supabase
+        .from("saved_clips")
+        .select("id")
+        .eq("owner_auth", u.id)
+        .order("created_at", { ascending: false });
       const extras = (all ?? []).slice(5).map((c) => c.id);
       if (extras.length) {
         await supabase.from("saved_clips").delete().in("id", extras);
@@ -376,8 +566,11 @@ function SaveClipButton({ state, you, nameOf, snapshot }: {
     }
   };
   return (
-    <button onClick={onClick} disabled={busy}
-      className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary disabled:opacity-60">
+    <button
+      onClick={onClick}
+      disabled={busy}
+      className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary disabled:opacity-60"
+    >
       {label}
     </button>
   );
@@ -404,20 +597,36 @@ function AnalyzeGameButton({ snapshot }: { snapshot: MatchSnapshot | null }) {
   const nav = useNavigate();
   const onClick = () => {
     if (!snapshot) return;
-    try { sessionStorage.setItem("analyze:pending", JSON.stringify(snapshot)); } catch {}
+    try {
+      sessionStorage.setItem("analyze:pending", JSON.stringify(snapshot));
+    } catch {}
     void nav({ to: "/analyze/$clipId", params: { clipId: "local" } });
   };
   return (
-    <button onClick={onClick} disabled={!snapshot || snapshot.rounds.length === 0}
-      className="rounded-lg border border-primary/60 bg-primary/10 px-5 py-2 text-sm font-medium text-primary hover:bg-primary/20 disabled:opacity-60">
+    <button
+      onClick={onClick}
+      disabled={!snapshot || snapshot.rounds.length === 0}
+      className="rounded-lg border border-primary/60 bg-primary/10 px-5 py-2 text-sm font-medium text-primary hover:bg-primary/20 disabled:opacity-60"
+    >
       Analyze with engine
     </button>
   );
 }
 
-function QuickMatch({ mode, ranked, ident, onBack, onJoin, onHost }: {
-  mode: Mode; ranked?: boolean; ident: Identity;
-  onBack: () => void; onJoin: (code: string) => void; onHost: (code: string) => void;
+function QuickMatch({
+  mode,
+  ranked,
+  ident,
+  onBack,
+  onJoin,
+  onHost,
+}: {
+  mode: Mode;
+  ranked?: boolean;
+  ident: Identity;
+  onBack: () => void;
+  onJoin: (code: string) => void;
+  onHost: (code: string) => void;
 }) {
   const [status, setStatus] = useState("Searching…");
   const cancelled = useRef(false);
@@ -430,7 +639,9 @@ function QuickMatch({ mode, ranked, ident, onBack, onJoin, onHost }: {
     // Radar ping loops back-to-back: each play waits for the sample to
     // finish before starting again (no chopping mid-ping).
     const stopLoop = startSampleLoop("searchPing", 0.85);
-    return () => { stopLoop(); };
+    return () => {
+      stopLoop();
+    };
   }, []);
 
   useEffect(() => {
@@ -491,7 +702,9 @@ function QuickMatch({ mode, ranked, ident, onBack, onJoin, onHost }: {
             // will swap the view to guest, tearing that peer session down.
             play("matchFound");
             onJoin(older);
-          } catch { /* transient; try again next tick */ }
+          } catch {
+            /* transient; try again next tick */
+          }
         };
         cedePoll = window.setInterval(tick, 1500);
         // Fire once immediately so a fast second registration also flips.
@@ -534,14 +747,33 @@ function QuickMatch({ mode, ranked, ident, onBack, onJoin, onHost }: {
   );
 }
 
-function SearchingAnimation({ status, ranked, mode, onBack, compact = false }: {
-  status: string; ranked: boolean; mode: Mode; onBack: () => void; compact?: boolean;
+function SearchingAnimation({
+  status,
+  ranked,
+  mode,
+  onBack,
+  compact = false,
+}: {
+  status: string;
+  ranked: boolean;
+  mode: Mode;
+  onBack: () => void;
+  compact?: boolean;
 }) {
   const opponents = Math.max(1, mode - 1);
   return (
-    <div className={"w-full overflow-hidden rounded-3xl border border-emerald-500/20 bg-gradient-to-br from-zinc-950 via-zinc-950 to-emerald-950/30 text-center shadow-[0_30px_80px_-20px_rgba(16,185,129,0.35)] " + (compact ? "max-w-sm p-6" : "max-w-lg p-10")}>
+    <div
+      className={
+        "w-full overflow-hidden rounded-3xl border border-emerald-500/20 bg-gradient-to-br from-zinc-950 via-zinc-950 to-emerald-950/30 text-center shadow-[0_30px_80px_-20px_rgba(16,185,129,0.35)] " +
+        (compact ? "max-w-sm p-6" : "max-w-lg p-10")
+      }
+    >
       {/* Radar */}
-      <div className={"relative mx-auto grid place-items-center " + (compact ? "h-40 w-40" : "h-56 w-56")}>
+      <div
+        className={
+          "relative mx-auto grid place-items-center " + (compact ? "h-40 w-40" : "h-56 w-56")
+        }
+      >
         {[0, 1, 2].map((i) => (
           <span
             key={i}
@@ -567,17 +799,32 @@ function SearchingAnimation({ status, ranked, mode, onBack, compact = false }: {
         <span className="absolute inset-0 rounded-full ring-1 ring-inset ring-emerald-400/15" />
       </div>
 
-      <p className={"text-xs font-semibold uppercase tracking-[0.4em] text-emerald-400 " + (compact ? "mt-5" : "mt-8")}>
+      <p
+        className={
+          "text-xs font-semibold uppercase tracking-[0.4em] text-emerald-400 " +
+          (compact ? "mt-5" : "mt-8")
+        }
+      >
         {ranked ? "Ranked queue" : "Quick match"}
       </p>
-      <p className={"font-semibold tracking-tight text-zinc-50 " + (compact ? "mt-2 text-lg" : "mt-2 text-2xl")}>
+      <p
+        className={
+          "font-semibold tracking-tight text-zinc-50 " +
+          (compact ? "mt-2 text-lg" : "mt-2 text-2xl")
+        }
+      >
         <span className="qm-dots">{status.replace(/…$/, "")}</span>
       </p>
-      <p className="mt-1 text-xs text-zinc-500">Looking for {opponents} player{opponents === 1 ? "" : "s"} nearby</p>
+      <p className="mt-1 text-xs text-zinc-500">
+        Looking for {opponents} player{opponents === 1 ? "" : "s"} nearby
+      </p>
 
       <button
         onClick={onBack}
-        className={"rounded-xl border border-zinc-800 bg-zinc-900/60 px-6 py-2.5 text-xs font-semibold uppercase tracking-widest text-zinc-300 transition-colors hover:bg-zinc-800 " + (compact ? "mt-5" : "mt-8")}
+        className={
+          "rounded-xl border border-zinc-800 bg-zinc-900/60 px-6 py-2.5 text-xs font-semibold uppercase tracking-widest text-zinc-300 transition-colors hover:bg-zinc-800 " +
+          (compact ? "mt-5" : "mt-8")
+        }
       >
         Cancel
       </button>
@@ -632,18 +879,38 @@ function introDurationMs(mode: Mode): number {
 }
 
 function GameScreen({
-  ident, code, isHost, mode: initialMode, initialWalls, initialRounds, onLeave,
-  quickMatch, ranked, onBotFallback, onRankedTimeout, onRequeue,
+  ident,
+  code,
+  isHost,
+  mode: initialMode,
+  initialWalls,
+  initialRounds,
+  onLeave,
+  quickMatch,
+  ranked,
+  onBotFallback,
+  onRankedTimeout,
+  onRequeue,
 }: {
-  ident: Identity; code: string; isHost: boolean; mode: Mode;
-  initialWalls: number; initialRounds: number; onLeave: () => void;
-  quickMatch?: boolean; ranked?: boolean; onBotFallback?: () => void;
+  ident: Identity;
+  code: string;
+  isHost: boolean;
+  mode: Mode;
+  initialWalls: number;
+  initialRounds: number;
+  onLeave: () => void;
+  quickMatch?: boolean;
+  ranked?: boolean;
+  onBotFallback?: () => void;
   onRankedTimeout?: () => void;
   onRequeue?: () => void;
 }) {
   const [status, setStatus] = useState<Status>("connecting");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [presence, setPresence] = useState<{ count: number; expected: number }>({ count: 1, expected: initialMode });
+  const [presence, setPresence] = useState<{ count: number; expected: number }>({
+    count: 1,
+    expected: initialMode,
+  });
   const presenceRef = useRef(presence);
   presenceRef.current = presence;
   const [roster, setRoster] = useState<RosterEntry[]>([]);
@@ -651,11 +918,21 @@ function GameScreen({
   rosterRef.current = roster;
 
   const [slot, setSlot] = useState<PlayerId>(0);
-  const slotRef = useRef<PlayerId>(0); slotRef.current = slot;
+  const slotRef = useRef<PlayerId>(0);
+  slotRef.current = slot;
 
-  const [state, setState] = useState<GameState>(() => initialState(initialMode, initialWalls, initialRounds));
-  const stateRef = useRef(state); stateRef.current = state;
-  const matchHistory = useMatchHistory(state, Array.from({ length: initialMode }, (_, i) => rosterRef.current.find((e) => e.slot === i)?.name ?? `Player ${i + 1}`));
+  const [state, setState] = useState<GameState>(() =>
+    initialState(initialMode, initialWalls, initialRounds),
+  );
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  const matchHistory = useMatchHistory(
+    state,
+    Array.from(
+      { length: initialMode },
+      (_, i) => rosterRef.current.find((e) => e.slot === i)?.name ?? `Player ${i + 1}`,
+    ),
+  );
 
   const [coinflip, setCoinflip] = useState<{ starter: PlayerId; animating: boolean } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -682,7 +959,9 @@ function GameScreen({
       const rm = (s as { ranked_matches?: number } | null)?.ranked_matches;
       preRankedMatchesRef.current = typeof rm === "number" ? rm : 0;
     })();
-    return () => { cancel = true; };
+    return () => {
+      cancel = true;
+    };
   }, [ranked, initialMode, ident.id]);
 
   // Post-match badge unlock queue (shared between online & bot flows).
@@ -714,26 +993,29 @@ function GameScreen({
     window.setTimeout(() => setCoinflip((cf) => (cf ? { ...cf, animating: false } : cf)), dur);
   }, []);
 
-  const hostStartRound = useCallback((base?: GameState) => {
-    const src = base ?? stateRef.current;
-    const active = src.leftMatch.map((l) => !l);
-    const candidates = active.map((v, i) => (v ? i : -1)).filter((i) => i >= 0);
-    const starter = (candidates[Math.floor(Math.random() * candidates.length)] ?? 0) as PlayerId;
-    const rawNs = newRound(src, starter);
-    // Fresh clocks each round; countdown begins once the coinflip settles.
-    const ns: GameState = {
-      ...rawNs,
-      clocks: {
-        remaining: Array.from({ length: rawNs.mode }, () => DEFAULT_CLOCK_MS),
-        turnStartedAt: Date.now() + introDurationMs(rawNs.mode as Mode),
-        total: DEFAULT_CLOCK_MS,
-      },
-    };
-    setState(ns);
-    roomRef.current?.send({ type: "state", payload: ns });
-    roomRef.current?.send({ type: "coinflip", payload: { starter } });
-    startCoinflip(starter);
-  }, [startCoinflip]);
+  const hostStartRound = useCallback(
+    (base?: GameState) => {
+      const src = base ?? stateRef.current;
+      const active = src.leftMatch.map((l) => !l);
+      const candidates = active.map((v, i) => (v ? i : -1)).filter((i) => i >= 0);
+      const starter = (candidates[Math.floor(Math.random() * candidates.length)] ?? 0) as PlayerId;
+      const rawNs = newRound(src, starter);
+      // Fresh clocks each round; countdown begins once the coinflip settles.
+      const ns: GameState = {
+        ...rawNs,
+        clocks: {
+          remaining: Array.from({ length: rawNs.mode }, () => DEFAULT_CLOCK_MS),
+          turnStartedAt: Date.now() + introDurationMs(rawNs.mode as Mode),
+          total: DEFAULT_CLOCK_MS,
+        },
+      };
+      setState(ns);
+      roomRef.current?.send({ type: "state", payload: ns });
+      roomRef.current?.send({ type: "coinflip", payload: { starter } });
+      startCoinflip(starter);
+    },
+    [startCoinflip],
+  );
 
   const hostStartMatch = useCallback(() => {
     matchRecordedRef.current = false;
@@ -742,27 +1024,37 @@ function GameScreen({
     hostStartRound(initialState(mode, totalWalls, totalRounds));
     // Kick every match off with a friendly reminder. Host is the source of
     // truth so the message shows up once for everyone.
-    const sys = { slot: -1, name: "System", text: "Be respectful 🙌 — good luck & have fun.", ts: Date.now() };
+    const sys = {
+      slot: -1,
+      name: "System",
+      text: "Be respectful 🙌 — good luck & have fun.",
+      ts: Date.now(),
+    };
     const sysKey = `sys-greet-${sys.ts}`;
     setChat((prev) => {
       if (prev.some((m) => m.slot === null && m.text === sys.text)) return prev;
-      return [...prev.slice(-99), { key: sysKey, slot: null, name: sys.name, text: sys.text, ts: sys.ts }];
+      return [
+        ...prev.slice(-99),
+        { key: sysKey, slot: null, name: sys.name, text: sys.text, ts: sys.ts },
+      ];
     });
     roomRef.current?.send({ type: "chat", payload: sys });
   }, [hostStartRound]);
 
-  const hostApplyForfeit = useCallback((
-    who: PlayerId,
-    permanent = false,
-    reason: "time" | "forfeit" | "afk" | "left" = "forfeit",
-  ) => {
-    const ns = applyForfeit(stateRef.current, who, permanent);
-    if (!ns) return;
-    if (ns.winner !== null) { ns.endReason = reason; ns.endLoser = who; }
-    setState(ns);
-    roomRef.current?.send({ type: "state", payload: ns });
-    play("pop");
-  }, []);
+  const hostApplyForfeit = useCallback(
+    (who: PlayerId, permanent = false, reason: "time" | "forfeit" | "afk" | "left" = "forfeit") => {
+      const ns = applyForfeit(stateRef.current, who, permanent);
+      if (!ns) return;
+      if (ns.winner !== null) {
+        ns.endReason = reason;
+        ns.endLoser = who;
+      }
+      setState(ns);
+      roomRef.current?.send({ type: "state", payload: ns });
+      play("pop");
+    },
+    [],
+  );
 
   // Explicit leave: notify other players so they get "X left the match" and
   // (in 2-player rooms) an immediate win, instead of a generic disconnect.
@@ -777,23 +1069,30 @@ function GameScreen({
         } else {
           roomRef.current?.send({ type: "leave", payload: { slot: slotRef.current } });
         }
-      } catch { /* best-effort */ }
+      } catch {
+        /* best-effort */
+      }
     }
     // Small delay so the leave/state message actually flushes over the wire
     // before we tear the peer connection down.
-    window.setTimeout(() => { onLeave(); }, 120);
+    window.setTimeout(() => {
+      onLeave();
+    }, 120);
   }, [status, isHost, hostApplyForfeit, onLeave]);
 
   // Host-authoritative ready tracking. Guest clicks send a "ready" message;
   // host writes to local state and broadcasts the canonical list.
-  const markSlotReady = useCallback((slot: PlayerId) => {
-    setReadySlots((prev) => {
-      if (prev.includes(slot)) return prev;
-      const next = [...prev, slot];
-      if (isHost) roomRef.current?.send({ type: "readyState", payload: { slots: next } });
-      return next;
-    });
-  }, [isHost]);
+  const markSlotReady = useCallback(
+    (slot: PlayerId) => {
+      setReadySlots((prev) => {
+        if (prev.includes(slot)) return prev;
+        const next = [...prev, slot];
+        if (isHost) roomRef.current?.send({ type: "readyState", payload: { slots: next } });
+        return next;
+      });
+    },
+    [isHost],
+  );
 
   const requestReady = useCallback(() => {
     if (stateRef.current.winner === null) return;
@@ -807,7 +1106,9 @@ function GameScreen({
   useEffect(() => {
     let cancelled = false;
     const handlers = {
-      onOpen: () => { if (!cancelled) setStatus("waiting"); },
+      onOpen: () => {
+        if (!cancelled) setStatus("waiting");
+      },
       onPresence: (count: number, expected: number, r: RosterEntry[]) => {
         if (cancelled) return;
         setPresence({ count, expected });
@@ -821,8 +1122,13 @@ function GameScreen({
         setPresence((p) => ({ count: p.count, expected }));
         setState((prev) => (prev.mode === m ? prev : initialState(m, initialWalls, initialRounds)));
       },
-      onGuestJoined: (_s: number, name: string) => { pushLog(`${name} joined`); play("join"); },
-      onGuestLeft: (_s: number, name: string) => { pushLog(`${name} disconnected`); },
+      onGuestJoined: (_s: number, name: string) => {
+        pushLog(`${name} joined`);
+        play("join");
+      },
+      onGuestLeft: (_s: number, name: string) => {
+        pushLog(`${name} disconnected`);
+      },
       onFull: () => {
         if (cancelled) return;
         setStatus("connected");
@@ -832,7 +1138,9 @@ function GameScreen({
           if (!matchStartedRef.current) hostStartMatch();
         }
       },
-      onDisconnect: () => { if (!cancelled) setStatus("disconnected"); },
+      onDisconnect: () => {
+        if (!cancelled) setStatus("disconnected");
+      },
       onMessage: (msg: PeerMessage) => {
         if (cancelled) return;
         if (msg.type === "state") {
@@ -894,7 +1202,9 @@ function GameScreen({
               {
                 key: `${p.ts}-${p.slot}-${Math.random()}`,
                 slot: isSystem ? null : p.slot,
-                name: p.name, text: p.text, ts: p.ts,
+                name: p.name,
+                text: p.text,
+                ts: p.ts,
               },
             ];
           });
@@ -907,8 +1217,12 @@ function GameScreen({
         const em = err?.message ?? String(err);
         // Quick-match joiner hit a stale/dead host — purge that queue row and
         // requeue immediately instead of leaving them on Connection error.
-        if (quickMatch && !isHost && onRankedTimeout &&
-            (em.includes("peer-unavailable") || em.toLowerCase().includes("could not connect"))) {
+        if (
+          quickMatch &&
+          !isHost &&
+          onRankedTimeout &&
+          (em.includes("peer-unavailable") || em.toLowerCase().includes("could not connect"))
+        ) {
           void removeOpenRoom(code);
           roomRef.current?.close();
           roomRef.current = null;
@@ -917,8 +1231,7 @@ function GameScreen({
         }
         if (em.includes("is taken") || em.includes("unavailable-id"))
           setErrorMsg("That room code is already in use. Try again.");
-        else if (em.includes("peer-unavailable"))
-          setErrorMsg("No room found with that code.");
+        else if (em.includes("peer-unavailable")) setErrorMsg("No room found with that code.");
         else setErrorMsg(em);
         setStatus("error");
       },
@@ -926,12 +1239,22 @@ function GameScreen({
     const boot = async () => {
       try {
         const room = isHost
-          ? await createHostRoom(code, initialMode, { name: ident.name, playerId: ident.id }, handlers)
+          ? await createHostRoom(
+              code,
+              initialMode,
+              { name: ident.name, playerId: ident.id },
+              handlers,
+            )
           : await createGuestRoom(code, { name: ident.name, playerId: ident.id }, handlers);
-        if (cancelled) { room.close(); return; }
+        if (cancelled) {
+          room.close();
+          return;
+        }
         roomRef.current = room;
         if (isHost) void registerOpenRoom(code, initialMode, ident.name, !!ranked);
-      } catch (err) { handlers.onError(err as Error); }
+      } catch (err) {
+        handlers.onError(err as Error);
+      }
     };
     boot();
     return () => {
@@ -948,7 +1271,9 @@ function GameScreen({
   // alone (it was already removed on `onFull`).
   useEffect(() => {
     if (!isHost) return;
-    const onUnload = () => { void removeOpenRoom(code); };
+    const onUnload = () => {
+      void removeOpenRoom(code);
+    };
     window.addEventListener("beforeunload", onUnload);
     return () => window.removeEventListener("beforeunload", onUnload);
   }, [isHost, code]);
@@ -977,78 +1302,116 @@ function GameScreen({
       ranked,
       savedAt: Date.now(),
     });
-  }, [state.matchWinner, isHost, code, initialMode, initialWalls, initialRounds, quickMatch, ranked, presence.count, presence.expected]);
+  }, [
+    state.matchWinner,
+    isHost,
+    code,
+    initialMode,
+    initialWalls,
+    initialRounds,
+    quickMatch,
+    ranked,
+    presence.count,
+    presence.expected,
+  ]);
 
   const [matchMuted, setMatchMuted] = useState(false);
-  const [chatBan, setChatBan] = useState<null | { until: string | null; reason: string | null }>(null);
+  const [chatBan, setChatBan] = useState<null | { until: string | null; reason: string | null }>(
+    null,
+  );
   const callModerate = useServerFn(moderateChatMessage);
   const callMyBan = useServerFn(myChatBan);
 
   useEffect(() => {
     let alive = true;
-    void callMyBan({}).then((r) => {
-      if (!alive) return;
-      if (r.active) setChatBan({ until: r.until, reason: r.reason });
-    }).catch(() => {});
-    return () => { alive = false; };
+    void callMyBan({})
+      .then((r) => {
+        if (!alive) return;
+        if (r.active) setChatBan({ until: r.until, reason: r.reason });
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
   }, [callMyBan]);
 
   const pushLocalSystem = useCallback((text: string) => {
     setChat((prev) => [
       ...prev.slice(-99),
-      { key: `sys-${Date.now()}-${Math.random()}`, slot: null, name: "System", text, ts: Date.now() },
+      {
+        key: `sys-${Date.now()}-${Math.random()}`,
+        slot: null,
+        name: "System",
+        text,
+        ts: Date.now(),
+      },
     ]);
   }, []);
 
-  const sendChat = useCallback((text: string) => {
-    const s = slotRef.current;
-    const name = rosterRef.current.find((e) => e.slot === s)?.name ?? `Player ${s + 1}`;
+  const sendChat = useCallback(
+    (text: string) => {
+      const s = slotRef.current;
+      const name = rosterRef.current.find((e) => e.slot === s)?.name ?? `Player ${s + 1}`;
 
-    if (chatBan) {
-      pushLocalSystem(`You're chat-banned${chatBan.until ? ` until ${new Date(chatBan.until).toLocaleString()}` : ""}. Message not sent.`);
-      return;
-    }
-    if (matchMuted) {
-      pushLocalSystem("You're muted for this match. Message not sent.");
-      return;
-    }
-
-    // Optimistic append for the sender only.
-    const ts = Date.now();
-    const optimisticKey = `${ts}-${s}-me-${Math.random()}`;
-    setChat((prev) => [
-      ...prev.slice(-99),
-      { key: optimisticKey, slot: s as number, name, text, ts },
-    ]);
-
-    void (async () => {
-      try {
-        const res = await callModerate({ data: { playerId: ident.id, matchId: code, text } });
-        if (res.allow) {
-          roomRef.current?.send({ type: "chat", payload: { slot: s as number, name, text, ts } });
-          return;
-        }
-        // Rejected: strip the optimistic message and show a private system note.
-        setChat((prev) => prev.filter((m) => m.key !== optimisticKey));
-        pushLocalSystem(res.senderMessage);
-        if (res.penalty === "match_mute") setMatchMuted(true);
-        if (res.penalty === "chat_ban_24h" || res.penalty === "chat_ban_7d" || res.penalty === "perm") {
-          setChatBan({ until: null, reason: res.reason });
-        }
-        if (res.lobbyMessage) {
-          const sys = { slot: -1, name: "System", text: res.lobbyMessage, ts: Date.now() };
-          setChat((prev) => [
-            ...prev.slice(-99),
-            { key: `sys-${sys.ts}-${Math.random()}`, slot: null, name: sys.name, text: sys.text, ts: sys.ts },
-          ]);
-          roomRef.current?.send({ type: "chat", payload: sys });
-        }
-      } catch (e: unknown) {
-        setChat((prev) => prev.filter((m) => m.key !== optimisticKey));
-        pushLocalSystem(`Message couldn't be sent (moderation error).`);
+      if (chatBan) {
+        pushLocalSystem(
+          `You're chat-banned${chatBan.until ? ` until ${new Date(chatBan.until).toLocaleString()}` : ""}. Message not sent.`,
+        );
+        return;
       }
-    })();
-  }, [callModerate, chatBan, code, ident.id, matchMuted, pushLocalSystem]);
+      if (matchMuted) {
+        pushLocalSystem("You're muted for this match. Message not sent.");
+        return;
+      }
+
+      // Optimistic append for the sender only.
+      const ts = Date.now();
+      const optimisticKey = `${ts}-${s}-me-${Math.random()}`;
+      setChat((prev) => [
+        ...prev.slice(-99),
+        { key: optimisticKey, slot: s as number, name, text, ts },
+      ]);
+
+      void (async () => {
+        try {
+          const res = await callModerate({ data: { playerId: ident.id, matchId: code, text } });
+          if (res.allow) {
+            roomRef.current?.send({ type: "chat", payload: { slot: s as number, name, text, ts } });
+            return;
+          }
+          // Rejected: strip the optimistic message and show a private system note.
+          setChat((prev) => prev.filter((m) => m.key !== optimisticKey));
+          pushLocalSystem(res.senderMessage);
+          if (res.penalty === "match_mute") setMatchMuted(true);
+          if (
+            res.penalty === "chat_ban_24h" ||
+            res.penalty === "chat_ban_7d" ||
+            res.penalty === "perm"
+          ) {
+            setChatBan({ until: null, reason: res.reason });
+          }
+          if (res.lobbyMessage) {
+            const sys = { slot: -1, name: "System", text: res.lobbyMessage, ts: Date.now() };
+            setChat((prev) => [
+              ...prev.slice(-99),
+              {
+                key: `sys-${sys.ts}-${Math.random()}`,
+                slot: null,
+                name: sys.name,
+                text: sys.text,
+                ts: sys.ts,
+              },
+            ]);
+            roomRef.current?.send({ type: "chat", payload: sys });
+          }
+        } catch (e: unknown) {
+          setChat((prev) => prev.filter((m) => m.key !== optimisticKey));
+          pushLocalSystem(`Message couldn't be sent (moderation error).`);
+        }
+      })();
+    },
+    [callModerate, chatBan, code, ident.id, matchMuted, pushLocalSystem],
+  );
 
   // ---------- Activity + AFK (host authoritative) ----------
   const lastInputRef = useRef<number[]>(Array.from({ length: initialMode }, () => Date.now()));
@@ -1086,20 +1449,23 @@ function GameScreen({
     }
     if (!isHost) return;
     // 4p: after 60s with 2-3 humans, fill the empty seats with bots.
-    const partialFillT = initialMode === 4 ? window.setTimeout(() => {
-      const cur = presenceRef.current;
-      if (cur.count >= cur.expected) return;
-      if (cur.count < 2) return; // solo fallback handles this
-      if (stateRef.current.matchWinner !== null) return;
-      const missing = cur.expected - cur.count;
-      if (missing <= 0) return;
-      const bots = Array.from({ length: missing }, () => ({ name: randomGamerName() }));
-      const assigned = roomRef.current?.addBotPlayers?.(bots) ?? [];
-      if (assigned.length > 0) {
-        setBotSlots((prev) => [...prev, ...assigned.map((s) => s as PlayerId)]);
-        void removeOpenRoom(code);
-      }
-    }, 30_000) : null;
+    const partialFillT =
+      initialMode === 4
+        ? window.setTimeout(() => {
+            const cur = presenceRef.current;
+            if (cur.count >= cur.expected) return;
+            if (cur.count < 2) return; // solo fallback handles this
+            if (stateRef.current.matchWinner !== null) return;
+            const missing = cur.expected - cur.count;
+            if (missing <= 0) return;
+            const bots = Array.from({ length: missing }, () => ({ name: randomGamerName() }));
+            const assigned = roomRef.current?.addBotPlayers?.(bots) ?? [];
+            if (assigned.length > 0) {
+              setBotSlots((prev) => [...prev, ...assigned.map((s) => s as PlayerId)]);
+              void removeOpenRoom(code);
+            }
+          }, 30_000)
+        : null;
     // Solo-host fallback → replace with a full local bot game.
     let soloT: number | null = null;
     if (onBotFallback) {
@@ -1144,35 +1510,43 @@ function GameScreen({
       const remaining = liveRemaining(state.clocks, state.turn, turn, Date.now());
       delay = Math.min(delay, Math.max(200, remaining - 500));
     }
-    const t = window.setTimeout(() => {
-      const cur = stateRef.current;
-      if (cur.turn !== turn || cur.winner !== null || cur.matchWinner !== null) return;
-      const next = applyMove(cur, turn, move);
-      if (!next) return;
-      if (cur.clocks) next.clocks = endTurn(cur.clocks, turn, Date.now());
-      if (next.winner !== null) {
-        next.endReason = "goal";
-        next.endLoser = (next.winner === turn
-          ? ((turn === 0 ? 1 : 0) as PlayerId)
-          : (turn as PlayerId));
-      }
-      setState(next);
-      roomRef.current?.send({ type: "state", payload: next });
-    }, Math.max(250, delay));
+    const t = window.setTimeout(
+      () => {
+        const cur = stateRef.current;
+        if (cur.turn !== turn || cur.winner !== null || cur.matchWinner !== null) return;
+        const next = applyMove(cur, turn, move);
+        if (!next) return;
+        if (cur.clocks) next.clocks = endTurn(cur.clocks, turn, Date.now());
+        if (next.winner !== null) {
+          next.endReason = "goal";
+          next.endLoser =
+            next.winner === turn ? ((turn === 0 ? 1 : 0) as PlayerId) : (turn as PlayerId);
+        }
+        setState(next);
+        roomRef.current?.send({ type: "state", payload: next });
+      },
+      Math.max(250, delay),
+    );
     return () => window.clearTimeout(t);
   }, [isHost, botSlots, state, coinflip?.animating, status, hostApplyForfeit]);
 
-  const markActivity = useCallback((who: PlayerId) => {
-    lastInputRef.current[who] = Date.now();
-    if (afk && afk.slot === who) {
-      setAfk(null);
-      if (isHost) roomRef.current?.send({ type: "afkCancel", payload: { slot: who } });
-    }
-  }, [afk, isHost]);
+  const markActivity = useCallback(
+    (who: PlayerId) => {
+      lastInputRef.current[who] = Date.now();
+      if (afk && afk.slot === who) {
+        setAfk(null);
+        if (isHost) roomRef.current?.send({ type: "afkCancel", payload: { slot: who } });
+      }
+    },
+    [afk, isHost],
+  );
 
   useEffect(() => {
     // resize lastInput to mode
-    lastInputRef.current = Array.from({ length: state.mode }, (_, i) => lastInputRef.current[i] ?? Date.now());
+    lastInputRef.current = Array.from(
+      { length: state.mode },
+      (_, i) => lastInputRef.current[i] ?? Date.now(),
+    );
   }, [state.mode]);
 
   // Reset idle timestamps whenever the match becomes playable, so time spent
@@ -1252,7 +1626,9 @@ function GameScreen({
   // Host: once every still-in-match player is ready, play the merge animation
   // and then kick off the next round (which itself triggers the coinflip).
   const mergingRef = useRef(false);
-  useEffect(() => { mergingRef.current = merging; }, [merging]);
+  useEffect(() => {
+    mergingRef.current = merging;
+  }, [merging]);
   useEffect(() => {
     if (!isHost) return;
     if (state.winner === null || state.matchWinner !== null) return;
@@ -1266,30 +1642,41 @@ function GameScreen({
     setMerging(true);
     hostStartRound();
     return;
-  }, [isHost, readySlots, state.winner, state.matchWinner, state.leftMatch, state.mode, hostStartRound]);
+  }, [
+    isHost,
+    readySlots,
+    state.winner,
+    state.matchWinner,
+    state.leftMatch,
+    state.mode,
+    hostStartRound,
+  ]);
 
-  const handleMove = useCallback((move: Move) => {
-    if (status !== "connected") return;
-    initSoundOnGesture();
-    play(move.kind === "wall" ? "wall" : "pop");
-    markActivity(slotRef.current);
-    if (isHost) {
-      const next = applyMove(stateRef.current, 0, move);
-      if (next) {
-        if (stateRef.current.clocks) {
-          next.clocks = endTurn(stateRef.current.clocks, 0, Date.now());
+  const handleMove = useCallback(
+    (move: Move) => {
+      if (status !== "connected") return;
+      initSoundOnGesture();
+      play(move.kind === "wall" ? "wall" : "pop");
+      markActivity(slotRef.current);
+      if (isHost) {
+        const next = applyMove(stateRef.current, 0, move);
+        if (next) {
+          if (stateRef.current.clocks) {
+            next.clocks = endTurn(stateRef.current.clocks, 0, Date.now());
+          }
+          if (next.winner !== null) {
+            next.endReason = "goal";
+            next.endLoser = (next.winner === 0 ? 1 : 0) as PlayerId;
+          }
+          setState(next);
+          roomRef.current?.send({ type: "state", payload: next });
         }
-        if (next.winner !== null) {
-          next.endReason = "goal";
-          next.endLoser = (next.winner === 0 ? 1 : 0) as PlayerId;
-        }
-        setState(next);
-        roomRef.current?.send({ type: "state", payload: next });
+      } else {
+        roomRef.current?.send({ type: "move", payload: { from: slotRef.current, move } });
       }
-    } else {
-      roomRef.current?.send({ type: "move", payload: { from: slotRef.current, move } });
-    }
-  }, [isHost, status, markActivity]);
+    },
+    [isHost, status, markActivity],
+  );
 
   const newMatchAction = useCallback(() => {
     if (isHost) hostStartMatch();
@@ -1299,8 +1686,9 @@ function GameScreen({
   // Rematch = play again with the same opponents. Also fires a lightweight
   // chat notification so the other side sees "@name wants a rematch".
   const rematchAction = useCallback(() => {
-    const name = rosterRef.current.find((e) => e.slot === slotRef.current)?.name
-      ?? `Player ${slotRef.current + 1}`;
+    const name =
+      rosterRef.current.find((e) => e.slot === slotRef.current)?.name ??
+      `Player ${slotRef.current + 1}`;
     const text = `${name} wants a rematch 🔁`;
     const ts = Date.now();
     const sys = { slot: -1, name: "System", text, ts };
@@ -1319,14 +1707,17 @@ function GameScreen({
     if (status !== "connected") return;
     if (state.winner !== null || state.matchWinner !== null) return;
     if (!state.active[you]) return;
-    if (isHost) { pushLog(`${ident.name} forfeited the round`); hostApplyForfeit(0, false, "forfeit"); }
-    else roomRef.current?.send({ type: "forfeit", payload: { from: slotRef.current } });
+    if (isHost) {
+      pushLog(`${ident.name} forfeited the round`);
+      hostApplyForfeit(0, false, "forfeit");
+    } else roomRef.current?.send({ type: "forfeit", payload: { from: slotRef.current } });
   }, [isHost, status, state, you, hostApplyForfeit, pushLog, ident.name]);
 
   const copyCode = useCallback(() => {
     play("click");
     navigator.clipboard?.writeText(code).catch(() => {});
-    setToast("Code copied"); window.setTimeout(() => setToast(null), 1400);
+    setToast("Code copied");
+    window.setTimeout(() => setToast(null), 1400);
   }, [code]);
 
   // ---------- Sound on round/match transitions ----------
@@ -1335,13 +1726,21 @@ function GameScreen({
   const [roundEndAnim, setRoundEndAnim] = useState(false);
   // Fog of Walls — client-side visibility filter. Persists per match.
   const [fogOn, setFogOn] = useState<boolean>(() => {
-    try { return localStorage.getItem("quoridor:fogOfWalls") === "1"; } catch { return false; }
+    try {
+      return localStorage.getItem("quoridor:fogOfWalls") === "1";
+    } catch {
+      return false;
+    }
   });
   const revealedRef = useRef<Set<string>>(new Set());
   const [visibleWallKeys, setVisibleWallKeys] = useState<Set<string> | undefined>(undefined);
   const [visibleCells, setVisibleCells] = useState<Set<number> | undefined>(undefined);
   useEffect(() => {
-    try { localStorage.setItem("quoridor:fogOfWalls", fogOn ? "1" : "0"); } catch { /* ignore */ }
+    try {
+      localStorage.setItem("quoridor:fogOfWalls", fogOn ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
   }, [fogOn]);
   // Reset revealed set at the start of every round.
   useEffect(() => {
@@ -1349,7 +1748,11 @@ function GameScreen({
   }, [state.moveCount]);
   // Recompute visibility whenever the board changes.
   useEffect(() => {
-    if (!fogOn) { setVisibleWallKeys(undefined); setVisibleCells(undefined); return; }
+    if (!fogOn) {
+      setVisibleWallKeys(undefined);
+      setVisibleCells(undefined);
+      return;
+    }
     const next = computeVisibleWalls(state, you, revealedRef.current);
     revealedRef.current = next;
     setVisibleWallKeys(next);
@@ -1438,8 +1841,12 @@ function GameScreen({
     const forfeited = state.leftMatch[you] ?? false;
     void (async () => {
       await bumpMyStats(ident.id, {
-        matches: 1, wins: iWon ? 1 : 0, losses: iWon ? 0 : 1,
-        walls_placed: walls, pawns_eliminated: pops, forfeits: forfeited ? 1 : 0,
+        matches: 1,
+        wins: iWon ? 1 : 0,
+        losses: iWon ? 0 : 1,
+        walls_placed: walls,
+        pawns_eliminated: pops,
+        forfeits: forfeited ? 1 : 0,
       });
       if (unlockFiredRef.current) return;
       unlockFiredRef.current = true;
@@ -1457,7 +1864,8 @@ function GameScreen({
         playerId: ident.id,
         mode: state.mode as 2 | 4,
         ranked: !!ranked,
-        iWon, forfeited,
+        iWon,
+        forfeited,
         wallsThisMatch: walls,
         pawnsThisMatch: pops,
         opponentRating: oppRating,
@@ -1501,7 +1909,10 @@ function GameScreen({
     };
     // Give host a beat to call the RPC and DB to settle before first read.
     const t = window.setTimeout(poll, 1200);
-    return () => { cancelled = true; window.clearTimeout(t); };
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.matchWinner]);
 
@@ -1511,7 +1922,12 @@ function GameScreen({
   const displayState = review
     ? { ...state, pawns: review.pawns, walls: review.walls, lastWall: review.lastWall }
     : state;
-  const boardInteractive = status === "connected" && presence.count >= presence.expected && state.winner === null && !coinflip?.animating && !review;
+  const boardInteractive =
+    status === "connected" &&
+    presence.count >= presence.expected &&
+    state.winner === null &&
+    !coinflip?.animating &&
+    !review;
 
   // Quick / ranked matchmaking: keep the radar visible from the start of
   // the game view until both players are connected AND one full radar
@@ -1531,9 +1947,15 @@ function GameScreen({
   useEffect(() => {
     if (!usesRadar || radarRevealed) return;
     const start = Date.now();
-    const id = window.setInterval(() => setWaitElapsed(Math.floor((Date.now() - start) / 1000)), 500);
+    const id = window.setInterval(
+      () => setWaitElapsed(Math.floor((Date.now() - start) / 1000)),
+      500,
+    );
     const stopLoop = startSampleLoop("searchPing", 0.85);
-    return () => { window.clearInterval(id); stopLoop(); };
+    return () => {
+      window.clearInterval(id);
+      stopLoop();
+    };
   }, [usesRadar, radarRevealed]);
 
   if (usesRadar && !radarRevealed) {
@@ -1542,28 +1964,44 @@ function GameScreen({
     // the queue is empty. Purely cosmetic — real presence still drives match
     // start.
     const displayedCount =
-      presence.expected === 4 && waitElapsed >= 5
-        ? Math.max(presence.count, 2)
-        : presence.count;
+      presence.expected === 4 && waitElapsed >= 5 ? Math.max(presence.count, 2) : presence.count;
     const label =
-      status === "error" ? "Connection error" :
-      status === "disconnected" ? "Disconnected" :
-      status === "connected" && presence.count >= presence.expected ? "Match found" :
-      status === "connected" ? `Waiting for opponent ${displayedCount}/${presence.expected}` :
-      status === "waiting" ? `Waiting for opponent ${displayedCount}/${presence.expected}` :
-      "Connecting";
+      status === "error"
+        ? "Connection error"
+        : status === "disconnected"
+          ? "Disconnected"
+          : status === "connected" && presence.count >= presence.expected
+            ? "Match found"
+            : status === "connected"
+              ? `Waiting for opponent ${displayedCount}/${presence.expected}`
+              : status === "waiting"
+                ? `Waiting for opponent ${displayedCount}/${presence.expected}`
+                : "Connecting";
     const showPuzzle = waitElapsed >= 11;
     return (
       <div className={"w-full " + (showPuzzle ? "" : "flex justify-center")}>
         {showPuzzle ? (
           <div className="mx-auto grid w-full max-w-5xl items-start gap-6 md:grid-cols-[minmax(0,1fr)_auto]">
-            <div className="order-2 md:order-1"><QueuePuzzle /></div>
+            <div className="order-2 md:order-1">
+              <QueuePuzzle />
+            </div>
             <div className="order-1 md:order-2 md:pt-4">
-              <SearchingAnimation compact status={label} ranked={!!ranked} mode={state.mode as Mode} onBack={handleLeave} />
+              <SearchingAnimation
+                compact
+                status={label}
+                ranked={!!ranked}
+                mode={state.mode as Mode}
+                onBack={handleLeave}
+              />
             </div>
           </div>
         ) : (
-          <SearchingAnimation status={label} ranked={!!ranked} mode={state.mode as Mode} onBack={handleLeave} />
+          <SearchingAnimation
+            status={label}
+            ranked={!!ranked}
+            mode={state.mode as Mode}
+            onBack={handleLeave}
+          />
         )}
       </div>
     );
@@ -1579,24 +2017,59 @@ function GameScreen({
         {afk && state.winner === null && state.matchWinner === null && (
           <AfkBanner slot={afk.slot} deadline={afk.deadline} name={nameOf(afk.slot)} />
         )}
-        <PlayerBanners state={state} you={you} nameOf={nameOf} playerIdOf={playerIdOf} placement="top" />
+        <PlayerBanners
+          state={state}
+          you={you}
+          nameOf={nameOf}
+          playerIdOf={playerIdOf}
+          placement="top"
+        />
         <div className="flex">
           <div className="relative min-w-0 flex-1">
-            <QuoridorBoard state={displayState} you={you} onMove={handleMove} interactive={boardInteractive} onActivity={() => markActivity(you)} visibleWallKeys={visibleWallKeys} fog={fogOn} visibleCells={visibleCells} />
-            {coinflip?.animating && <CoinflipOverlay starter={coinflip.starter} you={you} mode={state.mode as Mode} nameOf={nameOf} playerIdOf={playerIdOf} />}
+            <QuoridorBoard
+              state={displayState}
+              you={you}
+              onMove={handleMove}
+              interactive={boardInteractive}
+              onActivity={() => markActivity(you)}
+              visibleWallKeys={visibleWallKeys}
+              fog={fogOn}
+              visibleCells={visibleCells}
+            />
+            {coinflip?.animating && (
+              <CoinflipOverlay
+                starter={coinflip.starter}
+                you={you}
+                mode={state.mode as Mode}
+                nameOf={nameOf}
+                playerIdOf={playerIdOf}
+              />
+            )}
             {!usesRadar && status === "waiting" && presence.count < presence.expected && (
-              <WaitingOverlay count={presence.count} expected={presence.expected} isHost={isHost} onStart={hostStartMatch} />
+              <WaitingOverlay
+                count={presence.count}
+                expected={presence.expected}
+                isHost={isHost}
+                onStart={hostStartMatch}
+              />
             )}
             {status === "error" && <ErrorOverlay msg={errorMsg} onLeave={onLeave} />}
             {status === "disconnected" && !roundOver && (
-              <MessageOverlay title="Disconnected" body="Connection to the room was lost." onLeave={onLeave} />
+              <MessageOverlay
+                title="Disconnected"
+                body="Connection to the room was lost."
+                onLeave={onLeave}
+              />
             )}
             {roundOver && !matchOver && !coinflip?.animating && roundEndAnim && (
               <RoundEndScoreAnim
                 state={state}
                 nameOf={nameOf}
                 playerIdOf={playerIdOf}
-                onDone={() => { setRoundEndAnim(false); requestReady(); }}
+                onDone={() => {
+                  setRoundEndAnim(false);
+                  requestReady();
+                }}
               />
             )}
             {matchOver && (
@@ -1604,17 +2077,27 @@ function GameScreen({
             )}
           </div>
         </div>
-        <PlayerBanners state={state} you={you} nameOf={nameOf} playerIdOf={playerIdOf} placement="bottom" />
+        <PlayerBanners
+          state={state}
+          you={you}
+          nameOf={nameOf}
+          playerIdOf={playerIdOf}
+          placement="bottom"
+        />
       </div>
 
       {matchOver && (
-        <EndScreen state={state} you={you} nameOf={nameOf}
+        <EndScreen
+          state={state}
+          you={you}
+          nameOf={nameOf}
           snapshot={matchHistory.getSnapshot()}
           onRematch={rematchAction}
           onRequeue={onRequeue}
           onNewMatch={onRequeue ?? newMatchAction}
           onLeave={onLeave}
-          showRematch={false} />
+          showRematch={false}
+        />
       )}
 
       {rankUp && (
@@ -1630,18 +2113,35 @@ function GameScreen({
       )}
 
       <MobileAsideSheet
-        chat={<ChatPanel entries={chat} onSend={sendChat} disabled={status !== "connected" || matchMuted || !!chatBan} you={you} />}
+        chat={
+          <ChatPanel
+            entries={chat}
+            onSend={sendChat}
+            disabled={status !== "connected" || matchMuted || !!chatBan}
+            you={you}
+          />
+        }
       >
         <div className="rounded-xl border border-border bg-card p-3 sm:p-4">
           <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Room code</p>
           <div className="mt-1 flex items-center justify-between gap-2">
             <p className="font-mono text-xl tracking-[0.3em] text-primary sm:text-2xl">{code}</p>
-            <button onClick={copyCode} className="shrink-0 rounded-md border border-border px-2 py-1 text-[10px] uppercase tracking-widest text-muted-foreground hover:bg-secondary">Copy</button>
+            <button
+              onClick={copyCode}
+              className="shrink-0 rounded-md border border-border px-2 py-1 text-[10px] uppercase tracking-widest text-muted-foreground hover:bg-secondary"
+            >
+              Copy
+            </button>
           </div>
           <p className="mt-2 text-[11px] text-muted-foreground">
-            {isHost ? "Share this code." : "Connected to host."} · {presence.count}/{presence.expected} in
+            {isHost ? "Share this code." : "Connected to host."} · {presence.count}/
+            {presence.expected} in
           </p>
-          {toast && <p className="toast-in mt-2 text-[10px] uppercase tracking-widest text-primary">{toast}</p>}
+          {toast && (
+            <p className="toast-in mt-2 text-[10px] uppercase tracking-widest text-primary">
+              {toast}
+            </p>
+          )}
         </div>
 
         <ScoreCard state={state} you={you} nameOf={nameOf} />
@@ -1651,14 +2151,24 @@ function GameScreen({
         <div className="flex flex-col gap-2">
           <ForfeitButton
             onConfirm={forfeit}
-            disabled={status !== "connected" || state.winner !== null || state.matchWinner !== null || !state.active[you]}
+            disabled={
+              status !== "connected" ||
+              state.winner !== null ||
+              state.matchWinner !== null ||
+              !state.active[you]
+            }
           />
-          <button onClick={handleLeave} className="rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary">
+          <button
+            onClick={handleLeave}
+            className="rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary"
+          >
             Leave
           </button>
           {onRequeue && (
-            <button onClick={onRequeue}
-              className="rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-primary hover:bg-primary/20">
+            <button
+              onClick={onRequeue}
+              className="rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-primary hover:bg-primary/20"
+            >
               Find new match
             </button>
           )}
@@ -1670,39 +2180,72 @@ function GameScreen({
 
 // ---------------- SUBCOMPONENTS ----------------
 
-function TurnBar({ state, you, status, presence, coinAnimating, nameOf }: {
-  state: GameState; you: PlayerId; status: Status;
-  presence: { count: number; expected: number }; coinAnimating: boolean;
+function TurnBar({
+  state,
+  you,
+  status,
+  presence,
+  coinAnimating,
+  nameOf,
+}: {
+  state: GameState;
+  you: PlayerId;
+  status: Status;
+  presence: { count: number; expected: number };
+  coinAnimating: boolean;
   nameOf: (s: PlayerId) => string;
 }) {
   const active = state.turn;
   const yourTurn = state.turn === you && state.winner === null && state.active[you];
-  const highlight = state.matchWinner !== null ? state.matchWinner
-    : state.winner !== null ? state.winner : active;
+  const highlight =
+    state.matchWinner !== null ? state.matchWinner : state.winner !== null ? state.winner : active;
   const color = PLAYER_COLORS[highlight];
   const label =
-    status !== "connected" ? `Waiting… ${presence.count}/${presence.expected}` :
-    coinAnimating ? "Flipping the coin…" :
-    state.matchWinner !== null ? `${nameOf(state.matchWinner)} won the match` :
-    state.winner !== null ? `${nameOf(state.winner)} took the round` :
-    yourTurn ? "Your turn" : `${nameOf(active)}'s turn`;
+    status !== "connected"
+      ? `Waiting… ${presence.count}/${presence.expected}`
+      : coinAnimating
+        ? "Flipping the coin…"
+        : state.matchWinner !== null
+          ? `${nameOf(state.matchWinner)} won the match`
+          : state.winner !== null
+            ? `${nameOf(state.winner)} took the round`
+            : yourTurn
+              ? "Your turn"
+              : `${nameOf(active)}'s turn`;
   return (
     <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 shadow-sm">
-      <span className="grid h-9 w-9 place-items-center rounded-full text-sm font-semibold"
-        style={{ background: color, color: "oklch(0.15 0.02 55)", boxShadow: `0 0 14px color-mix(in oklab, ${color} 55%, transparent)` }}>
+      <span
+        className="grid h-9 w-9 place-items-center rounded-full text-sm font-semibold"
+        style={{
+          background: color,
+          color: "oklch(0.15 0.02 55)",
+          boxShadow: `0 0 14px color-mix(in oklab, ${color} 55%, transparent)`,
+        }}
+      >
         {highlight + 1}
       </span>
       <div className="flex-1 min-w-0">
         <p className="truncate text-base font-semibold">{label}</p>
         <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-          {state.mode}-player · {state.mode === 4 ? `first to ${winsNeeded(state.totalRounds, state.mode)}` : `best of ${state.totalRounds}`}
+          {state.mode}-player ·{" "}
+          {state.mode === 4
+            ? `first to ${winsNeeded(state.totalRounds, state.mode)}`
+            : `best of ${state.totalRounds}`}
         </p>
       </div>
     </div>
   );
 }
 
-function ScoreCard({ state, you, nameOf }: { state: GameState; you: PlayerId; nameOf: (s: PlayerId) => string }) {
+function ScoreCard({
+  state,
+  you,
+  nameOf,
+}: {
+  state: GameState;
+  you: PlayerId;
+  nameOf: (s: PlayerId) => string;
+}) {
   const target = winsNeeded(state.totalRounds, state.mode);
   const prevScoreRef = useRef<number[]>(state.score);
   const [bumped, setBumped] = useState<number | null>(null);
@@ -1723,13 +2266,25 @@ function ScoreCard({ state, you, nameOf }: { state: GameState; you: PlayerId; na
     <div className="rounded-xl border border-border bg-card p-4">
       <div className="flex items-baseline justify-between">
         <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Score</p>
-        <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">first to {target}</p>
+        <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+          first to {target}
+        </p>
       </div>
-      <div className="mt-3 grid gap-2" style={{ gridTemplateColumns: `repeat(${state.mode}, minmax(0, 1fr))` }}>
+      <div
+        className="mt-3 grid gap-2"
+        style={{ gridTemplateColumns: `repeat(${state.mode}, minmax(0, 1fr))` }}
+      >
         {Array.from({ length: state.mode }, (_, i) => (
-          <div key={i} className="flex min-w-0 flex-col items-center gap-1 rounded-lg border border-border bg-background/40 px-1.5 py-2">
-            <span className="block w-full truncate text-center text-[10px] uppercase tracking-[0.1em]"
-              style={{ color: state.matchWinner === i ? PLAYER_COLORS[i] : "var(--muted-foreground)" }}>
+          <div
+            key={i}
+            className="flex min-w-0 flex-col items-center gap-1 rounded-lg border border-border bg-background/40 px-1.5 py-2"
+          >
+            <span
+              className="block w-full truncate text-center text-[10px] uppercase tracking-[0.1em]"
+              style={{
+                color: state.matchWinner === i ? PLAYER_COLORS[i] : "var(--muted-foreground)",
+              }}
+            >
               {i === you ? "You" : nameOf(i as PlayerId)}
             </span>
             <span
@@ -1739,9 +2294,14 @@ function ScoreCard({ state, you, nameOf }: { state: GameState; you: PlayerId; na
                 (bumped === i ? "score-pop" : "")
               }
               style={{
-                background: PLAYER_COLORS[i], color: "oklch(0.15 0.02 55)",
-                boxShadow: state.matchWinner === i ? `0 0 0 3px color-mix(in oklab, ${PLAYER_COLORS[i]} 45%, transparent)` : "0 1px 3px rgba(0,0,0,0.4)",
-              }}>
+                background: PLAYER_COLORS[i],
+                color: "oklch(0.15 0.02 55)",
+                boxShadow:
+                  state.matchWinner === i
+                    ? `0 0 0 3px color-mix(in oklab, ${PLAYER_COLORS[i]} 45%, transparent)`
+                    : "0 1px 3px rgba(0,0,0,0.4)",
+              }}
+            >
               {state.score[i]}
             </span>
           </div>
@@ -1751,7 +2311,15 @@ function ScoreCard({ state, you, nameOf }: { state: GameState; you: PlayerId; na
   );
 }
 
-function PlayersCard({ state, you, nameOf }: { state: GameState; you: PlayerId; nameOf: (s: PlayerId) => string }) {
+function PlayersCard({
+  state,
+  you,
+  nameOf,
+}: {
+  state: GameState;
+  you: PlayerId;
+  nameOf: (s: PlayerId) => string;
+}) {
   return (
     <div className="rounded-xl border border-border bg-card p-4">
       <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Players</p>
@@ -1763,17 +2331,29 @@ function PlayersCard({ state, you, nameOf }: { state: GameState; you: PlayerId; 
           const color = PLAYER_COLORS[i];
           return (
             <div key={i} className="flex items-center gap-3">
-              <span className="grid h-6 w-6 place-items-center rounded-full text-[10px] font-semibold"
+              <span
+                className="grid h-6 w-6 place-items-center rounded-full text-[10px] font-semibold"
                 style={{
-                  background: color, color: "oklch(0.15 0.02 55)",
-                  boxShadow: isActiveTurn ? `0 0 0 3px color-mix(in oklab, ${color} 45%, transparent)` : "none",
+                  background: color,
+                  color: "oklch(0.15 0.02 55)",
+                  boxShadow: isActiveTurn
+                    ? `0 0 0 3px color-mix(in oklab, ${color} 45%, transparent)`
+                    : "none",
                   opacity: left ? 0.25 : eliminated ? 0.5 : 1,
-                }}>
+                }}
+              >
                 {i + 1}
               </span>
-              <span className="flex-1 truncate text-sm" style={{ opacity: left ? 0.4 : eliminated ? 0.6 : 1 }}>
+              <span
+                className="flex-1 truncate text-sm"
+                style={{ opacity: left ? 0.4 : eliminated ? 0.6 : 1 }}
+              >
                 {i === you ? `${nameOf(i as PlayerId)} (you)` : nameOf(i as PlayerId)}
-                {left && <span className="ml-1 text-[10px] uppercase tracking-widest text-muted-foreground">left</span>}
+                {left && (
+                  <span className="ml-1 text-[10px] uppercase tracking-widest text-muted-foreground">
+                    left
+                  </span>
+                )}
               </span>
               <WallCounter count={state.wallsLeft[i]} color={color} />
             </div>
@@ -1787,8 +2367,15 @@ function PlayersCard({ state, you, nameOf }: { state: GameState; you: PlayerId; 
 // ================ In-game top/bottom player banners =================
 // Opponent banners render above the board; the local player's banner
 // renders below. In 4P mode the top row shows all 3 opponents side by side.
-function PlayerBanners({ state, you, nameOf, playerIdOf, placement }: {
-  state: GameState; you: PlayerId;
+function PlayerBanners({
+  state,
+  you,
+  nameOf,
+  playerIdOf,
+  placement,
+}: {
+  state: GameState;
+  you: PlayerId;
   nameOf: (s: PlayerId) => string;
   playerIdOf: (s: PlayerId) => string | null;
   placement: "top" | "bottom";
@@ -1798,9 +2385,22 @@ function PlayerBanners({ state, you, nameOf, playerIdOf, placement }: {
   const relevant = placement === "top" ? seats.filter((s) => s !== you) : [you];
   if (relevant.length === 0) return null;
   return (
-    <div className={"grid gap-2 sm:gap-3 " + (relevant.length === 1 ? "grid-cols-1" : relevant.length === 2 ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-3")}>
+    <div
+      className={
+        "grid gap-2 sm:gap-3 " +
+        (relevant.length === 1
+          ? "grid-cols-1"
+          : relevant.length === 2
+            ? "grid-cols-2"
+            : "grid-cols-1 sm:grid-cols-3")
+      }
+    >
       {relevant.map((s) => {
-        const isTurn = state.turn === s && state.winner === null && state.matchWinner === null && state.active[s];
+        const isTurn =
+          state.turn === s &&
+          state.winner === null &&
+          state.matchWinner === null &&
+          state.active[s];
         return (
           <PlayerBanner
             key={s}
@@ -1823,8 +2423,11 @@ function PlayerBanners({ state, you, nameOf, playerIdOf, placement }: {
 // Compact monospace clock merged into the trailing edge of a PlayerBanner.
 function PlateClock({ state, playerId }: { state: GameState; playerId: PlayerId }) {
   const [now, setNow] = useState<number>(() => Date.now());
-  const active = state.turn === playerId && state.winner === null
-    && state.matchWinner === null && state.active[playerId];
+  const active =
+    state.turn === playerId &&
+    state.winner === null &&
+    state.matchWinner === null &&
+    state.active[playerId];
   useEffect(() => {
     if (!state.clocks) return;
     const iv = window.setInterval(() => setNow(Date.now()), 200);
@@ -1838,7 +2441,11 @@ function PlateClock({ state, playerId }: { state: GameState; playerId: PlayerId 
     <span
       className="font-mono text-base font-semibold tabular-nums leading-none sm:text-lg"
       style={{
-        color: danger ? "var(--destructive)" : active ? "var(--foreground)" : "var(--muted-foreground)",
+        color: danger
+          ? "var(--destructive)"
+          : active
+            ? "var(--foreground)"
+            : "var(--muted-foreground)",
       }}
     >
       {formatClock(remaining)}
@@ -1855,21 +2462,46 @@ function initialsOf(name: string): string {
   return s.slice(0, 2).toUpperCase();
 }
 // Deterministic placeholder title until real titles land.
-const TITLE_POOL = ["Pathfinder", "Wall Breaker", "Corner Cutter", "Grid Sniper", "Bridge Builder", "Blockade Baron", "Route Rogue", "Maze Whisper"];
+const TITLE_POOL = [
+  "Pathfinder",
+  "Wall Breaker",
+  "Corner Cutter",
+  "Grid Sniper",
+  "Bridge Builder",
+  "Blockade Baron",
+  "Route Rogue",
+  "Maze Whisper",
+];
 function titleFor(name: string): string {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
   return TITLE_POOL[Math.abs(h) % TITLE_POOL.length];
 }
 
-function RoundStartBanner({ slot, name, side, phase, isWinner, isLoser, playerId }: {
-  slot: PlayerId; name: string; side: "left" | "right"; phase: number;
-  isWinner: boolean; isLoser: boolean;
+function RoundStartBanner({
+  slot,
+  name,
+  side,
+  phase,
+  isWinner,
+  isLoser,
+  playerId,
+}: {
+  slot: PlayerId;
+  name: string;
+  side: "left" | "right";
+  phase: number;
+  isWinner: boolean;
+  isLoser: boolean;
   playerId: string | null;
 }) {
   const color = PLAYER_COLORS[slot];
   const landed = phase >= 1;
-  const translate = landed ? "translateX(0)" : (side === "left" ? "translateX(-160%)" : "translateX(160%)");
+  const translate = landed
+    ? "translateX(0)"
+    : side === "left"
+      ? "translateX(-160%)"
+      : "translateX(160%)";
   const glow = isWinner
     ? `0 0 0 2px ${color}, 0 20px 60px rgba(0,0,0,.5), 0 0 46px -6px ${color}`
     : "0 20px 50px rgba(0,0,0,.45)";
@@ -1883,10 +2515,14 @@ function RoundStartBanner({ slot, name, side, phase, isWinner, isLoser, playerId
         opacity: isLoser ? 0.42 : 1,
         filter: isLoser ? "grayscale(0.4) saturate(0.7)" : "none",
         boxShadow: glow,
-        transition: "transform .55s cubic-bezier(.2,.7,.3,1.3), opacity .5s ease, box-shadow .5s ease, filter .5s ease",
+        transition:
+          "transform .55s cubic-bezier(.2,.7,.3,1.3), opacity .5s ease, box-shadow .5s ease, filter .5s ease",
       }}
     >
-      <div className="absolute left-0 top-3 bottom-3 w-1 rounded-full" style={{ background: color }} />
+      <div
+        className="absolute left-0 top-3 bottom-3 w-1 rounded-full"
+        style={{ background: color }}
+      />
       {/* Goes first badge */}
       <div
         className="absolute -top-2.5 right-4 rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.14em]"
@@ -1904,7 +2540,10 @@ function RoundStartBanner({ slot, name, side, phase, isWinner, isLoser, playerId
       <IntroAvatar playerId={playerId} name={name} color={color} size={40} borderWidth={2} />
       {/* Name + title */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <p className="truncate text-[13px] font-extrabold text-foreground sm:text-sm" style={{ color: "var(--foreground)" }}>
+        <p
+          className="truncate text-[13px] font-extrabold text-foreground sm:text-sm"
+          style={{ color: "var(--foreground)" }}
+        >
           {name}
         </p>
         <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
@@ -1919,18 +2558,36 @@ function RoundStartBanner({ slot, name, side, phase, isWinner, isLoser, playerId
 
 // Small helper: fetches showcased achievements for a player and renders up
 // to `count` constellation sigils. Used on the round-start intro banners.
-function IntroBadgeSlots({ playerId, size, count }: { playerId: string | null; size: number; count: number }) {
+function IntroBadgeSlots({
+  playerId,
+  size,
+  count,
+}: {
+  playerId: string | null;
+  size: number;
+  count: number;
+}) {
   const [banner, setBanner] = useState<BannerData | null>(null);
   const [meta, setMeta] = useState<Map<string, { sigil_key: string; tier: string }>>(new Map());
   useEffect(() => {
-    if (!playerId) { setBanner(null); return; }
+    if (!playerId) {
+      setBanner(null);
+      return;
+    }
     let cancel = false;
-    void fetchBannerDataMany([playerId]).then((m) => { if (!cancel) setBanner(m.get(playerId) ?? null); });
-    return () => { cancel = true; };
+    void fetchBannerDataMany([playerId]).then((m) => {
+      if (!cancel) setBanner(m.get(playerId) ?? null);
+    });
+    return () => {
+      cancel = true;
+    };
   }, [playerId]);
   useEffect(() => {
     const slugs = banner?.showcased ?? [];
-    if (slugs.length === 0) { setMeta(new Map()); return; }
+    if (slugs.length === 0) {
+      setMeta(new Map());
+      return;
+    }
     let cancel = false;
     void fetchAchievementMeta(slugs).then((m) => {
       if (cancel) return;
@@ -1938,7 +2595,9 @@ function IntroBadgeSlots({ playerId, size, count }: { playerId: string | null; s
       for (const [k, v] of m.entries()) out.set(k, { sigil_key: v.sigil_key, tier: v.tier });
       setMeta(out);
     });
-    return () => { cancel = true; };
+    return () => {
+      cancel = true;
+    };
   }, [banner?.showcased?.join(",")]);
   const showcased = banner?.showcased ?? [];
   return (
@@ -1947,10 +2606,26 @@ function IntroBadgeSlots({ playerId, size, count }: { playerId: string | null; s
         const slug = showcased[i];
         const m = slug ? meta.get(slug) : null;
         if (!m) {
-          return <div key={i} className="rounded-full border border-dashed"
-            style={{ width: size, height: size, borderColor: "color-mix(in oklab, var(--foreground) 18%, transparent)" }} />;
+          return (
+            <div
+              key={i}
+              className="rounded-full border border-dashed"
+              style={{
+                width: size,
+                height: size,
+                borderColor: "color-mix(in oklab, var(--foreground) 18%, transparent)",
+              }}
+            />
+          );
         }
-        return <ConstellationSigil key={i} sigilKey={m.sigil_key} tier={m.tier as SigilTier} size={size} />;
+        return (
+          <ConstellationSigil
+            key={i}
+            sigilKey={m.sigil_key}
+            tier={m.tier as SigilTier}
+            size={size}
+          />
+        );
       })}
     </div>
   );
@@ -1958,15 +2633,32 @@ function IntroBadgeSlots({ playerId, size, count }: { playerId: string | null; s
 
 // Avatar disc used by the intro banners. Renders the player's uploaded
 // profile picture when available, falling back to initials on a color disc.
-function IntroAvatar({ playerId, name, color, size, borderWidth = 2 }: {
-  playerId: string | null; name: string; color: string; size: number; borderWidth?: number;
+function IntroAvatar({
+  playerId,
+  name,
+  color,
+  size,
+  borderWidth = 2,
+}: {
+  playerId: string | null;
+  name: string;
+  color: string;
+  size: number;
+  borderWidth?: number;
 }) {
   const [banner, setBanner] = useState<BannerData | null>(null);
   useEffect(() => {
-    if (!playerId) { setBanner(null); return; }
+    if (!playerId) {
+      setBanner(null);
+      return;
+    }
     let cancel = false;
-    void fetchBannerDataMany([playerId]).then((m) => { if (!cancel) setBanner(m.get(playerId) ?? null); });
-    return () => { cancel = true; };
+    void fetchBannerDataMany([playerId]).then((m) => {
+      if (!cancel) setBanner(m.get(playerId) ?? null);
+    });
+    return () => {
+      cancel = true;
+    };
   }, [playerId]);
   const avatarUrl = banner?.avatarUrl ?? null;
   const avatarColor = banner?.avatarColor ?? color;
@@ -1974,7 +2666,8 @@ function IntroAvatar({ playerId, name, color, size, borderWidth = 2 }: {
     <div
       className="grid flex-none place-items-center rounded-full font-extrabold"
       style={{
-        width: size, height: size,
+        width: size,
+        height: size,
         fontSize: Math.round(size * 0.36),
         background: avatarUrl
           ? `url(${avatarUrl}) center/cover`
@@ -1988,8 +2681,17 @@ function IntroAvatar({ playerId, name, color, size, borderWidth = 2 }: {
   );
 }
 
-function CoinflipOverlay({ starter, you, mode, nameOf, playerIdOf }: {
-  starter: PlayerId; you: PlayerId; mode: Mode; nameOf: (s: PlayerId) => string;
+function CoinflipOverlay({
+  starter,
+  you,
+  mode,
+  nameOf,
+  playerIdOf,
+}: {
+  starter: PlayerId;
+  you: PlayerId;
+  mode: Mode;
+  nameOf: (s: PlayerId) => string;
   playerIdOf?: (s: PlayerId) => string | null;
 }) {
   // Phase machine driven by mount-time timers.
@@ -2000,16 +2702,28 @@ function CoinflipOverlay({ starter, you, mode, nameOf, playerIdOf }: {
   useEffect(() => {
     const timers: number[] = [];
     const t = (ms: number, fn: () => void) => timers.push(window.setTimeout(fn, ms));
-    t(120, () => setPhase(1));   // slide in
-    t(950, () => { setPhase(2); setShakeKey((k) => k + 1); play("clash"); }); // impact
-    t(1350, () => { setPhase(3); play("coinToss"); });  // coin appear
-    t(1550, () => setPhase(4));  // coin spin
-    t(3350, () => { setPhase(5); play("roundWin"); }); // reveal
+    t(120, () => setPhase(1)); // slide in
+    t(950, () => {
+      setPhase(2);
+      setShakeKey((k) => k + 1);
+      play("clash");
+    }); // impact
+    t(1350, () => {
+      setPhase(3);
+      play("coinToss");
+    }); // coin appear
+    t(1550, () => setPhase(4)); // coin spin
+    t(3350, () => {
+      setPhase(5);
+      play("roundWin");
+    }); // reveal
     // Out animation: hold on reveal, then fade the whole frame away while a
     // "Game starting…" flash appears (matches the 2-player design doc).
     t(3350 + 1300, () => setPhase(6));
     t(3350 + 1300 + 650, () => setPhase(7));
-    return () => { timers.forEach((id) => window.clearTimeout(id)); };
+    return () => {
+      timers.forEach((id) => window.clearTimeout(id));
+    };
   }, []);
 
   const p1: PlayerId = 0;
@@ -2036,7 +2750,9 @@ function CoinflipOverlay({ starter, you, mode, nameOf, playerIdOf }: {
 
   // 4-player mode gets its own multi-banner intro with a spinning selector.
   if (mode === 4) {
-    return <FourPlayerRoundStart starter={starter} you={you} nameOf={nameOf} playerIdOf={playerIdOf} />;
+    return (
+      <FourPlayerRoundStart starter={starter} you={you} nameOf={nameOf} playerIdOf={playerIdOf} />
+    );
   }
 
   const exiting = phase >= 6;
@@ -2063,7 +2779,8 @@ function CoinflipOverlay({ starter, you, mode, nameOf, playerIdOf }: {
       <div
         className="absolute inset-0"
         style={{
-          background: "radial-gradient(circle at 50% 50%, rgba(255,255,255,.85), color-mix(in oklab, var(--primary) 30%, transparent) 40%, transparent 70%)",
+          background:
+            "radial-gradient(circle at 50% 50%, rgba(255,255,255,.85), color-mix(in oklab, var(--primary) 30%, transparent) 40%, transparent 70%)",
           opacity: phase === 2 ? 1 : 0,
           transition: phase === 2 ? "opacity .12s ease" : "opacity .35s ease",
         }}
@@ -2088,13 +2805,19 @@ function CoinflipOverlay({ starter, you, mode, nameOf, playerIdOf }: {
       >
         <div className="flex w-full max-w-md flex-col items-stretch gap-3">
           <RoundStartBanner
-            slot={p1} name={p1Name} side="left" phase={phase}
+            slot={p1}
+            name={p1Name}
+            side="left"
+            phase={phase}
             isWinner={phase === 5 && starter === p1}
             isLoser={phase === 5 && starter !== p1}
             playerId={playerIdOf?.(p1) ?? null}
           />
           <RoundStartBanner
-            slot={p2} name={p2Name} side="right" phase={phase}
+            slot={p2}
+            name={p2Name}
+            side="right"
+            phase={phase}
             isWinner={phase === 5 && starter === p2}
             isLoser={phase === 5 && starter !== p2}
             playerId={playerIdOf?.(p2) ?? null}
@@ -2120,8 +2843,18 @@ function CoinflipOverlay({ starter, you, mode, nameOf, playerIdOf }: {
               transition: "transform 1.75s cubic-bezier(.16,.85,.24,1)",
             }}
           >
-            <div className="absolute inset-0 grid place-items-center rounded-full text-2xl font-extrabold shadow-[0_10px_30px_rgba(0,0,0,.5)] ring-4 ring-white/25 sm:text-4xl" style={{ ...frontStyle, backfaceVisibility: "hidden" }}>1</div>
-            <div className="absolute inset-0 grid place-items-center rounded-full text-2xl font-extrabold shadow-[0_10px_30px_rgba(0,0,0,.5)] ring-4 ring-white/25 sm:text-4xl" style={{ ...backStyle, backfaceVisibility: "hidden" }}>2</div>
+            <div
+              className="absolute inset-0 grid place-items-center rounded-full text-2xl font-extrabold shadow-[0_10px_30px_rgba(0,0,0,.5)] ring-4 ring-white/25 sm:text-4xl"
+              style={{ ...frontStyle, backfaceVisibility: "hidden" }}
+            >
+              1
+            </div>
+            <div
+              className="absolute inset-0 grid place-items-center rounded-full text-2xl font-extrabold shadow-[0_10px_30px_rgba(0,0,0,.5)] ring-4 ring-white/25 sm:text-4xl"
+              style={{ ...backStyle, backfaceVisibility: "hidden" }}
+            >
+              2
+            </div>
           </div>
         </div>
       </div>
@@ -2163,8 +2896,15 @@ function CoinflipOverlay({ starter, you, mode, nameOf, playerIdOf }: {
 // in the middle, then a spinning selector cycles around all four cards
 // (decelerating) before landing on the winner. Ranks 2-4 reveal in slot
 // order afterwards. Purely cosmetic — the winner is whatever `starter` is.
-function FourPlayerRoundStart({ starter, you, nameOf, playerIdOf }: {
-  starter: PlayerId; you: PlayerId; nameOf: (s: PlayerId) => string;
+function FourPlayerRoundStart({
+  starter,
+  you,
+  nameOf,
+  playerIdOf,
+}: {
+  starter: PlayerId;
+  you: PlayerId;
+  nameOf: (s: PlayerId) => string;
   playerIdOf?: (s: PlayerId) => string | null;
 }) {
   const [phase, setPhase] = useState(0); // 0 idle → 1 slide → 2 impact → 3 spin → 4 reveal → 5 exit → 6 gone
@@ -2182,7 +2922,11 @@ function FourPlayerRoundStart({ starter, you, nameOf, playerIdOf }: {
     const timers: number[] = [];
     const t = (ms: number, fn: () => void) => timers.push(window.setTimeout(fn, ms));
     t(100, () => setPhase(1));
-    t(900, () => { setPhase(2); setShakeKey((k) => k + 1); play("clash"); });
+    t(900, () => {
+      setPhase(2);
+      setShakeKey((k) => k + 1);
+      play("clash");
+    });
     // Spinning selector: decelerating cycle that lands on the winner.
     const spinStart = 1250;
     const widx = cycle.indexOf(starter);
@@ -2202,7 +2946,11 @@ function FourPlayerRoundStart({ starter, you, nameOf, playerIdOf }: {
       setPhase(3);
       playWheelSpin(totalSteps + 1, cumulative);
     });
-    t(spinEnd + 200, () => { setPhase(4); setRevealedCount(1); play("roundWin"); });
+    t(spinEnd + 200, () => {
+      setPhase(4);
+      setRevealedCount(1);
+      play("roundWin");
+    });
     for (let i = 1; i < revealSeq.length; i++) {
       t(spinEnd + 200 + i * 300, () => setRevealedCount(i + 1));
     }
@@ -2212,7 +2960,9 @@ function FourPlayerRoundStart({ starter, you, nameOf, playerIdOf }: {
     const doneAt = spinEnd + 200 + revealSeq.length * 300 + 350;
     t(doneAt + 1300, () => setPhase(5));
     t(doneAt + 1300 + 650, () => setPhase(6));
-    return () => { timers.forEach((id) => window.clearTimeout(id)); };
+    return () => {
+      timers.forEach((id) => window.clearTimeout(id));
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -2224,7 +2974,9 @@ function FourPlayerRoundStart({ starter, you, nameOf, playerIdOf }: {
   } as Record<PlayerId, { row: 0 | 1; col: 0 | 1; from: string }>;
 
   const rankOf: Partial<Record<PlayerId, number>> = {};
-  revealSeq.forEach((s, i) => { rankOf[s] = i + 1; });
+  revealSeq.forEach((s, i) => {
+    rankOf[s] = i + 1;
+  });
 
   const winnerColor = PLAYER_COLORS[starter];
   const youStart = starter === you;
@@ -2238,28 +2990,46 @@ function FourPlayerRoundStart({ starter, you, nameOf, playerIdOf }: {
   return (
     <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-lg bg-background/85 backdrop-blur-md">
       {/* Grid + winner-tinted radial backdrop */}
-      <div className="absolute inset-0" style={{
-        backgroundImage:
-          "linear-gradient(color-mix(in oklab, var(--foreground) 3%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in oklab, var(--foreground) 3%, transparent) 1px, transparent 1px)",
-        backgroundSize: "34px 34px",
-      }} />
-      <div className="absolute inset-0" style={{
-        background: `radial-gradient(ellipse 60% 45% at 50% 50%, color-mix(in oklab, ${winnerColor} 16%, transparent), transparent 70%)`,
-      }} />
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage:
+            "linear-gradient(color-mix(in oklab, var(--foreground) 3%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in oklab, var(--foreground) 3%, transparent) 1px, transparent 1px)",
+          backgroundSize: "34px 34px",
+        }}
+      />
+      <div
+        className="absolute inset-0"
+        style={{
+          background: `radial-gradient(ellipse 60% 45% at 50% 50%, color-mix(in oklab, ${winnerColor} 16%, transparent), transparent 70%)`,
+        }}
+      />
       {/* Flash on impact */}
-      <div className="absolute inset-0" style={{
-        background: "radial-gradient(circle at 50% 50%, rgba(255,255,255,.85), color-mix(in oklab, var(--primary) 30%, transparent) 40%, transparent 70%)",
-        opacity: phase === 2 ? 1 : 0,
-        transition: phase === 2 ? "opacity .12s ease" : "opacity .35s ease",
-      }} />
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(circle at 50% 50%, rgba(255,255,255,.85), color-mix(in oklab, var(--primary) 30%, transparent) 40%, transparent 70%)",
+          opacity: phase === 2 ? 1 : 0,
+          transition: phase === 2 ? "opacity .12s ease" : "opacity .35s ease",
+        }}
+      />
       {/* Eyebrow */}
-      <div className="absolute left-1/2 top-5 flex -translate-x-1/2 items-center gap-2"
-        style={{ opacity: phase >= 1 && !exiting ? 1 : 0, transition: "opacity .5s ease" }}>
-        <span className="rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.14em] text-white"
-          style={{ background: "linear-gradient(90deg, oklch(0.65 0.22 350), oklch(0.55 0.24 305))" }}>
+      <div
+        className="absolute left-1/2 top-5 flex -translate-x-1/2 items-center gap-2"
+        style={{ opacity: phase >= 1 && !exiting ? 1 : 0, transition: "opacity .5s ease" }}
+      >
+        <span
+          className="rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.14em] text-white"
+          style={{
+            background: "linear-gradient(90deg, oklch(0.65 0.22 350), oklch(0.55 0.24 305))",
+          }}
+        >
           Chaos
         </span>
-        <span className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">4 players</span>
+        <span className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+          4 players
+        </span>
       </div>
 
       <div
@@ -2288,7 +3058,8 @@ function FourPlayerRoundStart({ starter, you, nameOf, playerIdOf }: {
                 key={slot}
                 className="relative flex items-center gap-4 rounded-2xl border px-4 py-3.5 sm:gap-5 sm:px-5 sm:py-4.5"
                 style={{
-                  gridRow: pos.row + 1, gridColumn: pos.col + 1,
+                  gridRow: pos.row + 1,
+                  gridColumn: pos.col + 1,
                   borderColor: "color-mix(in oklab, var(--border) 70%, transparent)",
                   background: "color-mix(in oklab, var(--card) 92%, black 8%)",
                   transform: landed ? "translate(0,0)" : pos.from,
@@ -2299,22 +3070,26 @@ function FourPlayerRoundStart({ starter, you, nameOf, playerIdOf }: {
                     : spinlit
                       ? `0 0 0 3px oklch(0.95 0.08 90), 0 16px 46px rgba(0,0,0,.5), 0 0 36px 2px oklch(0.85 0.16 90)`
                       : "0 16px 40px rgba(0,0,0,.45)",
-                  transition: "transform .55s cubic-bezier(.2,.7,.3,1.25), opacity .5s ease, box-shadow .35s ease, filter .5s ease",
+                  transition:
+                    "transform .55s cubic-bezier(.2,.7,.3,1.25), opacity .5s ease, box-shadow .35s ease, filter .5s ease",
                 }}
               >
-                <div className="absolute left-0 top-3 bottom-3 w-1 rounded-full" style={{ background: color }} />
+                <div
+                  className="absolute left-0 top-3 bottom-3 w-1 rounded-full"
+                  style={{ background: color }}
+                />
                 {/* Rank badge (top-left corner) */}
                 <div
                   className="absolute -left-3 -top-3 grid h-9 w-9 place-items-center rounded-full text-sm font-extrabold shadow-md"
                   style={{
                     background: revealed
-                      ? (rank === 1
-                          ? "linear-gradient(145deg, oklch(0.94 0.09 90), oklch(0.78 0.16 85))"
-                          : rank === 2
-                            ? "linear-gradient(145deg, oklch(0.92 0.01 260), oklch(0.78 0.02 260))"
-                            : rank === 3
-                              ? "linear-gradient(145deg, oklch(0.82 0.13 60), oklch(0.62 0.15 45))"
-                              : "linear-gradient(145deg, oklch(0.82 0.01 260), oklch(0.62 0.02 260))")
+                      ? rank === 1
+                        ? "linear-gradient(145deg, oklch(0.94 0.09 90), oklch(0.78 0.16 85))"
+                        : rank === 2
+                          ? "linear-gradient(145deg, oklch(0.92 0.01 260), oklch(0.78 0.02 260))"
+                          : rank === 3
+                            ? "linear-gradient(145deg, oklch(0.82 0.13 60), oklch(0.62 0.15 45))"
+                            : "linear-gradient(145deg, oklch(0.82 0.01 260), oklch(0.62 0.02 260))"
                       : "oklch(0.24 0.01 260)",
                     color: revealed ? "oklch(0.16 0.02 55)" : "oklch(0.65 0.02 260)",
                     boxShadow: "inset 0 0 0 2px rgba(255,255,255,.3)",
@@ -2338,10 +3113,18 @@ function FourPlayerRoundStart({ starter, you, nameOf, playerIdOf }: {
                   Goes first
                 </div>
                 {/* Avatar */}
-                <IntroAvatar playerId={playerIdOf?.(slot) ?? null} name={name} color={color} size={80} borderWidth={3.5} />
+                <IntroAvatar
+                  playerId={playerIdOf?.(slot) ?? null}
+                  name={name}
+                  color={color}
+                  size={80}
+                  borderWidth={3.5}
+                />
                 {/* Name + title */}
                 <div className="flex min-w-0 flex-1 flex-col">
-                  <p className="truncate text-base font-extrabold text-foreground sm:text-lg">{name}</p>
+                  <p className="truncate text-base font-extrabold text-foreground sm:text-lg">
+                    {name}
+                  </p>
                   <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                     {titleFor(name)}
                   </p>
@@ -2389,13 +3172,23 @@ function FourPlayerRoundStart({ starter, you, nameOf, playerIdOf }: {
 
 // ---------------- CHESS CLOCK ----------------
 
-function ChessClock({ state, playerId, nameOf, compact = false }: {
-  state: GameState; playerId: PlayerId;
-  nameOf: (s: PlayerId) => string; compact?: boolean;
+function ChessClock({
+  state,
+  playerId,
+  nameOf,
+  compact = false,
+}: {
+  state: GameState;
+  playerId: PlayerId;
+  nameOf: (s: PlayerId) => string;
+  compact?: boolean;
 }) {
   const [now, setNow] = useState<number>(() => Date.now());
-  const active = state.turn === playerId && state.winner === null
-    && state.matchWinner === null && state.active[playerId];
+  const active =
+    state.turn === playerId &&
+    state.winner === null &&
+    state.matchWinner === null &&
+    state.active[playerId];
   useEffect(() => {
     if (!state.clocks) return;
     const iv = window.setInterval(() => setNow(Date.now()), 200);
@@ -2411,7 +3204,10 @@ function ChessClock({ state, playerId, nameOf, compact = false }: {
   const dangerActive = active && danger && remaining > 0;
   const lastCueRef = useRef(0);
   useEffect(() => {
-    if (!dangerActive) { lastCueRef.current = 0; return; }
+    if (!dangerActive) {
+      lastCueRef.current = 0;
+      return;
+    }
     const cadence = seconds <= 5 ? 700 : seconds <= 10 ? 1200 : 1800;
     const now = Date.now();
     if (now - lastCueRef.current >= cadence) {
@@ -2433,25 +3229,38 @@ function ChessClock({ state, playerId, nameOf, compact = false }: {
     (active ? "clock-active " : "opacity-60 ") +
     (active && danger ? "clock-danger " : active && warn ? "clock-warn " : "");
   return (
-    <div key={pulseKey ? `p-${pulseKey}` : "p-0"} className={cls + (active ? " clock-turn-pulse" : "")}
-      style={{
-        borderColor: active ? color : "var(--border)",
-        background: active ? `color-mix(in oklab, ${color} 12%, var(--card))` : "var(--card)",
-        ["--pulse-color" as string]: color,
-      } as React.CSSProperties}>
+    <div
+      key={pulseKey ? `p-${pulseKey}` : "p-0"}
+      className={cls + (active ? " clock-turn-pulse" : "")}
+      style={
+        {
+          borderColor: active ? color : "var(--border)",
+          background: active ? `color-mix(in oklab, ${color} 12%, var(--card))` : "var(--card)",
+          ["--pulse-color" as string]: color,
+        } as React.CSSProperties
+      }
+    >
       <div className="flex items-center justify-between gap-2">
         <span className="truncate text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
           {label}
         </span>
         <span className="h-2 w-2 rounded-full" style={{ background: color }} />
       </div>
-      <p className={"font-mono tabular-nums " + (compact ? "text-xl" : "text-2xl sm:text-3xl") + " leading-tight"}
-        style={{ color: danger ? "var(--destructive)" : "inherit" }}>
+      <p
+        className={
+          "font-mono tabular-nums " +
+          (compact ? "text-xl" : "text-2xl sm:text-3xl") +
+          " leading-tight"
+        }
+        style={{ color: danger ? "var(--destructive)" : "inherit" }}
+      >
         {formatClock(remaining)}
       </p>
       {active && danger && remaining > 0 && (
-        <p className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.18em]"
-          style={{ color: "var(--destructive)" }}>
+        <p
+          className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.18em]"
+          style={{ color: "var(--destructive)" }}
+        >
           {Math.max(1, Math.ceil(seconds))}s left
         </p>
       )}
@@ -2459,8 +3268,14 @@ function ChessClock({ state, playerId, nameOf, compact = false }: {
   );
 }
 
-function ClocksCard({ state, you, nameOf }: {
-  state: GameState; you: PlayerId; nameOf: (s: PlayerId) => string;
+function ClocksCard({
+  state,
+  you,
+  nameOf,
+}: {
+  state: GameState;
+  you: PlayerId;
+  nameOf: (s: PlayerId) => string;
 }) {
   if (!state.clocks) return null;
   // Chess.com layout: opponent(s) on top, you on bottom. Spectators pass a
@@ -2486,8 +3301,14 @@ function ClocksCard({ state, you, nameOf }: {
 
 // Vertical clock stack that sits to the right of the board, chess.com style:
 // opponents float up top, you sit bottom-right.
-function BoardSideClocks({ state, you, nameOf }: {
-  state: GameState; you: PlayerId; nameOf: (s: PlayerId) => string;
+function BoardSideClocks({
+  state,
+  you,
+  nameOf,
+}: {
+  state: GameState;
+  you: PlayerId;
+  nameOf: (s: PlayerId) => string;
 }) {
   if (!state.clocks) return null;
   const others: PlayerId[] = [];
@@ -2500,17 +3321,21 @@ function BoardSideClocks({ state, you, nameOf }: {
           <ChessClock key={o} state={state} playerId={o} nameOf={nameOf} />
         ))}
       </div>
-      {showYou && (
-        <ChessClock state={state} playerId={you} nameOf={nameOf} />
-      )}
+      {showYou && <ChessClock state={state} playerId={you} nameOf={nameOf} />}
     </div>
   );
 }
 
 // Compact mobile-only strip that shows each seat's name, remaining clock,
 // and wall count without needing to open the match panel bottom sheet.
-function MobileMatchStrip({ state, you, nameOf }: {
-  state: GameState; you: PlayerId; nameOf: (s: PlayerId) => string;
+function MobileMatchStrip({
+  state,
+  you,
+  nameOf,
+}: {
+  state: GameState;
+  you: PlayerId;
+  nameOf: (s: PlayerId) => string;
 }) {
   const [now, setNow] = useState<number>(() => Date.now());
   useEffect(() => {
@@ -2521,21 +3346,31 @@ function MobileMatchStrip({ state, you, nameOf }: {
   const seats: PlayerId[] = [];
   for (let i = 0; i < state.mode; i++) seats.push(i as PlayerId);
   return (
-    <div className="grid gap-1.5 sm:hidden"
-      style={{ gridTemplateColumns: `repeat(${state.mode}, minmax(0, 1fr))` }}>
+    <div
+      className="grid gap-1.5 sm:hidden"
+      style={{ gridTemplateColumns: `repeat(${state.mode}, minmax(0, 1fr))` }}
+    >
       {seats.map((i) => {
         const color = PLAYER_COLORS[i];
-        const isTurn = state.turn === i && state.winner === null && state.matchWinner === null && state.active[i];
+        const isTurn =
+          state.turn === i &&
+          state.winner === null &&
+          state.matchWinner === null &&
+          state.active[i];
         const remaining = state.clocks ? liveRemaining(state.clocks, state.turn, i, now) : 0;
         const seconds = remaining / 1000;
         const danger = seconds <= 15;
         return (
-          <div key={i}
-            className={"rounded-lg border px-2 py-1.5 transition " + (isTurn ? "clock-active" : "opacity-70")}
+          <div
+            key={i}
+            className={
+              "rounded-lg border px-2 py-1.5 transition " + (isTurn ? "clock-active" : "opacity-70")
+            }
             style={{
               borderColor: isTurn ? color : "var(--border)",
               background: isTurn ? `color-mix(in oklab, ${color} 12%, var(--card))` : "var(--card)",
-            }}>
+            }}
+          >
             <div className="flex items-center gap-1.5">
               <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: color }} />
               <span className="min-w-0 flex-1 truncate text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
@@ -2543,8 +3378,10 @@ function MobileMatchStrip({ state, you, nameOf }: {
               </span>
             </div>
             {state.clocks && (
-              <p className="mt-0.5 font-mono text-base leading-tight tabular-nums"
-                style={{ color: danger && isTurn ? "var(--destructive)" : "inherit" }}>
+              <p
+                className="mt-0.5 font-mono text-base leading-tight tabular-nums"
+                style={{ color: danger && isTurn ? "var(--destructive)" : "inherit" }}
+              >
                 {formatClock(remaining)}
               </p>
             )}
@@ -2553,8 +3390,11 @@ function MobileMatchStrip({ state, you, nameOf }: {
                 {Array.from({ length: 10 }, (_, k) => {
                   const filled = k < Math.min(state.wallsLeft[i] ?? 0, 10);
                   return (
-                    <span key={k} className="block h-2.5 flex-1 rounded-sm"
-                      style={{ background: filled ? color : "var(--border)" }} />
+                    <span
+                      key={k}
+                      className="block h-2.5 flex-1 rounded-sm"
+                      style={{ background: filled ? color : "var(--border)" }}
+                    />
                   );
                 })}
               </div>
@@ -2573,11 +3413,21 @@ function MobileMatchStrip({ state, you, nameOf }: {
 // green when they click Ready; once every player is green the balls merge
 // into the middle and the next round starts (coinflip runs from the parent).
 function RoundEndReady({
-  state, you, nameOf, readySlots, merging, onReady, onLeave,
+  state,
+  you,
+  nameOf,
+  readySlots,
+  merging,
+  onReady,
+  onLeave,
 }: {
-  state: GameState; you: PlayerId; nameOf: (s: PlayerId) => string;
-  readySlots: PlayerId[]; merging: boolean;
-  onReady: () => void; onLeave: () => void;
+  state: GameState;
+  you: PlayerId;
+  nameOf: (s: PlayerId) => string;
+  readySlots: PlayerId[];
+  merging: boolean;
+  onReady: () => void;
+  onLeave: () => void;
 }) {
   const winner = state.winner as PlayerId;
   const youWon = winner === you;
@@ -2637,7 +3487,10 @@ function RoundEndReady({
             >
               {iAmReady ? "Waiting" : "Ready"}
             </button>
-            <button onClick={onLeave} className="rounded-lg border border-border bg-secondary/40 px-6 py-2.5 text-sm font-medium uppercase tracking-widest text-muted-foreground hover:bg-secondary">
+            <button
+              onClick={onLeave}
+              className="rounded-lg border border-border bg-secondary/40 px-6 py-2.5 text-sm font-medium uppercase tracking-widest text-muted-foreground hover:bg-secondary"
+            >
               Leave
             </button>
           </div>
@@ -2653,10 +3506,18 @@ function RoundEndReady({
 // doc (2p: 3700ms, 4p: 3850ms).
 export const ROUND_END_ANIM_MS_2P = 3700;
 export const ROUND_END_ANIM_MS_4P = 3850;
-function roundEndAnimMs(mode: Mode): number { return mode === 4 ? ROUND_END_ANIM_MS_4P : ROUND_END_ANIM_MS_2P; }
+function roundEndAnimMs(mode: Mode): number {
+  return mode === 4 ? ROUND_END_ANIM_MS_4P : ROUND_END_ANIM_MS_2P;
+}
 
-function RoundEndScoreAnim({ state, nameOf, playerIdOf, onDone }: {
-  state: GameState; nameOf: (s: PlayerId) => string;
+function RoundEndScoreAnim({
+  state,
+  nameOf,
+  playerIdOf,
+  onDone,
+}: {
+  state: GameState;
+  nameOf: (s: PlayerId) => string;
   playerIdOf?: (s: PlayerId) => string | null;
   onDone: () => void;
 }) {
@@ -2670,11 +3531,16 @@ function RoundEndScoreAnim({ state, nameOf, playerIdOf, onDone }: {
     const timers: number[] = [];
     const t = (ms: number, fn: () => void) => timers.push(window.setTimeout(fn, ms));
     t(120, () => setPhase("show"));
-    t(bumpAt, () => { setPhase("bump"); play("pointScore"); });
+    t(bumpAt, () => {
+      setPhase("bump");
+      play("pointScore");
+    });
     t(bumpAt + 900, () => setPhase("show"));
     t(exitAt, () => setPhase("exit"));
     t(totalMs, onDone);
-    return () => { timers.forEach((id) => window.clearTimeout(id)); };
+    return () => {
+      timers.forEach((id) => window.clearTimeout(id));
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -2698,37 +3564,50 @@ function RoundEndScoreAnim({ state, nameOf, playerIdOf, onDone }: {
   const target = winsNeeded(state.totalRounds, state.mode);
   const dimLosers = phase === "exit";
 
-  const roundIdx = (state.score?.reduce((a, b) => a + (b ?? 0), 0)) ?? 1;
+  const roundIdx = state.score?.reduce((a, b) => a + (b ?? 0), 0) ?? 1;
 
   return (
     <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-lg bg-background/85 backdrop-blur-md">
       {/* Winner-tinted glow backdrop */}
-      <div className="absolute inset-0" style={{
-        background: `radial-gradient(ellipse 60% 45% at 50% 50%, color-mix(in oklab, ${winnerColor} 16%, transparent), transparent 70%)`,
-        transition: "background .6s ease",
-      }} />
-      <div className="absolute inset-0" style={{
-        backgroundImage:
-          "linear-gradient(color-mix(in oklab, var(--foreground) 3%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in oklab, var(--foreground) 3%, transparent) 1px, transparent 1px)",
-        backgroundSize: "34px 34px",
-      }} />
+      <div
+        className="absolute inset-0"
+        style={{
+          background: `radial-gradient(ellipse 60% 45% at 50% 50%, color-mix(in oklab, ${winnerColor} 16%, transparent), transparent 70%)`,
+          transition: "background .6s ease",
+        }}
+      />
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage:
+            "linear-gradient(color-mix(in oklab, var(--foreground) 3%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in oklab, var(--foreground) 3%, transparent) 1px, transparent 1px)",
+          backgroundSize: "34px 34px",
+        }}
+      />
 
       <div
         className="relative flex h-full w-full flex-col items-center justify-center gap-8 px-4"
         style={{
           opacity: phase === "idle" || phase === "exit" ? 0 : 1,
-          transform: phase === "idle"
-            ? "scale(.96) translateY(6px)"
-            : phase === "exit"
-              ? "scale(.95) translateY(-10px)"
-              : "scale(1) translateY(0)",
+          transform:
+            phase === "idle"
+              ? "scale(.96) translateY(6px)"
+              : phase === "exit"
+                ? "scale(.95) translateY(-10px)"
+                : "scale(1) translateY(0)",
           transition: "opacity .5s ease, transform .5s ease",
         }}
       >
         {/* Header */}
         <div className="flex items-center gap-3 sm:gap-4">
-          <div className="grid h-9 w-9 flex-none place-items-center rounded-full border-2 text-sm font-extrabold"
-            style={{ background: "oklch(0.24 0.01 260)", color: "oklch(0.85 0.02 260)", borderColor: "color-mix(in oklab, var(--foreground) 15%, transparent)" }}>
+          <div
+            className="grid h-9 w-9 flex-none place-items-center rounded-full border-2 text-sm font-extrabold"
+            style={{
+              background: "oklch(0.24 0.01 260)",
+              color: "oklch(0.85 0.02 260)",
+              borderColor: "color-mix(in oklab, var(--foreground) 15%, transparent)",
+            }}
+          >
             {roundIdx}
           </div>
           <div className="flex flex-col gap-1">
@@ -2737,14 +3616,25 @@ function RoundEndScoreAnim({ state, nameOf, playerIdOf, onDone }: {
             </p>
             <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground sm:text-[11px]">
               {isFourP && (
-                <span className="rounded-full px-2 py-0.5 text-[9px] font-extrabold text-white"
-                  style={{ background: "linear-gradient(90deg, oklch(0.65 0.22 350), oklch(0.55 0.24 305))" }}>
+                <span
+                  className="rounded-full px-2 py-0.5 text-[9px] font-extrabold text-white"
+                  style={{
+                    background:
+                      "linear-gradient(90deg, oklch(0.65 0.22 350), oklch(0.55 0.24 305))",
+                  }}
+                >
                   Chaos
                 </span>
               )}
-              {isFourP
-                ? <span>{state.mode} players · first to {target}</span>
-                : <span>{state.mode}-player · best of {state.totalRounds}</span>}
+              {isFourP ? (
+                <span>
+                  {state.mode} players · first to {target}
+                </span>
+              ) : (
+                <span>
+                  {state.mode}-player · best of {state.totalRounds}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -2760,9 +3650,21 @@ function RoundEndScoreAnim({ state, nameOf, playerIdOf, onDone }: {
               <React.Fragment key={slot}>
                 {i > 0 && !isFourP && (
                   <div className="flex flex-col items-center gap-1.5 self-stretch justify-center">
-                    <div className="h-10 w-px" style={{ background: "color-mix(in oklab, var(--foreground) 14%, transparent)" }} />
-                    <span className="whitespace-nowrap text-[10px] font-extrabold uppercase tracking-[0.14em] text-muted-foreground">First to {target}</span>
-                    <div className="h-10 w-px" style={{ background: "color-mix(in oklab, var(--foreground) 14%, transparent)" }} />
+                    <div
+                      className="h-10 w-px"
+                      style={{
+                        background: "color-mix(in oklab, var(--foreground) 14%, transparent)",
+                      }}
+                    />
+                    <span className="whitespace-nowrap text-[10px] font-extrabold uppercase tracking-[0.14em] text-muted-foreground">
+                      First to {target}
+                    </span>
+                    <div
+                      className="h-10 w-px"
+                      style={{
+                        background: "color-mix(in oklab, var(--foreground) 14%, transparent)",
+                      }}
+                    />
                   </div>
                 )}
                 <div
@@ -2794,11 +3696,26 @@ function RoundEndScoreAnim({ state, nameOf, playerIdOf, onDone }: {
                       />
                     )}
                   </div>
-                  <p className={"font-bold text-foreground " + (isFourP ? "max-w-[110px] truncate text-xs sm:text-sm" : "text-sm sm:text-base")}>{name}</p>
-                  <div className="relative grid place-items-center" style={{ width: isFourP ? 64 : 88, height: isFourP ? 52 : 78 }}>
+                  <p
+                    className={
+                      "font-bold text-foreground " +
+                      (isFourP
+                        ? "max-w-[110px] truncate text-xs sm:text-sm"
+                        : "text-sm sm:text-base")
+                    }
+                  >
+                    {name}
+                  </p>
+                  <div
+                    className="relative grid place-items-center"
+                    style={{ width: isFourP ? 64 : 88, height: isFourP ? 52 : 78 }}
+                  >
                     <span
                       key={bumping ? `bump-${slot}` : `n-${slot}-${scoreFor(slot)}`}
-                      className={"font-extrabold tabular-nums " + (isFourP ? "text-4xl sm:text-5xl" : "text-5xl sm:text-6xl")}
+                      className={
+                        "font-extrabold tabular-nums " +
+                        (isFourP ? "text-4xl sm:text-5xl" : "text-5xl sm:text-6xl")
+                      }
                       style={{
                         color: bumping ? color : "var(--foreground)",
                         animation: bumping ? "rs-bump .6s cubic-bezier(.3,1.6,.4,1)" : undefined,
@@ -2837,9 +3754,21 @@ function RoundEndScoreAnim({ state, nameOf, playerIdOf, onDone }: {
   );
 }
 
-function WinOverlay({ state, you, matchOver, onPrimary, primaryLabel, onLeave, nameOf }: {
-  state: GameState; you: PlayerId; matchOver: boolean;
-  onPrimary: () => void; primaryLabel: string; onLeave: () => void;
+function WinOverlay({
+  state,
+  you,
+  matchOver,
+  onPrimary,
+  primaryLabel,
+  onLeave,
+  nameOf,
+}: {
+  state: GameState;
+  you: PlayerId;
+  matchOver: boolean;
+  onPrimary: () => void;
+  primaryLabel: string;
+  onLeave: () => void;
   nameOf: (s: PlayerId) => string;
 }) {
   const [analyzing, setAnalyzing] = useState(false);
@@ -2847,7 +3776,13 @@ function WinOverlay({ state, you, matchOver, onPrimary, primaryLabel, onLeave, n
   const youWon = winner === you;
   const winnerColor = PLAYER_COLORS[winner];
   const pieces = Array.from({ length: youWon ? (matchOver ? 90 : 45) : 0 }, (_, i) => i);
-  const title = matchOver ? (youWon ? "Match won!" : "Match over") : (youWon ? "Round won" : "Round lost");
+  const title = matchOver
+    ? youWon
+      ? "Match won!"
+      : "Match over"
+    : youWon
+      ? "Round won"
+      : "Round lost";
   const reason = state.endReason;
   const loser = state.endLoser;
   const loserName = loser !== undefined ? nameOf(loser) : "Opponent";
@@ -2864,19 +3799,17 @@ function WinOverlay({ state, you, matchOver, onPrimary, primaryLabel, onLeave, n
         : `${loserName} went idle and forfeited on time.`;
     }
     if (reason === "forfeit") {
-      return youLost
-        ? "You forfeited the round."
-        : `${loserName} forfeited the round.`;
+      return youLost ? "You forfeited the round." : `${loserName} forfeited the round.`;
     }
     if (reason === "left") {
-      return youLost
-        ? "You left the match."
-        : `${loserName} left the match — you win by default.`;
+      return youLost ? "You left the match." : `${loserName} left the match — you win by default.`;
     }
     return youWon ? "You reached your goal." : `${nameOf(winner)} reached their goal first.`;
   })();
   const sub = matchOver
-    ? youWon ? `You took the match.` : `${nameOf(winner)} took the match.`
+    ? youWon
+      ? `You took the match.`
+      : `${nameOf(winner)} took the match.`
     : roundSub;
 
   return (
@@ -2889,44 +3822,89 @@ function WinOverlay({ state, you, matchOver, onPrimary, primaryLabel, onLeave, n
         const size = 6 + Math.random() * 8;
         const color = WARM_CONFETTI[i % WARM_CONFETTI.length];
         return (
-          <span key={i} className="confetti-piece absolute top-0 block rounded-sm"
-            style={{
-              left: `${left}%`, width: size, height: size * 1.6, background: color,
-              animationDelay: `${delay}s`, animationDuration: `${dur}s`,
-              ["--dx" as string]: `${dx}vw`,
-            } as React.CSSProperties} />
+          <span
+            key={i}
+            className="confetti-piece absolute top-0 block rounded-sm"
+            style={
+              {
+                left: `${left}%`,
+                width: size,
+                height: size * 1.6,
+                background: color,
+                animationDelay: `${delay}s`,
+                animationDuration: `${dur}s`,
+                ["--dx" as string]: `${dx}vw`,
+              } as React.CSSProperties
+            }
+          />
         );
       })}
-      <div className={"results-in relative mx-4 flex flex-col items-center gap-3 rounded-2xl border border-border bg-card px-6 py-6 text-center shadow-2xl sm:mx-0 sm:px-8 sm:py-7"}>
-        <span className="grid h-14 w-14 place-items-center rounded-full text-xl font-semibold"
-          style={{ background: winnerColor, color: "oklch(0.15 0.02 55)", boxShadow: `0 0 26px color-mix(in oklab, ${winnerColor} 60%, transparent)` }}>
+      <div
+        className={
+          "results-in relative mx-4 flex flex-col items-center gap-3 rounded-2xl border border-border bg-card px-6 py-6 text-center shadow-2xl sm:mx-0 sm:px-8 sm:py-7"
+        }
+      >
+        <span
+          className="grid h-14 w-14 place-items-center rounded-full text-xl font-semibold"
+          style={{
+            background: winnerColor,
+            color: "oklch(0.15 0.02 55)",
+            boxShadow: `0 0 26px color-mix(in oklab, ${winnerColor} 60%, transparent)`,
+          }}
+        >
           {winner + 1}
         </span>
         <p className="text-3xl">{title}</p>
         <p className="max-w-xs text-sm text-muted-foreground">{sub}</p>
         <div className="mt-2 flex gap-2">
-          <button onClick={onPrimary} className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5">
+          <button
+            onClick={onPrimary}
+            className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
+          >
             {primaryLabel}
           </button>
-          <button onClick={() => setAnalyzing((v) => !v)}
-            className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary">
+          <button
+            onClick={() => setAnalyzing((v) => !v)}
+            className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary"
+          >
             {analyzing ? "Hide analysis" : "Analyze game"}
           </button>
           <ShareResultButton state={state} you={you} nameOf={nameOf} matchOver={matchOver} />
-          <button onClick={onLeave} className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary">
+          <button
+            onClick={onLeave}
+            className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary"
+          >
             Leave
           </button>
         </div>
-        <MoveHistoryPanel key={analyzing ? "open" : "closed"} state={state} nameOf={nameOf} defaultOpen={analyzing} />
+        <MoveHistoryPanel
+          key={analyzing ? "open" : "closed"}
+          state={state}
+          nameOf={nameOf}
+          defaultOpen={analyzing}
+        />
         <SignUpNudge />
       </div>
     </div>
   );
 }
 
-function EndScreen({ state, you, onRematch, onNewMatch, onRequeue, onLeave, nameOf, snapshot, showRematch = true }: {
-  state: GameState; you: PlayerId;
-  onRematch: () => void; onNewMatch: () => void; onRequeue?: () => void;
+function EndScreen({
+  state,
+  you,
+  onRematch,
+  onNewMatch,
+  onRequeue,
+  onLeave,
+  nameOf,
+  snapshot,
+  showRematch = true,
+}: {
+  state: GameState;
+  you: PlayerId;
+  onRematch: () => void;
+  onNewMatch: () => void;
+  onRequeue?: () => void;
   onLeave: () => void;
   nameOf: (s: PlayerId) => string;
   snapshot: MatchSnapshot | null;
@@ -2946,17 +3924,36 @@ function EndScreen({ state, you, onRematch, onNewMatch, onRequeue, onLeave, name
         const size = 6 + Math.random() * 8;
         const color = WARM_CONFETTI[i % WARM_CONFETTI.length];
         return (
-          <span key={i} className="confetti-piece absolute top-0 block rounded-sm"
-            style={{
-              left: `${left}%`, width: size, height: size * 1.6, background: color,
-              animationDelay: `${delay}s`, animationDuration: `${dur}s`,
-              ["--dx" as string]: `${dx}vw`,
-            } as React.CSSProperties} />
+          <span
+            key={i}
+            className="confetti-piece absolute top-0 block rounded-sm"
+            style={
+              {
+                left: `${left}%`,
+                width: size,
+                height: size * 1.6,
+                background: color,
+                animationDelay: `${delay}s`,
+                animationDuration: `${dur}s`,
+                ["--dx" as string]: `${dx}vw`,
+              } as React.CSSProperties
+            }
+          />
         );
       })}
-      <div className={"results-in relative my-auto flex max-h-[calc(100dvh-3rem)] w-[min(92vw,520px)] flex-col items-center gap-3 overflow-hidden rounded-2xl border border-border bg-card px-4 py-6 text-center shadow-2xl sm:px-6"}>
-        <span className="grid h-14 w-14 place-items-center rounded-full text-xl font-semibold"
-          style={{ background: winnerColor, color: "oklch(0.15 0.02 55)", boxShadow: `0 0 26px color-mix(in oklab, ${winnerColor} 60%, transparent)` }}>
+      <div
+        className={
+          "results-in relative my-auto flex max-h-[calc(100dvh-3rem)] w-[min(92vw,520px)] flex-col items-center gap-3 overflow-hidden rounded-2xl border border-border bg-card px-4 py-6 text-center shadow-2xl sm:px-6"
+        }
+      >
+        <span
+          className="grid h-14 w-14 place-items-center rounded-full text-xl font-semibold"
+          style={{
+            background: winnerColor,
+            color: "oklch(0.15 0.02 55)",
+            boxShadow: `0 0 26px color-mix(in oklab, ${winnerColor} 60%, transparent)`,
+          }}
+        >
           {winner + 1}
         </span>
         <p className="text-3xl">{youWon ? "Match won!" : `${nameOf(winner)} wins the match`}</p>
@@ -2975,9 +3972,16 @@ function EndScreen({ state, you, onRematch, onNewMatch, onRequeue, onLeave, name
               {Array.from({ length: state.mode }, (_, i) => (
                 <tr key={i} className="border-t border-border">
                   <td className="py-1.5 text-left">
-                    <span className="mr-2 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ background: PLAYER_COLORS[i] }} />
+                    <span
+                      className="mr-2 inline-block h-2.5 w-2.5 rounded-full align-middle"
+                      style={{ background: PLAYER_COLORS[i] }}
+                    />
                     {i === you ? `${nameOf(i as PlayerId)} (you)` : nameOf(i as PlayerId)}
-                    {state.leftMatch[i] && <span className="ml-1 text-[10px] uppercase text-muted-foreground">· left</span>}
+                    {state.leftMatch[i] && (
+                      <span className="ml-1 text-[10px] uppercase text-muted-foreground">
+                        · left
+                      </span>
+                    )}
                   </td>
                   <td className="py-1.5 text-right font-semibold">{state.score[i]}</td>
                   <td className="py-1.5 text-right">{state.wallsPlacedByPlayer[i] ?? 0}</td>
@@ -2989,18 +3993,27 @@ function EndScreen({ state, you, onRematch, onNewMatch, onRequeue, onLeave, name
         </div>
 
         <div className="mt-3 flex flex-wrap justify-center gap-2">
-          <button onClick={onNewMatch} className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5">
+          <button
+            onClick={onNewMatch}
+            className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
+          >
             {onRequeue ? "Find new match" : "New match"}
           </button>
           {showRematch && (
-            <button onClick={onRematch} className="rounded-lg border border-primary/50 bg-primary/10 px-5 py-2 text-sm font-semibold text-primary transition-transform hover:-translate-y-0.5 hover:bg-primary/20">
+            <button
+              onClick={onRematch}
+              className="rounded-lg border border-primary/50 bg-primary/10 px-5 py-2 text-sm font-semibold text-primary transition-transform hover:-translate-y-0.5 hover:bg-primary/20"
+            >
               Rematch 🔁
             </button>
           )}
           <ShareResultButton state={state} you={you} nameOf={nameOf} matchOver />
           <DownloadGifButton snapshot={snapshot} />
           <AnalyzeGameButton snapshot={snapshot} />
-          <button onClick={onLeave} className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary">
+          <button
+            onClick={onLeave}
+            className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary"
+          >
             Leave
           </button>
         </div>
@@ -3010,20 +4023,32 @@ function EndScreen({ state, you, onRematch, onNewMatch, onRequeue, onLeave, name
   );
 }
 
-function ShareResultButton({ state, you, nameOf, matchOver }: {
-  state: GameState; you: PlayerId;
-  nameOf: (s: PlayerId) => string; matchOver: boolean;
+function ShareResultButton({
+  state,
+  you,
+  nameOf,
+  matchOver,
+}: {
+  state: GameState;
+  you: PlayerId;
+  nameOf: (s: PlayerId) => string;
+  matchOver: boolean;
 }) {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<null | "shared" | "downloaded" | "error">(null);
   const onClick = useCallback(async () => {
-    const winner = (matchOver ? state.matchWinner : state.winner);
+    const winner = matchOver ? state.matchWinner : state.winner;
     if (winner === null) return;
-    setBusy(true); setDone(null);
+    setBusy(true);
+    setDone(null);
     try {
       const blob = await renderResultCard({
-        state, you, winner: winner as PlayerId, nameOf,
-        reason: state.endReason, matchOver,
+        state,
+        you,
+        winner: winner as PlayerId,
+        nameOf,
+        reason: state.endReason,
+        matchOver,
       });
       const outcome = await shareResultCard(blob);
       setDone(outcome);
@@ -3034,14 +4059,21 @@ function ShareResultButton({ state, you, nameOf, matchOver }: {
       window.setTimeout(() => setDone(null), 2400);
     }
   }, [state, you, nameOf, matchOver]);
-  const label = busy ? "Preparing…"
-    : done === "shared" ? "Shared!"
-    : done === "downloaded" ? "Downloaded"
-    : done === "error" ? "Try again"
-    : "Share result";
+  const label = busy
+    ? "Preparing…"
+    : done === "shared"
+      ? "Shared!"
+      : done === "downloaded"
+        ? "Downloaded"
+        : done === "error"
+          ? "Try again"
+          : "Share result";
   return (
-    <button onClick={onClick} disabled={busy}
-      className="rounded-lg border border-border bg-accent/70 px-5 py-2 text-sm font-medium text-accent-foreground transition-transform hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-70">
+    <button
+      onClick={onClick}
+      disabled={busy}
+      className="rounded-lg border border-border bg-accent/70 px-5 py-2 text-sm font-medium text-accent-foreground transition-transform hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-70"
+    >
       {label}
     </button>
   );
@@ -3049,7 +4081,15 @@ function ShareResultButton({ state, you, nameOf, matchOver }: {
 
 // ---------------- BOT GAME (opponent presented as a human player) ----------------
 
-function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, onRequeue }: {
+function BotGame({
+  ident,
+  mode,
+  difficulty,
+  opponentNames,
+  rankedBot,
+  onLeave,
+  onRequeue,
+}: {
   ident: Identity;
   mode: Mode;
   difficulty: number;
@@ -3070,11 +4110,17 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
   }, [mode]);
 
   const [state, setState] = useState<GameState>(initial);
-  const stateRef = useRef(state); stateRef.current = state;
+  const stateRef = useRef(state);
+  stateRef.current = state;
   const [coinflip, setCoinflip] = useState<{ starter: PlayerId; animating: boolean } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [chat, setChat] = useState<ChatEntry[]>([]);
-  const botMatchHistory = useMatchHistory(state, Array.from({ length: mode }, (_, i) => (i === YOU ? ident.name : opponentNames[i - 1] ?? `Player ${i + 1}`)));
+  const botMatchHistory = useMatchHistory(
+    state,
+    Array.from({ length: mode }, (_, i) =>
+      i === YOU ? ident.name : (opponentNames[i - 1] ?? `Player ${i + 1}`),
+    ),
+  );
 
   // Record bot matches to history so they show up alongside multiplayer games.
   const botRecordedRef = useRef(false);
@@ -3095,7 +4141,9 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
       const rm = (s as { ranked_matches?: number } | null)?.ranked_matches;
       preRankedMatchesRef.current = typeof rm === "number" ? rm : 0;
     })();
-    return () => { cancel = true; };
+    return () => {
+      cancel = true;
+    };
   }, [rankedBot, ident.id]);
 
   const unlockFiredRef = useRef(false);
@@ -3114,8 +4162,12 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
     const pops = state.pawnsEliminatedByPlayer[YOU] ?? 0;
     const forfeited = state.leftMatch[YOU] ?? false;
     void bumpMyStats(ident.id, {
-      matches: 1, wins: winnerIsYou ? 1 : 0, losses: winnerIsYou ? 0 : 1,
-      walls_placed: walls, pawns_eliminated: pops, forfeits: forfeited ? 1 : 0,
+      matches: 1,
+      wins: winnerIsYou ? 1 : 0,
+      losses: winnerIsYou ? 0 : 1,
+      walls_placed: walls,
+      pawns_eliminated: pops,
+      forfeits: forfeited ? 1 : 0,
     });
     // Post-match achievement evaluation for bot games.
     if (!unlockFiredRef.current) {
@@ -3137,9 +4189,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
       })();
     }
     void (async () => {
-      const winnerId = winnerIsYou
-        ? ident.id
-        : rankedBot?.playerId ?? null;
+      const winnerId = winnerIsYou ? ident.id : (rankedBot?.playerId ?? null);
       const matchId = await recordMatch({
         mode: mode as 2 | 4,
         rounds: state.totalRounds,
@@ -3167,9 +4217,9 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
       // ----- Ranked bot: apply ELO and trigger rank-up overlay -----
       if (rankedBot && mode === 2) {
         const winnerPid = winnerIsYou ? ident.id : rankedBot.playerId;
-        const loserPid  = winnerIsYou ? rankedBot.playerId : ident.id;
+        const loserPid = winnerIsYou ? rankedBot.playerId : ident.id;
         const winnerName = winnerIsYou ? ident.name : rankedBot.name;
-        const loserName  = winnerIsYou ? rankedBot.name : ident.name;
+        const loserName = winnerIsYou ? rankedBot.name : ident.name;
         const delta = await applyElo1v1(winnerPid, winnerName, loserPid, loserName);
         if (matchId && typeof delta === "number") await setMatchEloDelta(matchId, delta);
 
@@ -3201,17 +4251,22 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.matchWinner]);
 
-  const sendChat = useCallback((text: string) => {
-    setChat((prev) => [
-      ...prev.slice(-99),
-      {
-        key: `${Date.now()}-you-${Math.random()}`,
-        slot: YOU as number, name: ident.name,
-        text, ts: Date.now(),
-      },
-    ]);
-    // Bots don't reply. Give a tiny cue so it's clear it's a solo chat.
-  }, [ident.name]);
+  const sendChat = useCallback(
+    (text: string) => {
+      setChat((prev) => [
+        ...prev.slice(-99),
+        {
+          key: `${Date.now()}-you-${Math.random()}`,
+          slot: YOU as number,
+          name: ident.name,
+          text,
+          ts: Date.now(),
+        },
+      ]);
+      // Bots don't reply. Give a tiny cue so it's clear it's a solo chat.
+    },
+    [ident.name],
+  );
 
   // Ready-up between rounds. Bot auto-readies after a short beat.
   const [readySlots, setReadySlots] = useState<PlayerId[]>([]);
@@ -3236,28 +4291,37 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
     [ident.id, rankedBot],
   );
 
-  const startCoinflip = useCallback((starter: PlayerId) => {
-    setCoinflip({ starter, animating: true });
-    play("matchStart");
-    window.setTimeout(() => setCoinflip((cf) => (cf ? { ...cf, animating: false } : cf)), introDurationMs(mode));
-  }, [mode]);
+  const startCoinflip = useCallback(
+    (starter: PlayerId) => {
+      setCoinflip({ starter, animating: true });
+      play("matchStart");
+      window.setTimeout(
+        () => setCoinflip((cf) => (cf ? { ...cf, animating: false } : cf)),
+        introDurationMs(mode),
+      );
+    },
+    [mode],
+  );
 
-  const startRound = useCallback((base?: GameState) => {
-    const src = base ?? stateRef.current;
-    const starter = Math.floor(Math.random() * mode) as PlayerId;
-    const ns = newRound(src, starter);
-    // Fresh clocks + timestamp starts once the coinflip finishes.
-    const withClocks: GameState = {
-      ...ns,
-      clocks: {
-        remaining: Array.from({ length: mode }, () => DEFAULT_CLOCK_MS),
-        turnStartedAt: Date.now() + introDurationMs(mode),
-        total: DEFAULT_CLOCK_MS,
-      },
-    };
-    setState(withClocks);
-    startCoinflip(starter);
-  }, [startCoinflip, mode]);
+  const startRound = useCallback(
+    (base?: GameState) => {
+      const src = base ?? stateRef.current;
+      const starter = Math.floor(Math.random() * mode) as PlayerId;
+      const ns = newRound(src, starter);
+      // Fresh clocks + timestamp starts once the coinflip finishes.
+      const withClocks: GameState = {
+        ...ns,
+        clocks: {
+          remaining: Array.from({ length: mode }, () => DEFAULT_CLOCK_MS),
+          turnStartedAt: Date.now() + introDurationMs(mode),
+          total: DEFAULT_CLOCK_MS,
+        },
+      };
+      setState(withClocks);
+      startCoinflip(starter);
+    },
+    [startCoinflip, mode],
+  );
 
   const startMatch = useCallback(() => {
     startRound(initial());
@@ -3275,7 +4339,9 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
   }, [startRound, initial]);
 
   // Kick off the first round on mount.
-  useEffect(() => { startMatch(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+  useEffect(() => {
+    startMatch(); /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, []);
 
   // Sound cues.
   const prevWinnerRef = useRef<PlayerId | null>(null);
@@ -3296,7 +4362,11 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
 
   // Fog of Walls — same behaviour as GameScreen but scoped to bot games.
   const [fogOn, setFogOn] = useState<boolean>(() => {
-    try { return localStorage.getItem("quoridor:fogOfWalls") === "1"; } catch { return false; }
+    try {
+      return localStorage.getItem("quoridor:fogOfWalls") === "1";
+    } catch {
+      return false;
+    }
   });
   const revealedRef = useRef<Set<string>>(new Set());
   const [visibleWallKeys, setVisibleWallKeys] = useState<Set<string> | undefined>(undefined);
@@ -3310,7 +4380,11 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
   // opponent — used to infer how many hidden turns to advance the guess by.
   const botKnownMoveCountRef = useRef<Map<PlayerId, Map<PlayerId, number>>>(new Map());
   useEffect(() => {
-    try { localStorage.setItem("quoridor:fogOfWalls", fogOn ? "1" : "0"); } catch { /* ignore */ }
+    try {
+      localStorage.setItem("quoridor:fogOfWalls", fogOn ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
   }, [fogOn]);
   useEffect(() => {
     if ((state.moveCount ?? 0) === 0) {
@@ -3321,7 +4395,11 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
     }
   }, [state.moveCount]);
   useEffect(() => {
-    if (!fogOn) { setVisibleWallKeys(undefined); setVisibleCells(undefined); return; }
+    if (!fogOn) {
+      setVisibleWallKeys(undefined);
+      setVisibleCells(undefined);
+      return;
+    }
     const next = computeVisibleWalls(state, YOU, revealedRef.current);
     revealedRef.current = next;
     setVisibleWallKeys(next);
@@ -3329,19 +4407,25 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
   }, [state.walls, state.pawns, fogOn]);
 
   // Helper: apply a move and roll the clock over to the next player.
-  const applyLocalMove = useCallback((mover: PlayerId, move: Move): GameState | null => {
-    const cur = stateRef.current;
-    const ns = applyMove(cur, mover, move);
-    if (!ns) return null;
-    if (cur.clocks) {
-      ns.clocks = endTurn(cur.clocks, mover, Date.now());
-    }
-    if (ns.winner !== null) {
-      ns.endReason = "goal";
-      ns.endLoser = ns.winner === mover ? ((mover === YOU ? BOT_SLOTS[0] : YOU) as PlayerId) : (mover as PlayerId);
-    }
-    return ns;
-  }, [BOT_SLOTS]);
+  const applyLocalMove = useCallback(
+    (mover: PlayerId, move: Move): GameState | null => {
+      const cur = stateRef.current;
+      const ns = applyMove(cur, mover, move);
+      if (!ns) return null;
+      if (cur.clocks) {
+        ns.clocks = endTurn(cur.clocks, mover, Date.now());
+      }
+      if (ns.winner !== null) {
+        ns.endReason = "goal";
+        ns.endLoser =
+          ns.winner === mover
+            ? ((mover === YOU ? BOT_SLOTS[0] : YOU) as PlayerId)
+            : (mover as PlayerId);
+      }
+      return ns;
+    },
+    [BOT_SLOTS],
+  );
 
   // Bot's turn — think for a human amount of time, then move. Works for
   // any slot that isn't the human (2p or 4p games).
@@ -3360,9 +4444,7 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
       const prior = botRevealedRef.current.get(slot) ?? new Set<string>();
       const seen = computeVisibleWalls(state, slot, prior);
       botRevealedRef.current.set(slot, seen);
-      const filteredWalls = state.walls.filter((w) =>
-        seen.has(`${w.o}-${w.r}-${w.c}`),
-      );
+      const filteredWalls = state.walls.filter((w) => seen.has(`${w.o}-${w.r}-${w.c}`));
       // Compute bot's own sight cells to decide which opponents it can see.
       const sight = computeVisibleCells(state, slot);
       const known = new Map(botKnownPawnsRef.current.get(slot) ?? new Map());
@@ -3412,8 +4494,12 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
     if (!move) {
       const ns = applyForfeit(state, slot, false);
       if (ns) {
-        if (ns.winner !== null) { ns.endReason = "forfeit"; ns.endLoser = slot; }
-        setState(ns); play("pop");
+        if (ns.winner !== null) {
+          ns.endReason = "forfeit";
+          ns.endLoser = slot;
+        }
+        setState(ns);
+        play("pop");
       }
       return;
     }
@@ -3454,7 +4540,10 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
         const loser = cur.turn;
         const ns = applyForfeit(cur, loser, false);
         if (ns) {
-          if (ns.winner !== null) { ns.endReason = "time"; ns.endLoser = loser; }
+          if (ns.winner !== null) {
+            ns.endReason = "time";
+            ns.endLoser = loser;
+          }
           setState(ns);
           play("pop");
           setToast(loser === YOU ? "You ran out of time" : `${nameOf(loser)} ran out of time`);
@@ -3465,23 +4554,32 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
     return () => window.clearInterval(iv);
   }, [state.clocks, state.winner, state.matchWinner, coinflip?.animating, nameOf]);
 
-  const handleMove = useCallback((move: Move) => {
-    initSoundOnGesture();
-    const cur = stateRef.current;
-    if (cur.turn !== YOU) return;
-    const ns = applyLocalMove(YOU, move);
-    if (!ns) return;
-    play(move.kind === "wall" ? "wall" : "pop");
-    setState(ns);
-  }, [applyLocalMove]);
+  const handleMove = useCallback(
+    (move: Move) => {
+      initSoundOnGesture();
+      const cur = stateRef.current;
+      if (cur.turn !== YOU) return;
+      const ns = applyLocalMove(YOU, move);
+      if (!ns) return;
+      play(move.kind === "wall" ? "wall" : "pop");
+      setState(ns);
+    },
+    [applyLocalMove],
+  );
 
   const forfeit = useCallback(() => {
     if (state.winner !== null || state.matchWinner !== null) return;
     if (!state.active[YOU]) return;
     const ns = applyForfeit(state, YOU, false);
     if (ns) {
-      if (ns.winner !== null) { ns.endReason = "forfeit"; ns.endLoser = YOU; }
-      setState(ns); play("pop"); setToast("You forfeited the round"); window.setTimeout(() => setToast(null), 1400);
+      if (ns.winner !== null) {
+        ns.endReason = "forfeit";
+        ns.endLoser = YOU;
+      }
+      setState(ns);
+      play("pop");
+      setToast("You forfeited the round");
+      window.setTimeout(() => setToast(null), 1400);
     }
   }, [state]);
 
@@ -3523,17 +4621,23 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
       if (readySlots.includes(bot)) continue;
       setReadySlots((prev) => (prev.includes(bot) ? prev : [...prev, bot]));
     }
-    return () => { for (const t of timers) window.clearTimeout(t); };
+    return () => {
+      for (const t of timers) window.clearTimeout(t);
+    };
   }, [state.winner, state.matchWinner, state.leftMatch, readySlots, BOT_SLOTS]);
 
   // When both sides are ready, play the merge animation then start next round.
   const botMergingRef = useRef(false);
-  useEffect(() => { botMergingRef.current = merging; }, [merging]);
+  useEffect(() => {
+    botMergingRef.current = merging;
+  }, [merging]);
   useEffect(() => {
     if (state.winner === null || state.matchWinner !== null) return;
     const need: PlayerId[] = [];
     if (!state.leftMatch[YOU]) need.push(YOU);
-    for (const bot of BOT_SLOTS) { if (!state.leftMatch[bot]) need.push(bot); }
+    for (const bot of BOT_SLOTS) {
+      if (!state.leftMatch[bot]) need.push(bot);
+    }
     if (need.length === 0) return;
     const allReady = need.every((i) => readySlots.includes(i));
     if (!allReady || botMergingRef.current) return;
@@ -3548,7 +4652,8 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
   const displayState = review
     ? { ...state, pawns: review.pawns, walls: review.walls, lastWall: review.lastWall }
     : state;
-  const boardInteractive = state.winner === null && !coinflip?.animating && state.turn === YOU && !review;
+  const boardInteractive =
+    state.winner === null && !coinflip?.animating && state.turn === YOU && !review;
 
   return (
     <div className="mx-auto grid w-full max-w-[1120px] items-start gap-6 px-4 sm:px-6 lg:grid-cols-[minmax(0,720px)_360px]">
@@ -3556,19 +4661,42 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
         className="order-1 mx-auto flex w-full min-w-0 flex-col gap-3 pb-20 lg:mx-0 lg:pb-0"
         style={{ maxWidth: "min(720px, calc(100dvh - 18rem))" }}
       >
-        <PlayerBanners state={state} you={YOU} nameOf={nameOf} playerIdOf={playerIdOf} placement="top" />
+        <PlayerBanners
+          state={state}
+          you={YOU}
+          nameOf={nameOf}
+          playerIdOf={playerIdOf}
+          placement="top"
+        />
         <div className="flex">
           <div className="relative min-w-0 flex-1">
-            <QuoridorBoard state={displayState} you={YOU} onMove={handleMove} interactive={boardInteractive} visibleWallKeys={visibleWallKeys} fog={fogOn} visibleCells={visibleCells} />
+            <QuoridorBoard
+              state={displayState}
+              you={YOU}
+              onMove={handleMove}
+              interactive={boardInteractive}
+              visibleWallKeys={visibleWallKeys}
+              fog={fogOn}
+              visibleCells={visibleCells}
+            />
             {coinflip?.animating && (
-              <CoinflipOverlay starter={coinflip.starter} you={YOU} mode={mode} nameOf={nameOf} playerIdOf={playerIdOf} />
+              <CoinflipOverlay
+                starter={coinflip.starter}
+                you={YOU}
+                mode={mode}
+                nameOf={nameOf}
+                playerIdOf={playerIdOf}
+              />
             )}
             {roundOver && !matchOver && !coinflip?.animating && roundEndAnim && (
               <RoundEndScoreAnim
                 state={state}
                 nameOf={nameOf}
                 playerIdOf={playerIdOf}
-                onDone={() => { setRoundEndAnim(false); requestReady(); }}
+                onDone={() => {
+                  setRoundEndAnim(false);
+                  requestReady();
+                }}
               />
             )}
             {matchOver && (
@@ -3576,16 +4704,26 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
             )}
           </div>
         </div>
-        <PlayerBanners state={state} you={YOU} nameOf={nameOf} playerIdOf={playerIdOf} placement="bottom" />
+        <PlayerBanners
+          state={state}
+          you={YOU}
+          nameOf={nameOf}
+          playerIdOf={playerIdOf}
+          placement="bottom"
+        />
       </div>
 
       {matchOver && (
-        <EndScreen state={state} you={YOU} nameOf={nameOf}
+        <EndScreen
+          state={state}
+          you={YOU}
+          nameOf={nameOf}
           snapshot={botMatchHistory.getSnapshot()}
           onRematch={startMatch}
           onNewMatch={onRequeue ?? startMatch}
           onRequeue={onRequeue}
-          onLeave={onLeave} />
+          onLeave={onLeave}
+        />
       )}
 
       {rankUp && (
@@ -3616,11 +4754,17 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
             disabled={state.winner !== null || state.matchWinner !== null || !state.active[YOU]}
           />
           <div className="flex gap-2">
-            <button onClick={startMatch} disabled={!!coinflip?.animating}
-              className="flex-1 rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary disabled:opacity-40">
+            <button
+              onClick={startMatch}
+              disabled={!!coinflip?.animating}
+              className="flex-1 rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary disabled:opacity-40"
+            >
               New match
             </button>
-            <button onClick={onLeave} className="flex-1 rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary">
+            <button
+              onClick={onLeave}
+              className="flex-1 rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs font-medium uppercase tracking-widest hover:bg-secondary"
+            >
               Leave
             </button>
           </div>
@@ -3634,8 +4778,14 @@ function BotGame({ ident, mode, difficulty, opponentNames, rankedBot, onLeave, o
 
 type SpectateStatus = "connecting" | "waiting" | "watching" | "disconnected" | "error";
 
-function SpectatorGame({ ident, code, onLeave }: {
-  ident: Identity; code: string; onLeave: () => void;
+function SpectatorGame({
+  ident,
+  code,
+  onLeave,
+}: {
+  ident: Identity;
+  code: string;
+  onLeave: () => void;
 }) {
   // Spectator has no seat. Use -1 (cast) so no "you" logic ever matches.
   const SPECTATOR_YOU = -1 as unknown as PlayerId;
@@ -3651,25 +4801,36 @@ function SpectatorGame({ ident, code, onLeave }: {
 
   const roomRef = useRef<Room | null>(null);
 
-  const nameOf = useCallback((s: PlayerId): string => {
-    const r = roster.find((x) => x.slot === s);
-    return r?.name ?? `Player ${s + 1}`;
-  }, [roster]);
+  const nameOf = useCallback(
+    (s: PlayerId): string => {
+      const r = roster.find((x) => x.slot === s);
+      return r?.name ?? `Player ${s + 1}`;
+    },
+    [roster],
+  );
 
   const pushLog = useCallback((text: string) => {
     setLog((prev) => [...prev.slice(-30), { key: Date.now() + Math.random(), text }]);
   }, []);
 
-  const startCoinflip = useCallback((starter: PlayerId) => {
-    setCoinflip({ starter, animating: true });
-    play("matchStart");
-    window.setTimeout(() => setCoinflip((cf) => (cf ? { ...cf, animating: false } : cf)), introDurationMs(mode));
-  }, [mode]);
+  const startCoinflip = useCallback(
+    (starter: PlayerId) => {
+      setCoinflip({ starter, animating: true });
+      play("matchStart");
+      window.setTimeout(
+        () => setCoinflip((cf) => (cf ? { ...cf, animating: false } : cf)),
+        introDurationMs(mode),
+      );
+    },
+    [mode],
+  );
 
   useEffect(() => {
     let cancelled = false;
     const handlers = {
-      onOpen: () => { if (!cancelled) setStatus("connecting"); },
+      onOpen: () => {
+        if (!cancelled) setStatus("connecting");
+      },
       onSpectateAssign: (m: Mode, _expected: number, r: RosterEntry[]) => {
         if (cancelled) return;
         setMode(m);
@@ -3682,7 +4843,9 @@ function SpectatorGame({ ident, code, onLeave }: {
         if (cancelled) return;
         setRoster(r);
       },
-      onDisconnect: () => { if (!cancelled) setStatus("disconnected"); },
+      onDisconnect: () => {
+        if (!cancelled) setStatus("disconnected");
+      },
       onError: (err: Error) => {
         if (cancelled) return;
         console.error(err);
@@ -3718,7 +4881,10 @@ function SpectatorGame({ ident, code, onLeave }: {
           { name: ident.name, playerId: ident.id },
           handlers,
         );
-        if (cancelled) { room.close(); return; }
+        if (cancelled) {
+          room.close();
+          return;
+        }
         roomRef.current = room;
       } catch (err) {
         if (cancelled) return;
@@ -3740,21 +4906,25 @@ function SpectatorGame({ ident, code, onLeave }: {
     <div className="grid w-full gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
       <div className="order-1 flex min-w-0 flex-col gap-3 pb-20 lg:pb-0">
         <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 shadow-sm">
-          <span className="grid h-9 w-9 place-items-center rounded-full text-[10px] font-semibold uppercase tracking-widest"
-            style={{ background: "var(--secondary)", color: "var(--secondary-foreground)" }}>
+          <span
+            className="grid h-9 w-9 place-items-center rounded-full text-[10px] font-semibold uppercase tracking-widest"
+            style={{ background: "var(--secondary)", color: "var(--secondary-foreground)" }}
+          >
             Live
           </span>
           <div className="flex-1 min-w-0">
             <p className="truncate text-base font-semibold">
               {status === "connecting" && "Connecting to match…"}
               {status === "waiting" && "Waiting for the next move…"}
-              {status === "watching" && state && (
-                coinflip?.animating
+              {status === "watching" &&
+                state &&
+                (coinflip?.animating
                   ? "Flipping the coin…"
-                  : state.matchWinner !== null ? `${nameOf(state.matchWinner)} won the match`
-                  : state.winner !== null ? `${nameOf(state.winner)} took the round`
-                  : `${nameOf(state.turn)}'s turn`
-              )}
+                  : state.matchWinner !== null
+                    ? `${nameOf(state.matchWinner)} won the match`
+                    : state.winner !== null
+                      ? `${nameOf(state.winner)} took the round`
+                      : `${nameOf(state.turn)}'s turn`)}
               {status === "disconnected" && "Match ended · host disconnected"}
               {status === "error" && (errorMsg ?? "Couldn't join")}
             </p>
@@ -3775,7 +4945,9 @@ function SpectatorGame({ ident, code, onLeave }: {
               <QuoridorBoard
                 state={state}
                 you={SPECTATOR_YOU}
-                onMove={() => { /* read-only */ }}
+                onMove={() => {
+                  /* read-only */
+                }}
                 interactive={false}
               />
             ) : (
@@ -3797,7 +4969,9 @@ function SpectatorGame({ ident, code, onLeave }: {
 
       <MobileAsideSheet>
         <div className="rounded-xl border border-border bg-card p-3 sm:p-4">
-          <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Spectating</p>
+          <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+            Spectating
+          </p>
           <div className="mt-1 flex items-center justify-between gap-2">
             <p className="font-mono text-xl tracking-[0.3em] text-primary sm:text-2xl">{code}</p>
             <span className="rounded-md border border-border px-2 py-1 text-[10px] uppercase tracking-widest text-muted-foreground">

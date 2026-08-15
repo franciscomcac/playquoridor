@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
-  BOARD, goalsFor, startsFor,
-  type GameState, type MoveRecord, type PlayerId, type Pos, type Wall,
+  BOARD,
+  goalsFor,
+  startsFor,
+  type GameState,
+  type MoveRecord,
+  type PlayerId,
+  type Pos,
+  type Wall,
 } from "@/lib/quoridor";
 import { PLAYER_COLORS } from "@/components/QuoridorBoard";
 
@@ -36,16 +42,25 @@ function reconstruct(state: GameState, upto: number): HistorySnapshot {
   return { pawns, walls, lastWall };
 }
 
-function MiniBoard({ state, snapshot, highlight }: {
-  state: GameState; snapshot: HistorySnapshot; highlight: MoveRecord | null;
+function MiniBoard({
+  state,
+  snapshot,
+  highlight,
+}: {
+  state: GameState;
+  snapshot: HistorySnapshot;
+  highlight: MoveRecord | null;
 }) {
   const goals = goalsFor(state.mode);
   const cells: ReactNode[] = [];
   for (let r = 0; r < BOARD; r++) {
     for (let c = 0; c < BOARD; c++) {
       cells.push(
-        <div key={`c${r}-${c}`} className="rounded-[3px] bg-secondary/40"
-          style={{ gridColumn: 2 * c + 1, gridRow: 2 * r + 1 }} />
+        <div
+          key={`c${r}-${c}`}
+          className="rounded-[3px] bg-secondary/40"
+          style={{ gridColumn: 2 * c + 1, gridRow: 2 * r + 1 }}
+        />,
       );
     }
   }
@@ -56,21 +71,29 @@ function MiniBoard({ state, snapshot, highlight }: {
     if (g.kind === "row") {
       for (let c = 0; c < BOARD; c++) {
         cells.push(
-          <div key={`g${i}-${c}`} className="pointer-events-none rounded-[3px]"
+          <div
+            key={`g${i}-${c}`}
+            className="pointer-events-none rounded-[3px]"
             style={{
-              gridColumn: 2 * c + 1, gridRow: 2 * g.value + 1,
+              gridColumn: 2 * c + 1,
+              gridRow: 2 * g.value + 1,
               background: `color-mix(in oklab, ${color} 14%, transparent)`,
-            }} />
+            }}
+          />,
         );
       }
     } else {
       for (let r = 0; r < BOARD; r++) {
         cells.push(
-          <div key={`g${i}-r${r}`} className="pointer-events-none rounded-[3px]"
+          <div
+            key={`g${i}-r${r}`}
+            className="pointer-events-none rounded-[3px]"
             style={{
-              gridColumn: 2 * g.value + 1, gridRow: 2 * r + 1,
+              gridColumn: 2 * g.value + 1,
+              gridRow: 2 * r + 1,
               background: `color-mix(in oklab, ${color} 14%, transparent)`,
-            }} />
+            }}
+          />,
         );
       }
     }
@@ -79,29 +102,35 @@ function MiniBoard({ state, snapshot, highlight }: {
   const pawnEls = snapshot.pawns.map((p, i) => {
     const isMoved = highlight?.move.kind === "pawn" && highlight.by === i;
     return (
-      <div key={`p${i}`}
+      <div
+        key={`p${i}`}
         className="pointer-events-none m-[10%] rounded-full"
         style={{
-          gridColumn: 2 * p[1] + 1, gridRow: 2 * p[0] + 1,
+          gridColumn: 2 * p[1] + 1,
+          gridRow: 2 * p[0] + 1,
           background: PLAYER_COLORS[i],
           boxShadow: isMoved
             ? `0 0 0 2px color-mix(in oklab, ${PLAYER_COLORS[i]} 80%, white)`
             : "inset 0 -2px 0 rgba(0,0,0,0.18)",
-        }} />
+        }}
+      />
     );
   });
   // Walls
   const wallEls = snapshot.walls.map((w, i) => {
-    const isNew = highlight?.move.kind === "wall"
-      && highlight.move.wall.r === w.r
-      && highlight.move.wall.c === w.c
-      && highlight.move.wall.o === w.o;
+    const isNew =
+      highlight?.move.kind === "wall" &&
+      highlight.move.wall.r === w.r &&
+      highlight.move.wall.c === w.c &&
+      highlight.move.wall.o === w.o;
     const color = isNew
       ? `color-mix(in oklab, ${PLAYER_COLORS[w.by]} 90%, white)`
       : "oklch(0.35 0.03 55)";
     if (w.o === "h") {
       return (
-        <div key={`w${i}`} className="pointer-events-none rounded-full"
+        <div
+          key={`w${i}`}
+          className="pointer-events-none rounded-full"
           style={{
             gridColumn: `${2 * w.c + 1} / span 3`,
             gridRow: 2 * w.r + 2,
@@ -109,11 +138,14 @@ function MiniBoard({ state, snapshot, highlight }: {
             height: "60%",
             alignSelf: "center",
             boxShadow: isNew ? `0 0 8px ${color}` : undefined,
-          }} />
+          }}
+        />
       );
     }
     return (
-      <div key={`w${i}`} className="pointer-events-none rounded-full"
+      <div
+        key={`w${i}`}
+        className="pointer-events-none rounded-full"
         style={{
           gridColumn: 2 * w.c + 2,
           gridRow: `${2 * w.r + 1} / span 3`,
@@ -121,7 +153,8 @@ function MiniBoard({ state, snapshot, highlight }: {
           width: "60%",
           justifySelf: "center",
           boxShadow: isNew ? `0 0 8px ${color}` : undefined,
-        }} />
+        }}
+      />
     );
   });
   return (
@@ -140,15 +173,27 @@ function MiniBoard({ state, snapshot, highlight }: {
   );
 }
 
-export function MoveHistory({ state, nameOf }: {
-  state: GameState; nameOf: (p: PlayerId) => string;
+export function MoveHistory({
+  state,
+  nameOf,
+}: {
+  state: GameState;
+  nameOf: (p: PlayerId) => string;
 }) {
   return <MoveHistoryPanel state={state} nameOf={nameOf} defaultOpen={false} />;
 }
 
-export function MoveHistoryPanel({ state, nameOf, defaultOpen = false, compact = false, onView }: {
-  state: GameState; nameOf: (p: PlayerId) => string;
-  defaultOpen?: boolean; compact?: boolean;
+export function MoveHistoryPanel({
+  state,
+  nameOf,
+  defaultOpen = false,
+  compact = false,
+  onView,
+}: {
+  state: GameState;
+  nameOf: (p: PlayerId) => string;
+  defaultOpen?: boolean;
+  compact?: boolean;
   onView?: (view: HistorySnapshot | null) => void;
 }) {
   // Note: `defaultOpen` is intentionally ignored — the panel is always open
@@ -163,7 +208,7 @@ export function MoveHistoryPanel({ state, nameOf, defaultOpen = false, compact =
     stepRef.prevLen = history.length;
   }
   const snapshot = useMemo(() => reconstruct(state, step), [state, step]);
-  const highlight = step > 0 ? history[step - 1] ?? null : null;
+  const highlight = step > 0 ? (history[step - 1] ?? null) : null;
 
   // Broadcast the currently-reviewed board so a parent can mirror it on the
   // main game board. Emit null when the panel is closed or pinned to the
@@ -172,7 +217,9 @@ export function MoveHistoryPanel({ state, nameOf, defaultOpen = false, compact =
   useEffect(() => {
     if (!onView) return;
     onView(reviewing ? snapshot : null);
-    return () => { onView(null); };
+    return () => {
+      onView(null);
+    };
   }, [reviewing, snapshot, onView]);
 
   // Auto-scroll the moves list to the bottom whenever a new move is appended
@@ -220,14 +267,19 @@ export function MoveHistoryPanel({ state, nameOf, defaultOpen = false, compact =
               />
               {`#${step} ${nameOf(highlight!.by)} · `}
               <span className="font-mono">
-                {highlight!.move.kind === "wall" ? `wall ${notate(highlight!)}` : notate(highlight!)}
+                {highlight!.move.kind === "wall"
+                  ? `wall ${notate(highlight!)}`
+                  : notate(highlight!)}
               </span>
             </>
           )}
         </div>
 
         {/* Moves list — fixed height reserves space so adding moves never shifts. */}
-        <ol ref={listRef} className="mt-2 grid h-[5.5rem] grid-cols-2 gap-x-3 gap-y-1 overflow-y-auto pr-1 text-xs">
+        <ol
+          ref={listRef}
+          className="mt-2 grid h-[5.5rem] grid-cols-2 gap-x-3 gap-y-1 overflow-y-auto pr-1 text-xs"
+        >
           {history.length === 0 ? (
             <li className="col-span-2 pt-4 text-center text-muted-foreground/60">
               Moves will appear here.
@@ -274,8 +326,16 @@ export function MoveHistoryPanel({ state, nameOf, defaultOpen = false, compact =
   );
 }
 
-function StepBtn({ onClick, disabled, label, title }: {
-  onClick: () => void; disabled: boolean; label: string; title: string;
+function StepBtn({
+  onClick,
+  disabled,
+  label,
+  title,
+}: {
+  onClick: () => void;
+  disabled: boolean;
+  label: string;
+  title: string;
 }) {
   return (
     <button

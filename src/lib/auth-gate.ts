@@ -3,10 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 // Client-side "must be a real signed-in user" check. Returns the profile if
 // the user is signed in with a non-anonymous session, else null. Callers use
 // this in a useEffect to redirect anonymous / guest users to /auth.
-export async function requireRealUser(): Promise<
-  | { authUserId: string; email: string | null; playerId: string; username: string; country: string | null }
-  | null
-> {
+export async function requireRealUser(): Promise<{
+  authUserId: string;
+  email: string | null;
+  playerId: string;
+  username: string;
+  country: string | null;
+} | null> {
   const { data } = await supabase.auth.getUser();
   const u = data.user;
   const anon = !u || u.is_anonymous === true || (u.app_metadata?.provider ?? "") === "anonymous";

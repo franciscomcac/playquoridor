@@ -88,6 +88,10 @@ export function useMatchHistory(state: GameState, playerNames: string[]) {
 }
 
 export function isMatchSnapshot(x: unknown): x is MatchSnapshot {
-  return !!x && typeof x === "object" && (x as { version?: number }).version === 2
-    && Array.isArray((x as MatchSnapshot).rounds);
+  return (
+    !!x &&
+    typeof x === "object" &&
+    (x as { version?: number }).version === 2 &&
+    Array.isArray((x as MatchSnapshot).rounds)
+  );
 }

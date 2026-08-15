@@ -63,7 +63,9 @@ function PostNotFound() {
       <div className="mx-auto max-w-[720px] px-6 pb-16 pt-14 text-center">
         <h1 className="text-[28px] font-bold text-[#ececf1]">Post not found</h1>
         <p className="mt-3 text-[#a7a7b2]">That article doesn't exist or has moved.</p>
-        <Link to="/blog" className="mt-6 inline-block text-[#f5c542] underline">Back to the blog</Link>
+        <Link to="/blog" className="mt-6 inline-block text-[#f5c542] underline">
+          Back to the blog
+        </Link>
       </div>
     </LobbyChrome>
   );
@@ -87,20 +89,27 @@ function PostPage() {
           </h1>
           <div className="mt-3 flex flex-wrap items-center gap-2 font-[IBM_Plex_Mono,monospace] text-[11px] uppercase tracking-[0.12em] text-[#5c5c66]">
             <time dateTime={p.date}>
-              {new Date(p.date).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+              {new Date(p.date).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
             </time>
             <span>·</span>
             <span>{p.readMinutes} min read</span>
           </div>
         </header>
         <div className="mt-6 space-y-4 text-[15.5px] leading-[1.75] text-[#c8c8d0]">
-          {p.body.map((b: BlogBlock, i: number) => <Block key={i} block={b} />)}
+          {p.body.map((b: BlogBlock, i: number) => (
+            <Block key={i} block={b} />
+          ))}
         </div>
 
         <section className="mt-12 rounded-2xl border border-[#232329] bg-[#0e0e11] p-6">
           <h2 className="text-[18px] font-bold text-[#ececf1]">Play Quoridor now</h2>
           <p className="mt-2 text-[14px] text-[#a7a7b2]">
-            Free, no download, no signup. Quick match, private rooms, bot practice, and 4-player free-for-alls.
+            Free, no download, no signup. Quick match, private rooms, bot practice, and 4-player
+            free-for-alls.
           </p>
           <Link
             to="/"
@@ -145,13 +154,17 @@ function Block({ block }: { block: BlogBlock }) {
     case "ul":
       return (
         <ul className="list-disc space-y-1 pl-6">
-          {block.items.map((it, i) => <li key={i}>{it}</li>)}
+          {block.items.map((it, i) => (
+            <li key={i}>{it}</li>
+          ))}
         </ul>
       );
     case "ol":
       return (
         <ol className="list-decimal space-y-1 pl-6">
-          {block.items.map((it, i) => <li key={i}>{it}</li>)}
+          {block.items.map((it, i) => (
+            <li key={i}>{it}</li>
+          ))}
         </ol>
       );
     case "quote":

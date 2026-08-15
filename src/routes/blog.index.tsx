@@ -57,8 +57,8 @@ function BlogIndex() {
             Quoridor strategy, rules & updates
           </h1>
           <p className="mt-3 max-w-[640px] text-[15px] leading-[1.6] text-[#a7a7b2]">
-            Guides for new players, deep-dives for competitive climbers, and news
-            on new modes shipping to playquoridor.online.
+            Guides for new players, deep-dives for competitive climbers, and news on new modes
+            shipping to playquoridor.online.
           </p>
         </header>
         <ul className="space-y-4">
@@ -71,12 +71,19 @@ function BlogIndex() {
               >
                 <div className="flex flex-wrap items-center gap-2 font-[IBM_Plex_Mono,monospace] text-[11px] uppercase tracking-[0.12em] text-[#5c5c66]">
                   <time dateTime={p.date}>
-                    {new Date(p.date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+                    {new Date(p.date).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })}
                   </time>
                   <span>·</span>
                   <span>{p.readMinutes} min read</span>
                   {p.tags.map((t) => (
-                    <span key={t} className="rounded-full border border-[#232329] px-2 py-[2px] text-[10px] text-[#a7a7b2]">
+                    <span
+                      key={t}
+                      className="rounded-full border border-[#232329] px-2 py-[2px] text-[10px] text-[#a7a7b2]"
+                    >
                       {t}
                     </span>
                   ))}

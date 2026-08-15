@@ -24,9 +24,11 @@ export type ResultCardInput = {
 
 export async function renderResultCard(input: ResultCardInput): Promise<Blob> {
   const { state, winner, you, nameOf, reason, matchOver } = input;
-  const W = 1200, H = 1200;
+  const W = 1200,
+    H = 1200;
   const canvas = document.createElement("canvas");
-  canvas.width = W; canvas.height = H;
+  canvas.width = W;
+  canvas.height = H;
   const ctx = canvas.getContext("2d")!;
   ctx.textBaseline = "alphabetic";
 
@@ -48,17 +50,24 @@ export async function renderResultCard(input: ResultCardInput): Promise<Blob> {
   ctx.textAlign = "left";
   ctx.font = "600 68px ui-serif, Georgia, serif";
   const title = matchOver
-    ? (youWon ? "Match won" : `${nameOf(winner)} wins the match`)
-    : (youWon ? "Round won" : `${nameOf(winner)} takes the round`);
+    ? youWon
+      ? "Match won"
+      : `${nameOf(winner)} wins the match`
+    : youWon
+      ? "Round won"
+      : `${nameOf(winner)} takes the round`;
   ctx.fillText(title, 80, 170);
 
   ctx.fillStyle = MUTED;
   ctx.font = "400 26px ui-sans-serif, system-ui, sans-serif";
   const sub =
-    reason === "time" ? "Won on time" :
-    reason === "afk" ? "Won by idle forfeit" :
-    reason === "forfeit" ? "Won by forfeit" :
-    "Reached the goal";
+    reason === "time"
+      ? "Won on time"
+      : reason === "afk"
+        ? "Won by idle forfeit"
+        : reason === "forfeit"
+          ? "Won by forfeit"
+          : "Reached the goal";
   ctx.fillText(sub, 80, 210);
 
   // Board area
@@ -72,7 +81,7 @@ export async function renderResultCard(input: ResultCardInput): Promise<Blob> {
   const moves = state.moveCount ?? state.walls.length;
   const wallsUsed = state.walls.length;
   drawStat(ctx, W * 0.22, statsY, String(moves), "Total moves");
-  drawStat(ctx, W * 0.5,  statsY, String(wallsUsed), "Walls placed");
+  drawStat(ctx, W * 0.5, statsY, String(wallsUsed), "Walls placed");
   drawStat(ctx, W * 0.78, statsY, `${state.score.join(" — ")}`, "Score");
 
   // Watermark
@@ -86,7 +95,13 @@ export async function renderResultCard(input: ResultCardInput): Promise<Blob> {
   });
 }
 
-function drawStat(ctx: CanvasRenderingContext2D, x: number, y: number, value: string, label: string) {
+function drawStat(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  value: string,
+  label: string,
+) {
   ctx.textAlign = "center";
   ctx.fillStyle = FG;
   ctx.font = "600 54px ui-serif, Georgia, serif";
@@ -96,7 +111,13 @@ function drawStat(ctx: CanvasRenderingContext2D, x: number, y: number, value: st
   ctx.fillText(label.toUpperCase().split("").join(" "), x, y + 34);
 }
 
-function drawBoard(ctx: CanvasRenderingContext2D, state: GameState, x: number, y: number, size: number) {
+function drawBoard(
+  ctx: CanvasRenderingContext2D,
+  state: GameState,
+  x: number,
+  y: number,
+  size: number,
+) {
   // Frame
   ctx.fillStyle = "#8a6a3d";
   roundRect(ctx, x - 18, y - 18, size + 36, size + 36, 22);
@@ -176,7 +197,14 @@ function drawBoard(ctx: CanvasRenderingContext2D, state: GameState, x: number, y
   }
 }
 
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+function roundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+) {
   const rr = Math.min(r, w / 2, h / 2);
   ctx.beginPath();
   ctx.moveTo(x + rr, y);

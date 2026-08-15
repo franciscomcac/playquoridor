@@ -67,13 +67,15 @@ function ForumIndex() {
             Community forum
           </h1>
           <p className="mt-3 max-w-[640px] text-[15px] leading-[1.6] text-[#a7a7b2]">
-            Discuss openings, wall traps, ladder climbs, and new game modes.
-            Anyone can read — sign in to post or reply.
+            Discuss openings, wall traps, ladder climbs, and new game modes. Anyone can read — sign
+            in to post or reply.
           </p>
         </header>
 
         {err ? (
-          <div className="rounded-2xl border border-[#3a1a1a] bg-[#1a0d0d] p-4 text-[13px] text-[#ff9a8a]">{err}</div>
+          <div className="rounded-2xl border border-[#3a1a1a] bg-[#1a0d0d] p-4 text-[13px] text-[#ff9a8a]">
+            {err}
+          </div>
         ) : null}
 
         <section className="grid gap-3 sm:grid-cols-2">
@@ -94,7 +96,9 @@ function ForumIndex() {
                 <div className="min-w-0">
                   <div className="truncate text-[15px] font-semibold text-[#ececf1]">{c.name}</div>
                   {c.description ? (
-                    <div className="mt-0.5 truncate text-[12px] text-[#83838e]">{c.description}</div>
+                    <div className="mt-0.5 truncate text-[12px] text-[#83838e]">
+                      {c.description}
+                    </div>
                   ) : null}
                 </div>
               </div>
@@ -102,7 +106,10 @@ function ForumIndex() {
           ))}
           {cats == null
             ? Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-[76px] animate-pulse rounded-2xl border border-[#1a1a1f] bg-[#0d0d10]" />
+                <div
+                  key={i}
+                  className="h-[76px] animate-pulse rounded-2xl border border-[#1a1a1f] bg-[#0d0d10]"
+                />
               ))
             : null}
         </section>
@@ -119,7 +126,11 @@ function ForumIndex() {
                   params={{ id: t.id }}
                   className="flex items-center gap-3 px-4 py-3 hover:bg-[#111114]"
                 >
-                  <Avatar name={t.author?.name ?? "Player"} imageUrl={t.author?.avatar_url ?? null} size={30} />
+                  <Avatar
+                    name={t.author?.name ?? "Player"}
+                    imageUrl={t.author?.avatar_url ?? null}
+                    size={30}
+                  />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       {t.pinned ? (
@@ -127,10 +138,13 @@ function ForumIndex() {
                           Pinned
                         </span>
                       ) : null}
-                      <span className="truncate text-[14px] font-medium text-[#ececf1]">{t.title}</span>
+                      <span className="truncate text-[14px] font-medium text-[#ececf1]">
+                        {t.title}
+                      </span>
                     </div>
                     <div className="mt-0.5 truncate text-[12px] text-[#5c5c66]">
-                      {t.author?.name ?? "Player"} · {catNameFor(cats, t.category_slug)} · {timeAgo(t.last_activity_at)}
+                      {t.author?.name ?? "Player"} · {catNameFor(cats, t.category_slug)} ·{" "}
+                      {timeAgo(t.last_activity_at)}
                     </div>
                   </div>
                   <span className="rounded-md bg-[#141418] px-2 py-1 text-[11px] tabular-nums text-[#a7a7b2]">

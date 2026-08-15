@@ -12,7 +12,11 @@ export function WallCounter({ count, color }: { count: number; color: string }) 
   return (
     <div className="flex items-center gap-[3px]">
       {Array.from({ length: 10 }, (_, i) => (
-        <span key={i} className="block h-3 w-1.5 rounded-sm" style={{ background: i < shown ? color : "var(--border)" }} />
+        <span
+          key={i}
+          className="block h-3 w-1.5 rounded-sm"
+          style={{ background: i < shown ? color : "var(--border)" }}
+        />
       ))}
       {count > 10 && <span className="ml-1 text-[10px] text-muted-foreground">+{count - 10}</span>}
     </div>
@@ -27,10 +31,18 @@ export function AfkBanner({ deadline, name }: { slot: PlayerId; deadline: number
   }, []);
   const remain = Math.max(0, deadline - now);
   const mm = Math.floor(remain / 60000);
-  const ss = Math.floor((remain % 60000) / 1000).toString().padStart(2, "0");
+  const ss = Math.floor((remain % 60000) / 1000)
+    .toString()
+    .padStart(2, "0");
   return (
-    <div className="afk-pulse rounded-xl border px-4 py-2 text-sm font-medium"
-      style={{ borderColor: "var(--destructive)", color: "var(--destructive)", background: "oklch(0.6 0.2 25 / 0.08)" }}>
+    <div
+      className="afk-pulse rounded-xl border px-4 py-2 text-sm font-medium"
+      style={{
+        borderColor: "var(--destructive)",
+        color: "var(--destructive)",
+        background: "oklch(0.6 0.2 25 / 0.08)",
+      }}
+    >
       {name} is AFK — forfeiting in {mm}:{ss}
     </div>
   );
@@ -43,10 +55,16 @@ export function ChaosBanner() {
       <div className="relative flex items-center gap-3">
         <span className="text-lg">⚡</span>
         <div className="flex-1">
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-fuchsia-300">Chaos Mode</p>
-          <p className="text-xs font-semibold text-white">4 players. One board. All bets are off.</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-fuchsia-300">
+            Chaos Mode
+          </p>
+          <p className="text-xs font-semibold text-white">
+            4 players. One board. All bets are off.
+          </p>
         </div>
-        <span className="rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-white">FFA</span>
+        <span className="rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-white">
+          FFA
+        </span>
       </div>
     </div>
   );
@@ -58,7 +76,12 @@ export function EventLog({ entries }: { entries: EventEntry[] }) {
     <div className="rounded-xl border border-border bg-card p-4">
       <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Log</p>
       <ul className="mt-2 max-h-32 space-y-1 overflow-y-auto text-[11px] text-muted-foreground">
-        {entries.slice().reverse().map((e) => (<li key={e.key}>· {e.text}</li>))}
+        {entries
+          .slice()
+          .reverse()
+          .map((e) => (
+            <li key={e.key}>· {e.text}</li>
+          ))}
       </ul>
     </div>
   );

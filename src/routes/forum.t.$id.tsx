@@ -55,7 +55,9 @@ function ThreadPage() {
       setUid(data.user && !data.user.is_anonymous ? data.user.id : null);
     });
     void isAdminOrMod().then((v) => alive && setIsMod(v));
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, []);
 
   async function reload() {
@@ -79,7 +81,10 @@ function ThreadPage() {
     setErr(null);
     const r = await createReply({ threadId: id, body: reply });
     setBusy(false);
-    if ("error" in r) { setErr(r.error); return; }
+    if ("error" in r) {
+      setErr(r.error);
+      return;
+    }
     setReply("");
     void reload();
   }
@@ -87,7 +92,10 @@ function ThreadPage() {
   async function onDeleteThread() {
     if (!confirm("Delete this thread and all replies?")) return;
     const { error } = await deleteThread(id);
-    if (error) { setErr(error); return; }
+    if (error) {
+      setErr(error);
+      return;
+    }
     void navigate({ to: "/forum" });
   }
 
@@ -107,7 +115,10 @@ function ThreadPage() {
       <LobbyChrome>
         <div className="mx-auto max-w-[820px] px-6 pb-16 pt-10 text-center">
           <p className="text-[15px] text-[#a7a7b2]">Thread not found.</p>
-          <Link to="/forum" className="mt-4 inline-block text-[13px] text-[#f5a524] hover:underline">
+          <Link
+            to="/forum"
+            className="mt-4 inline-block text-[13px] text-[#f5a524] hover:underline"
+          >
             ← Back to forum
           </Link>
         </div>
@@ -123,7 +134,9 @@ function ThreadPage() {
     <LobbyChrome>
       <div className="mx-auto max-w-[820px] px-6 pb-16 pt-10">
         <div className="mb-4 text-[12px] text-[#5c5c66]">
-          <Link to="/forum" className="hover:text-[#a7a7b2]">Forum</Link>
+          <Link to="/forum" className="hover:text-[#a7a7b2]">
+            Forum
+          </Link>
           <span className="mx-2">/</span>
           <Link
             to="/forum/c/$slug"
@@ -154,9 +167,15 @@ function ThreadPage() {
 
         <article className="rounded-2xl border border-[#1a1a1f] bg-[#0d0d10] p-5">
           <div className="flex items-center gap-3">
-            <Avatar name={thread.author?.name ?? "Player"} imageUrl={thread.author?.avatar_url ?? null} size={36} />
+            <Avatar
+              name={thread.author?.name ?? "Player"}
+              imageUrl={thread.author?.avatar_url ?? null}
+              size={36}
+            />
             <div className="min-w-0 flex-1">
-              <div className="text-[13px] font-medium text-[#ececf1]">{thread.author?.name ?? "Player"}</div>
+              <div className="text-[13px] font-medium text-[#ececf1]">
+                {thread.author?.name ?? "Player"}
+              </div>
               <div className="text-[11px] text-[#5c5c66]">{timeAgo(thread.created_at)}</div>
             </div>
             {(isAuthor || canModerate) && (
@@ -201,9 +220,15 @@ function ThreadPage() {
             return (
               <li key={p.id} className="rounded-2xl border border-[#1a1a1f] bg-[#0d0d10] p-4">
                 <div className="flex items-center gap-3">
-                  <Avatar name={p.author?.name ?? "Player"} imageUrl={p.author?.avatar_url ?? null} size={30} />
+                  <Avatar
+                    name={p.author?.name ?? "Player"}
+                    imageUrl={p.author?.avatar_url ?? null}
+                    size={30}
+                  />
                   <div className="min-w-0 flex-1">
-                    <div className="text-[13px] font-medium text-[#ececf1]">{p.author?.name ?? "Player"}</div>
+                    <div className="text-[13px] font-medium text-[#ececf1]">
+                      {p.author?.name ?? "Player"}
+                    </div>
                     <div className="text-[11px] text-[#5c5c66]">{timeAgo(p.created_at)}</div>
                   </div>
                   {(own || canModerate) && (
@@ -235,7 +260,10 @@ function ThreadPage() {
 
         <div className="mt-8">
           {canReply ? (
-            <form onSubmit={onReply} className="rounded-2xl border border-[#1a1a1f] bg-[#0d0d10] p-4">
+            <form
+              onSubmit={onReply}
+              className="rounded-2xl border border-[#1a1a1f] bg-[#0d0d10] p-4"
+            >
               <textarea
                 value={reply}
                 onChange={(e) => setReply(e.target.value)}
@@ -261,7 +289,10 @@ function ThreadPage() {
             </div>
           ) : (
             <div className="rounded-2xl border border-[#1a1a1f] bg-[#0d0d10] p-4 text-center text-[13px] text-[#a7a7b2]">
-              <Link to="/auth" className="font-semibold text-[#2fd575] hover:underline">Sign in</Link> to reply.
+              <Link to="/auth" className="font-semibold text-[#2fd575] hover:underline">
+                Sign in
+              </Link>{" "}
+              to reply.
             </div>
           )}
         </div>

@@ -20,7 +20,8 @@ export type ProfileModResult =
   | { allow: true }
   | { allow: false; penalty: Kind; severity: number; reason: string; senderMessage: string };
 
-export type ChatBanState = { active: false } | { active: true; kind: Kind; until: string | null; reason: string | null };
+export type ChatBanState =
+  { active: false } | { active: true; kind: Kind; until: string | null; reason: string | null };
 
 async function recentStrikeCount(supabase: any, playerId: string): Promise<number> {
   const since = new Date(Date.now() - 30 * 24 * 3600_000).toISOString();
@@ -63,7 +64,11 @@ export const moderateChatMessage = createServerFn({ method: "POST" })
   .inputValidator((raw: unknown) => {
     const d = raw as { playerId: string; matchId?: string | null; text: string };
     if (!d?.playerId || typeof d.text !== "string") throw new Error("bad input");
-    return { playerId: String(d.playerId), matchId: d.matchId ? String(d.matchId).slice(0, 40) : null, text: d.text.slice(0, 500) };
+    return {
+      playerId: String(d.playerId),
+      matchId: d.matchId ? String(d.matchId).slice(0, 40) : null,
+      text: d.text.slice(0, 500),
+    };
   })
   .handler(async ({ data, context }): Promise<ChatModResult> => {
     const { supabase, userId } = context;
@@ -122,9 +127,7 @@ export const moderateChatMessage = createServerFn({ method: "POST" })
         ? `Message blocked (warning). Reason: ${reasonText}. Further violations will escalate.`
         : `Message blocked — ${label} issued. Reason: ${reasonText}.`;
     const lobbyMessage =
-      penalty === "warn"
-        ? null
-        : `${player.name} received a ${label} for chat policy violations.`;
+      penalty === "warn" ? null : `${player.name} received a ${label} for chat policy violations.`;
 
     return {
       allow: false,
@@ -147,8 +150,11 @@ export const saveBio = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const player = await ownPlayerRow(supabase, userId, data.playerId);
     if (!player) throw new Error("Player not found");
-    const { moderateText, pickPenaltyForProfile, activeUntilFor, penaltyLabel } = await import("./moderation.server");
-    const verdict = data.bio.trim() ? await moderateText(data.bio) : { severity: 0 as const, categories: [], summary: "" };
+    const { moderateText, pickPenaltyForProfile, activeUntilFor, penaltyLabel } =
+      await import("./moderation.server");
+    const verdict = data.bio.trim()
+      ? await moderateText(data.bio)
+      : { severity: 0 as const, categories: [], summary: "" };
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     await supabaseAdmin.from("moderation_events").insert({
@@ -181,7 +187,10 @@ export const saveBio = createServerFn({ method: "POST" })
       };
     }
 
-    const { error } = await supabase.from("players").update({ bio: data.bio, updated_at: new Date().toISOString() }).eq("id", data.playerId);
+    const { error } = await supabase
+      .from("players")
+      .update({ bio: data.bio, updated_at: new Date().toISOString() })
+      .eq("id", data.playerId);
     if (error) throw new Error(error.message);
     return { allow: true };
   });
@@ -200,7 +209,8 @@ export const saveAvatar = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const player = await ownPlayerRow(supabase, userId, data.playerId);
     if (!player) throw new Error("Player not found");
-    const { moderateImageDataUrl, pickPenaltyForProfile, activeUntilFor, penaltyLabel } = await import("./moderation.server");
+    const { moderateImageDataUrl, pickPenaltyForProfile, activeUntilFor, penaltyLabel } =
+      await import("./moderation.server");
     const verdict = await moderateImageDataUrl(data.dataUrl);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -225,7 +235,10 @@ export const saveAvatar = createServerFn({ method: "POST" })
       };
     }
 
-    const { error } = await supabase.from("players").update({ avatar_url: data.dataUrl, updated_at: new Date().toISOString() }).eq("id", data.playerId);
+    const { error } = await supabase
+      .from("players")
+      .update({ avatar_url: data.dataUrl, updated_at: new Date().toISOString() })
+      .eq("id", data.playerId);
     if (error) throw new Error(error.message);
     return { allow: true };
   });
@@ -262,9 +275,14 @@ export const moderateUsername = createServerFn({ method: "POST" })
     const clean = data.name.trim();
     if (!clean) return { allow: false, reason: "Name is required." };
     const { moderateText } = await import("./moderation.server");
-    const verdict = await moderateText(`Proposed username: "${clean}". Judge only the username itself for hate, slurs, harassment, or sexual content.`);
+    const verdict = await moderateText(
+      `Proposed username: "${clean}". Judge only the username itself for hate, slurs, harassment, or sexual content.`,
+    );
     if (verdict.severity >= 3) {
-      return { allow: false, reason: verdict.summary || verdict.categories.join(", ") || "Username not allowed." };
+      return {
+        allow: false,
+        reason: verdict.summary || verdict.categories.join(", ") || "Username not allowed.",
+      };
     }
     return { allow: true };
   });

@@ -10,7 +10,10 @@ export const Route = createFileRoute("/history")({
   head: () => ({
     meta: [
       { title: "Match history · playquoridor.online" },
-      { name: "description", content: "Review your Quoridor match history with per-round analysis." },
+      {
+        name: "description",
+        content: "Review your Quoridor match history with per-round analysis.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -47,7 +50,10 @@ function HistoryPage() {
   useEffect(() => {
     void (async () => {
       const u = await requireRealUser();
-      if (!u) { void navigate({ to: "/auth" }); return; }
+      if (!u) {
+        void navigate({ to: "/auth" });
+        return;
+      }
       setMe(u);
       const { data: myRows } = await supabase
         .from("match_players")
@@ -56,7 +62,10 @@ function HistoryPage() {
         .order("match_id", { ascending: false })
         .limit(50);
       const ids = Array.from(new Set((myRows ?? []).map((r) => r.match_id)));
-      if (ids.length === 0) { setRows([]); return; }
+      if (ids.length === 0) {
+        setRows([]);
+        return;
+      }
       const { data: matches } = await supabase
         .from("matches")
         .select("id,mode,rounds,ranked,ended_at,winner_player_id,snapshot,elo_delta")
@@ -64,7 +73,9 @@ function HistoryPage() {
         .order("ended_at", { ascending: false });
       const { data: mps } = await supabase
         .from("match_players")
-        .select("match_id,slot,name,player_id,result,rounds_won,walls_placed,pawns_eliminated,forfeited")
+        .select(
+          "match_id,slot,name,player_id,result,rounds_won,walls_placed,pawns_eliminated,forfeited",
+        )
         .in("match_id", ids);
       const grouped: MatchRow[] = (matches ?? []).map((m) => ({
         match_id: m.id,
@@ -81,7 +92,12 @@ function HistoryPage() {
     })();
   }, [navigate]);
 
-  if (!me) return <Shell><p className="text-zinc-500">Loading…</p></Shell>;
+  if (!me)
+    return (
+      <Shell>
+        <p className="text-zinc-500">Loading…</p>
+      </Shell>
+    );
 
   return (
     <Shell>
@@ -94,7 +110,12 @@ function HistoryPage() {
       {rows?.length === 0 && (
         <div className="mt-6 rounded-2xl border border-dashed border-zinc-800 p-8 text-center">
           <p className="text-sm text-zinc-400">No matches recorded yet.</p>
-          <Link to="/" className="mt-3 inline-block rounded-lg bg-emerald-500 px-4 py-2 text-xs font-bold uppercase tracking-widest text-emerald-950 hover:bg-emerald-400">Play a game</Link>
+          <Link
+            to="/"
+            className="mt-3 inline-block rounded-lg bg-emerald-500 px-4 py-2 text-xs font-bold uppercase tracking-widest text-emerald-950 hover:bg-emerald-400"
+          >
+            Play a game
+          </Link>
         </div>
       )}
 
@@ -103,7 +124,11 @@ function HistoryPage() {
           const mine = m.players.find((p) => p.player_id === me.playerId);
           const iWon = m.winner_player_id === me.playerId;
           const iForfeited = !!mine?.forfeited;
-          const outcome: "win" | "loss" | "forfeit" = iWon ? "win" : iForfeited ? "forfeit" : "loss";
+          const outcome: "win" | "loss" | "forfeit" = iWon
+            ? "win"
+            : iForfeited
+              ? "forfeit"
+              : "loss";
           const opp = m.players.find((p) => p.slot !== mine?.slot);
           const oppName = opp?.name ?? (m.mode > 2 ? "Room" : "Opponent");
           const myRounds = mine?.rounds_won ?? 0;
@@ -112,38 +137,87 @@ function HistoryPage() {
           const isOpen = openId === m.match_id;
           const tone =
             outcome === "win"
-              ? { bar: "bg-emerald-500", chip: "bg-emerald-500/15 text-emerald-300 ring-emerald-500/40", label: "Win",     border: "border-emerald-500/25 hover:border-emerald-400/50", glow: "shadow-[inset_3px_0_0_0_theme(colors.emerald.500)]" }
+              ? {
+                  bar: "bg-emerald-500",
+                  chip: "bg-emerald-500/15 text-emerald-300 ring-emerald-500/40",
+                  label: "Win",
+                  border: "border-emerald-500/25 hover:border-emerald-400/50",
+                  glow: "shadow-[inset_3px_0_0_0_theme(colors.emerald.500)]",
+                }
               : outcome === "forfeit"
-                ? { bar: "bg-amber-500",   chip: "bg-amber-500/15 text-amber-300 ring-amber-500/40",   label: "Forfeit", border: "border-amber-500/25 hover:border-amber-400/50",   glow: "shadow-[inset_3px_0_0_0_theme(colors.amber.500)]" }
-                : { bar: "bg-rose-500",    chip: "bg-rose-500/15 text-rose-300 ring-rose-500/40",     label: "Loss",    border: "border-rose-500/25 hover:border-rose-400/50",     glow: "shadow-[inset_3px_0_0_0_theme(colors.rose.500)]" };
+                ? {
+                    bar: "bg-amber-500",
+                    chip: "bg-amber-500/15 text-amber-300 ring-amber-500/40",
+                    label: "Forfeit",
+                    border: "border-amber-500/25 hover:border-amber-400/50",
+                    glow: "shadow-[inset_3px_0_0_0_theme(colors.amber.500)]",
+                  }
+                : {
+                    bar: "bg-rose-500",
+                    chip: "bg-rose-500/15 text-rose-300 ring-rose-500/40",
+                    label: "Loss",
+                    border: "border-rose-500/25 hover:border-rose-400/50",
+                    glow: "shadow-[inset_3px_0_0_0_theme(colors.rose.500)]",
+                  };
           return (
-            <li key={m.match_id} className={"overflow-hidden rounded-xl border bg-zinc-900/50 transition-colors " + tone.border + " " + tone.glow}>
+            <li
+              key={m.match_id}
+              className={
+                "overflow-hidden rounded-xl border bg-zinc-900/50 transition-colors " +
+                tone.border +
+                " " +
+                tone.glow
+              }
+            >
               <button
                 onClick={() => setOpenId(isOpen ? null : m.match_id)}
                 className="flex w-full items-center justify-between gap-4 px-4 py-3 text-left hover:bg-zinc-900"
               >
                 <div className="flex min-w-0 items-center gap-3">
-                  <span className={"grid h-10 w-10 flex-none place-items-center rounded-full text-[11px] font-black uppercase tracking-wide ring-1 " + tone.chip}>
+                  <span
+                    className={
+                      "grid h-10 w-10 flex-none place-items-center rounded-full text-[11px] font-black uppercase tracking-wide ring-1 " +
+                      tone.chip
+                    }
+                  >
                     {outcome === "win" ? "W" : outcome === "forfeit" ? "FF" : "L"}
                   </span>
                   <div className="min-w-0">
                     <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-zinc-100">
-                      <span className={"rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-widest ring-1 " + tone.chip}>{tone.label}</span>
+                      <span
+                        className={
+                          "rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-widest ring-1 " +
+                          tone.chip
+                        }
+                      >
+                        {tone.label}
+                      </span>
                       <span className="truncate">vs {oppName}</span>
-                      {m.ranked && <span className="rounded-md bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-primary ring-1 ring-primary/40">Ranked</span>}
+                      {m.ranked && (
+                        <span className="rounded-md bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-primary ring-1 ring-primary/40">
+                          Ranked
+                        </span>
+                      )}
                       {m.ranked && typeof m.elo_delta === "number" && outcome !== "forfeit" && (
-                        <span className={
-                          "rounded-md px-1.5 py-0.5 font-mono text-[11px] font-bold ring-1 " +
-                          (iWon
-                            ? "bg-emerald-500/15 text-emerald-300 ring-emerald-500/40"
-                            : "bg-rose-500/15 text-rose-300 ring-rose-500/40")
-                        }>
-                          {iWon ? "+" : "−"}{m.elo_delta} ELO
+                        <span
+                          className={
+                            "rounded-md px-1.5 py-0.5 font-mono text-[11px] font-bold ring-1 " +
+                            (iWon
+                              ? "bg-emerald-500/15 text-emerald-300 ring-emerald-500/40"
+                              : "bg-rose-500/15 text-rose-300 ring-rose-500/40")
+                          }
+                        >
+                          {iWon ? "+" : "−"}
+                          {m.elo_delta} ELO
                         </span>
                       )}
                     </p>
                     <p className="mt-0.5 text-[11px] text-zinc-500">
-                      <span className="font-mono text-zinc-400">{myRounds}<span className="mx-1 text-zinc-600">–</span>{oppRounds}</span>
+                      <span className="font-mono text-zinc-400">
+                        {myRounds}
+                        <span className="mx-1 text-zinc-600">–</span>
+                        {oppRounds}
+                      </span>
                       <span className="mx-2 text-zinc-700">·</span>
                       {m.mode}p · {m.rounds} rounds
                       <span className="mx-2 text-zinc-700">·</span>
@@ -157,26 +231,51 @@ function HistoryPage() {
                       {mine.walls_placed} walls · {mine.pawns_eliminated} pops
                     </span>
                   )}
-                  <svg className={"h-4 w-4 text-zinc-600 transition-transform " + (isOpen ? "rotate-180" : "")} viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4z" /></svg>
+                  <svg
+                    className={
+                      "h-4 w-4 text-zinc-600 transition-transform " + (isOpen ? "rotate-180" : "")
+                    }
+                    viewBox="0 0 12 12"
+                    fill="currentColor"
+                  >
+                    <path d="M2 4l4 4 4-4z" />
+                  </svg>
                 </div>
               </button>
               <AnimatePresence initial={false}>
                 {isOpen && (
                   <motion.div
                     key="body"
-                    initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
                     transition={{ duration: 0.2 }}
                     className="border-t border-zinc-800 bg-zinc-950/60 px-4 py-4"
                   >
                     <p className="text-[10px] uppercase tracking-[0.3em] text-zinc-500">Analysis</p>
                     <table className="mt-3 w-full text-xs">
                       <thead className="text-[10px] uppercase tracking-widest text-zinc-500">
-                        <tr><th className="pb-2 text-left">Player</th><th className="pb-2">Rounds</th><th className="pb-2">Walls</th><th className="pb-2">Pops</th><th className="pb-2">Result</th></tr>
+                        <tr>
+                          <th className="pb-2 text-left">Player</th>
+                          <th className="pb-2">Rounds</th>
+                          <th className="pb-2">Walls</th>
+                          <th className="pb-2">Pops</th>
+                          <th className="pb-2">Result</th>
+                        </tr>
                       </thead>
                       <tbody>
                         {m.players.map((p) => (
-                          <tr key={p.slot} className={"border-t border-zinc-800 " + (p.player_id === me.playerId ? "text-emerald-300" : "text-zinc-300")}>
-                            <td className="py-2">{p.name}{p.forfeited ? " · forfeit" : ""}</td>
+                          <tr
+                            key={p.slot}
+                            className={
+                              "border-t border-zinc-800 " +
+                              (p.player_id === me.playerId ? "text-emerald-300" : "text-zinc-300")
+                            }
+                          >
+                            <td className="py-2">
+                              {p.name}
+                              {p.forfeited ? " · forfeit" : ""}
+                            </td>
                             <td className="text-center">{p.rounds_won}</td>
                             <td className="text-center">{p.walls_placed}</td>
                             <td className="text-center">{p.pawns_eliminated}</td>
@@ -204,31 +303,40 @@ function MatchActions({ row, meId }: { row: MatchRow; meId: string | null }) {
   const opp = row.players.find((p) => p.player_id && p.player_id !== meId);
   const analyze = () => {
     if (!snap) return;
-    try { sessionStorage.setItem("analyze:pending", JSON.stringify(snap)); } catch {}
+    try {
+      sessionStorage.setItem("analyze:pending", JSON.stringify(snap));
+    } catch {}
     void nav({ to: "/analyze/$clipId", params: { clipId: "local" } });
   };
   return (
     <div className="mt-4 flex flex-wrap items-center gap-2">
-      <button onClick={analyze} disabled={!snap}
+      <button
+        onClick={analyze}
+        disabled={!snap}
         title={snap ? "Open engine analysis" : "This match has no saved replay"}
-        className="rounded-md border border-primary/50 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 disabled:opacity-40">
+        className="rounded-md border border-primary/50 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 disabled:opacity-40"
+      >
         Analyze
       </button>
-      <button onClick={() => setOpen(true)} disabled={!snap}
+      <button
+        onClick={() => setOpen(true)}
+        disabled={!snap}
         title={snap ? "Export a shareable clip" : "This match has no saved replay"}
-        className="rounded-md border border-border bg-secondary/40 px-3 py-1.5 text-xs font-medium hover:bg-secondary disabled:opacity-40">
+        className="rounded-md border border-border bg-secondary/40 px-3 py-1.5 text-xs font-medium hover:bg-secondary disabled:opacity-40"
+      >
         Download clip
       </button>
       <ExportClipModal open={open} snapshot={snap} onClose={() => setOpen(false)} />
       {opp?.player_id && (
-        <Link to="/player/$playerId" params={{ playerId: opp.player_id }}
-          className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-secondary">
+        <Link
+          to="/player/$playerId"
+          params={{ playerId: opp.player_id }}
+          className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-secondary"
+        >
           View {opp.name}'s profile
         </Link>
       )}
-      {!snap && (
-        <span className="text-[11px] text-zinc-500">Older match — no replay stored.</span>
-      )}
+      {!snap && <span className="text-[11px] text-zinc-500">Older match — no replay stored.</span>}
     </div>
   );
 }
@@ -237,7 +345,12 @@ function Shell({ children }: { children: React.ReactNode }) {
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
       <div className="mx-auto max-w-[1600px] px-4 py-8 sm:py-12">
-        <Link to="/" className="text-xs uppercase tracking-widest text-zinc-500 hover:text-zinc-300">← Home</Link>
+        <Link
+          to="/"
+          className="text-xs uppercase tracking-widest text-zinc-500 hover:text-zinc-300"
+        >
+          ← Home
+        </Link>
         <div className="mt-6">{children}</div>
       </div>
     </main>

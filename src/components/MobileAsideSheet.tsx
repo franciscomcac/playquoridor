@@ -19,7 +19,9 @@ export function MobileAsideSheet({ chat, chatUnread = 0, children }: Props) {
 
   useEffect(() => {
     if (sheet === null) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setSheet(null); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSheet(null);
+    };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [sheet]);
@@ -84,9 +86,7 @@ export function MobileAsideSheet({ chat, chatUnread = 0, children }: Props) {
                 Close
               </button>
             </div>
-            <div className="flex flex-col gap-3">
-              {sheet === "chat" ? chat : children}
-            </div>
+            <div className="flex flex-col gap-3">{sheet === "chat" ? chat : children}</div>
           </div>
         </div>
       )}

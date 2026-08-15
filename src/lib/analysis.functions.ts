@@ -7,10 +7,10 @@ import { generateText } from "ai";
 import { z } from "zod";
 
 const Input = z.object({
-  fenLike: z.string(),          // short position summary
-  moveText: z.string(),         // e.g. "e2 → e3" or "wall h @ e4"
-  playerLabel: z.string(),      // "You" or "Opponent"
-  distMe: z.number(),           // BFS distance for the moving player before/after
+  fenLike: z.string(), // short position summary
+  moveText: z.string(), // e.g. "e2 → e3" or "wall h @ e4"
+  playerLabel: z.string(), // "You" or "Opponent"
+  distMe: z.number(), // BFS distance for the moving player before/after
   distOpp: z.number(),
   distMeAfter: z.number(),
   distOppAfter: z.number(),

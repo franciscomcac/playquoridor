@@ -46,8 +46,21 @@ export async function evaluatePostMatch(ctx: EvalContext): Promise<UnlockedAchie
       .select("slug,name,description,tier,sigil_key,sort_order")
       .in("slug", slugs);
     const meta = new Map<string, UnlockedAchievement>();
-    for (const r of (rows ?? []) as Array<{ slug: string; name: string; description: string; tier: SigilTier; sigil_key: string; sort_order: number }>) {
-      meta.set(r.slug, { slug: r.slug, name: r.name, description: r.description, tier: r.tier, sigil_key: r.sigil_key });
+    for (const r of (rows ?? []) as Array<{
+      slug: string;
+      name: string;
+      description: string;
+      tier: SigilTier;
+      sigil_key: string;
+      sort_order: number;
+    }>) {
+      meta.set(r.slug, {
+        slug: r.slug,
+        name: r.name,
+        description: r.description,
+        tier: r.tier,
+        sigil_key: r.sigil_key,
+      });
     }
     // Preserve grant order from the RPC.
     return slugs.map((s) => meta.get(s)).filter((x): x is UnlockedAchievement => !!x);

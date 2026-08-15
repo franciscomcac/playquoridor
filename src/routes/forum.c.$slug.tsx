@@ -53,7 +53,9 @@ function CategoryPage() {
       if (!alive) return;
       setSignedIn(!!data.user && !data.user.is_anonymous);
     });
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -69,7 +71,9 @@ function CategoryPage() {
         setErr(e instanceof Error ? e.message : "Failed to load threads.");
       }
     })();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [slug]);
 
   const cat = cats?.find((c) => c.slug === slug);
@@ -80,7 +84,10 @@ function CategoryPage() {
     setErr(null);
     const r = await createThread({ categorySlug: slug, title, body });
     setBusy(false);
-    if ("error" in r) { setErr(r.error); return; }
+    if ("error" in r) {
+      setErr(r.error);
+      return;
+    }
     void navigate({ to: "/forum/t/$id", params: { id: r.id } });
   }
 
@@ -88,7 +95,9 @@ function CategoryPage() {
     <LobbyChrome>
       <div className="mx-auto max-w-[1000px] px-6 pb-16 pt-10">
         <div className="mb-4 text-[12px] text-[#5c5c66]">
-          <Link to="/forum" className="hover:text-[#a7a7b2]">Forum</Link>
+          <Link to="/forum" className="hover:text-[#a7a7b2]">
+            Forum
+          </Link>
           <span className="mx-2">/</span>
           <span className="text-[#a7a7b2]">{cat?.name ?? prettySlug(slug)}</span>
         </div>
@@ -120,7 +129,10 @@ function CategoryPage() {
         </header>
 
         {composerOpen && signedIn ? (
-          <form onSubmit={onSubmit} className="mb-6 rounded-2xl border border-[#1a1a1f] bg-[#0d0d10] p-4">
+          <form
+            onSubmit={onSubmit}
+            className="mb-6 rounded-2xl border border-[#1a1a1f] bg-[#0d0d10] p-4"
+          >
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -157,7 +169,9 @@ function CategoryPage() {
         ) : null}
 
         {err && !composerOpen ? (
-          <div className="mb-4 rounded-2xl border border-[#3a1a1a] bg-[#1a0d0d] p-4 text-[13px] text-[#ff9a8a]">{err}</div>
+          <div className="mb-4 rounded-2xl border border-[#3a1a1a] bg-[#1a0d0d] p-4 text-[13px] text-[#ff9a8a]">
+            {err}
+          </div>
         ) : null}
 
         <ul className="divide-y divide-[#17171b] rounded-2xl border border-[#1a1a1f] bg-[#0d0d10]">
@@ -168,7 +182,11 @@ function CategoryPage() {
                 params={{ id: t.id }}
                 className="flex items-center gap-3 px-4 py-3 hover:bg-[#111114]"
               >
-                <Avatar name={t.author?.name ?? "Player"} imageUrl={t.author?.avatar_url ?? null} size={34} />
+                <Avatar
+                  name={t.author?.name ?? "Player"}
+                  imageUrl={t.author?.avatar_url ?? null}
+                  size={34}
+                />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     {t.pinned ? (
@@ -181,7 +199,9 @@ function CategoryPage() {
                         Locked
                       </span>
                     ) : null}
-                    <span className="truncate text-[15px] font-medium text-[#ececf1]">{t.title}</span>
+                    <span className="truncate text-[15px] font-medium text-[#ececf1]">
+                      {t.title}
+                    </span>
                   </div>
                   <div className="mt-0.5 truncate text-[12px] text-[#5c5c66]">
                     by {t.author?.name ?? "Player"} · {timeAgo(t.last_activity_at)}

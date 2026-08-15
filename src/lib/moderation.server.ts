@@ -54,7 +54,7 @@ async function callGateway(body: unknown): Promise<string> {
     const t = await res.text();
     throw new Error(`AI gateway ${res.status}: ${t.slice(0, 300)}`);
   }
-  const data = await res.json() as { choices?: Array<{ message?: { content?: string } }> };
+  const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
   return data.choices?.[0]?.message?.content ?? "";
 }
 
@@ -97,7 +97,11 @@ export async function moderateImageDataUrl(dataUrl: string): Promise<Verdict> {
 
 export type PenaltyKind = "warn" | "match_mute" | "chat_ban_24h" | "chat_ban_7d" | "perm";
 
-export function pickPenaltyForChat(severity: number, recentStrikes: number, hasChatBan: boolean): PenaltyKind | null {
+export function pickPenaltyForChat(
+  severity: number,
+  recentStrikes: number,
+  hasChatBan: boolean,
+): PenaltyKind | null {
   // "Standard": warn → match mute → 24h → 7d → perm.
   // Severe (>=4) skips warn.
   if (severity <= 1) return null;
@@ -123,20 +127,30 @@ export function pickPenaltyForProfile(severity: number, recentStrikes: number): 
 export function activeUntilFor(kind: PenaltyKind): Date | null {
   const now = Date.now();
   switch (kind) {
-    case "match_mute": return null; // enforced per-match
-    case "chat_ban_24h": return new Date(now + 24 * 3600_000);
-    case "chat_ban_7d": return new Date(now + 7 * 24 * 3600_000);
-    case "perm": return new Date(now + 100 * 365 * 24 * 3600_000);
-    default: return null; // warn
+    case "match_mute":
+      return null; // enforced per-match
+    case "chat_ban_24h":
+      return new Date(now + 24 * 3600_000);
+    case "chat_ban_7d":
+      return new Date(now + 7 * 24 * 3600_000);
+    case "perm":
+      return new Date(now + 100 * 365 * 24 * 3600_000);
+    default:
+      return null; // warn
   }
 }
 
 export function penaltyLabel(kind: PenaltyKind): string {
   switch (kind) {
-    case "warn": return "warning";
-    case "match_mute": return "full match mute";
-    case "chat_ban_24h": return "24-hour chat ban";
-    case "chat_ban_7d": return "7-day chat ban";
-    case "perm": return "permanent chat ban";
+    case "warn":
+      return "warning";
+    case "match_mute":
+      return "full match mute";
+    case "chat_ban_24h":
+      return "24-hour chat ban";
+    case "chat_ban_7d":
+      return "7-day chat ban";
+    case "perm":
+      return "permanent chat ban";
   }
 }

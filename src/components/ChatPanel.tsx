@@ -40,26 +40,31 @@ export function ChatPanel({ entries, onSend, disabled, you }: Props) {
     <div className="flex flex-col rounded-xl border border-border bg-card p-3 sm:p-3.5">
       <div className="flex items-baseline justify-between">
         <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Chat</p>
-        <p className="text-[10px] text-muted-foreground">{entries.length} msg{entries.length === 1 ? "" : "s"}</p>
+        <p className="text-[10px] text-muted-foreground">
+          {entries.length} msg{entries.length === 1 ? "" : "s"}
+        </p>
       </div>
       <div
         ref={scrollRef}
         className="mt-2 flex h-40 flex-col gap-1 overflow-y-auto rounded-md border border-border bg-background/40 p-2 text-xs"
       >
-        {entries.length === 0 && (
-          <p className="m-auto text-muted-foreground">No messages yet</p>
-        )}
+        {entries.length === 0 && <p className="m-auto text-muted-foreground">No messages yet</p>}
         {entries.map((m) => {
           if (m.slot === null) {
             return (
-              <p key={m.key} className="text-[10px] italic text-muted-foreground">{m.text}</p>
+              <p key={m.key} className="text-[10px] italic text-muted-foreground">
+                {m.text}
+              </p>
             );
           }
           const color = PLAYER_COLORS[m.slot as PlayerId] ?? "var(--muted-foreground)";
           const mine = you !== null && m.slot === you;
           return (
             <p key={m.key} className="leading-snug">
-              <span className="font-semibold" style={{ color }}>{m.name}{mine ? " (you)" : ""}:</span>{" "}
+              <span className="font-semibold" style={{ color }}>
+                {m.name}
+                {mine ? " (you)" : ""}:
+              </span>{" "}
               <span className="text-foreground/90">{m.text}</span>
             </p>
           );

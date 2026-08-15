@@ -49,6 +49,7 @@ The 2P coinflip intro and 4P multi-banner intro currently render small nameplate
 ## Technical details
 
 **Files touched**
+
 - `src/lib/achievement-families.ts` (new)
 - `src/lib/peer-room.ts` (roster/join types + payloads)
 - `src/lib/stats.ts` (add helper: `fetchPlayerBannerData(playerId)` returning `{country, rating, showcased}`)
