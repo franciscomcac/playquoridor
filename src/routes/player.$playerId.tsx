@@ -1,19 +1,37 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Avatar, PLACEMENT_GAMES, UNRANKED_COLOR, isPlacement, placementRemaining, tierFromRating } from "@/components/LobbyChrome";
+import {
+  Avatar,
+  PLACEMENT_GAMES,
+  UNRANKED_COLOR,
+  isPlacement,
+  placementRemaining,
+  tierFromRating,
+} from "@/components/LobbyChrome";
 import { fetchProfile, fetchRecentMatches, type RecentMatchRow } from "@/lib/stats";
 
 export const Route = createFileRoute("/player/$playerId")({
   head: () => ({
     meta: [
       { title: "Player profile · playquoridor.online" },
-      { name: "description", content: "Public Quoridor player profile: rating, record, and recent matches." },
+      {
+        name: "description",
+        content: "Public Quoridor player profile: rating, record, and recent matches.",
+      },
       { name: "robots", content: "noindex,follow" },
     ],
   }),
   component: PlayerPage,
-  notFoundComponent: () => <Shell><p className="text-rose-400">Player not found.</p></Shell>,
-  errorComponent: () => <Shell><p className="text-rose-400">Couldn't load player.</p></Shell>,
+  notFoundComponent: () => (
+    <Shell>
+      <p className="text-rose-400">Player not found.</p>
+    </Shell>
+  ),
+  errorComponent: () => (
+    <Shell>
+      <p className="text-rose-400">Couldn't load player.</p>
+    </Shell>
+  ),
 });
 
 function PlayerPage() {
@@ -26,34 +44,72 @@ function PlayerPage() {
     void (async () => {
       setLoading(true);
       try {
-        const [p, r] = await Promise.all([
-          fetchProfile(playerId),
-          fetchRecentMatches(playerId, 8),
-        ]);
+        const [p, r] = await Promise.all([fetchProfile(playerId), fetchRecentMatches(playerId, 8)]);
         setProfile(p);
         setRecent(r);
-      } finally { setLoading(false); }
+      } finally {
+        setLoading(false);
+      }
     })();
   }, [playerId]);
 
-  if (loading) return <Shell><p className="text-zinc-500">Loading…</p></Shell>;
-  const p = profile?.player as { name?: string; country?: string | null; bio?: string | null; avatar_color?: string | null; avatar_url?: string | null } | null | undefined;
-  const s = profile?.stats as { rating?: number; matches?: number; wins?: number; losses?: number; walls_placed?: number; pawns_eliminated?: number; ranked_matches?: number } | null | undefined;
-  if (!p) return <Shell><p className="text-rose-400">Player not found.</p></Shell>;
+  if (loading)
+    return (
+      <Shell>
+        <p className="text-zinc-500">Loading…</p>
+      </Shell>
+    );
+  const p = profile?.player as
+    | {
+        name?: string;
+        country?: string | null;
+        bio?: string | null;
+        avatar_color?: string | null;
+        avatar_url?: string | null;
+      }
+    | null
+    | undefined;
+  const s = profile?.stats as
+    | {
+        rating?: number;
+        matches?: number;
+        wins?: number;
+        losses?: number;
+        walls_placed?: number;
+        pawns_eliminated?: number;
+        ranked_matches?: number;
+      }
+    | null
+    | undefined;
+  if (!p)
+    return (
+      <Shell>
+        <p className="text-rose-400">Player not found.</p>
+      </Shell>
+    );
 
   const rating = s?.rating ?? 1000;
   const rankedMatches = s?.ranked_matches ?? 0;
   const unranked = isPlacement(rankedMatches);
   const tier = tierFromRating(rating);
-  const winRate = s && (s.matches ?? 0) > 0 ? Math.round((100 * (s.wins ?? 0)) / (s.matches ?? 1)) : null;
+  const winRate =
+    s && (s.matches ?? 0) > 0 ? Math.round((100 * (s.wins ?? 0)) / (s.matches ?? 1)) : null;
 
   return (
     <Shell>
       <div className="flex items-center gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5">
-        <Avatar name={p.name ?? "player"} color={p.avatar_color} imageUrl={p.avatar_url ?? undefined} size={72} />
+        <Avatar
+          name={p.name ?? "player"}
+          color={p.avatar_color}
+          imageUrl={p.avatar_url ?? undefined}
+          size={72}
+        />
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-2xl font-bold">{p.name ?? "player"}</h1>
-          <p className="text-[11px] uppercase tracking-widest" style={{ color: unranked ? UNRANKED_COLOR : undefined }}>
+          <p
+            className="text-[11px] uppercase tracking-widest"
+            style={{ color: unranked ? UNRANKED_COLOR : undefined }}
+          >
             {unranked
               ? `Unranked · ${placementRemaining(rankedMatches)}/${PLACEMENT_GAMES} placements left · ${p.country ?? "—"}`
               : `${tier.name} · ${rating} · ${p.country ?? "—"}`}
@@ -78,7 +134,9 @@ function PlayerPage() {
       </div>
 
       <div className="mt-6">
-        <h2 className="mb-2 text-sm font-semibold uppercase tracking-widest text-zinc-400">Recent matches</h2>
+        <h2 className="mb-2 text-sm font-semibold uppercase tracking-widest text-zinc-400">
+          Recent matches
+        </h2>
         {recent.length === 0 ? (
           <p className="text-sm text-zinc-500">No matches yet.</p>
         ) : (
@@ -88,7 +146,9 @@ function PlayerPage() {
                 <span className="text-zinc-300">vs {m.opponentName}</span>
                 <span className="flex items-center gap-3 text-[11px] text-zinc-500">
                   <span>{new Date(m.endedAt).toLocaleDateString()}</span>
-                  <span className={m.result === "win" ? "text-emerald-400" : "text-rose-400"}>{m.result}</span>
+                  <span className={m.result === "win" ? "text-emerald-400" : "text-rose-400"}>
+                    {m.result}
+                  </span>
                 </span>
               </li>
             ))}
@@ -112,7 +172,12 @@ function Shell({ children }: { children: React.ReactNode }) {
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
       <div className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
-        <Link to="/" className="text-xs uppercase tracking-widest text-zinc-500 hover:text-zinc-300">← Home</Link>
+        <Link
+          to="/"
+          className="text-xs uppercase tracking-widest text-zinc-500 hover:text-zinc-300"
+        >
+          ← Home
+        </Link>
         <div className="mt-6">{children}</div>
       </div>
     </main>

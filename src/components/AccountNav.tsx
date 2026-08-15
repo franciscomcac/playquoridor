@@ -22,9 +22,7 @@ export function AccountNav({ compact = false }: { compact?: boolean }) {
       const { data: userData } = await supabase.auth.getUser();
       const u = userData.user;
       const anon =
-        !u ||
-        u.is_anonymous === true ||
-        (u.app_metadata?.provider ?? "") === "anonymous";
+        !u || u.is_anonymous === true || (u.app_metadata?.provider ?? "") === "anonymous";
       if (!u || anon) {
         if (alive) setSession({ signedIn: false, onboarded: false });
         return;
@@ -47,17 +45,32 @@ export function AccountNav({ compact = false }: { compact?: boolean }) {
       });
     };
     void load();
-    const { data: sub } = supabase.auth.onAuthStateChange(() => { void load(); });
-    return () => { alive = false; sub.subscription.unsubscribe(); };
+    const { data: sub } = supabase.auth.onAuthStateChange(() => {
+      void load();
+    });
+    return () => {
+      alive = false;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   const pad = compact ? "px-3 py-1.5 text-[10px]" : "px-5 py-2.5 text-xs";
 
   if (session === null) {
-    return <div className={"h-9 " + (compact ? "w-28" : "w-40") + " animate-pulse rounded-lg bg-zinc-900"} />;
+    return (
+      <div
+        className={"h-9 " + (compact ? "w-28" : "w-40") + " animate-pulse rounded-lg bg-zinc-900"}
+      />
+    );
   }
   if (session.signedIn && session.onboarded) {
-    return <AccountMenu username={session.username!} country={session.country ?? null} compact={compact} />;
+    return (
+      <AccountMenu
+        username={session.username!}
+        country={session.country ?? null}
+        compact={compact}
+      />
+    );
   }
   if (session.signedIn && !session.onboarded) {
     return (
@@ -90,7 +103,15 @@ export function AccountNav({ compact = false }: { compact?: boolean }) {
   );
 }
 
-function AccountMenu({ username, country, compact }: { username: string; country: string | null; compact: boolean }) {
+function AccountMenu({
+  username,
+  country,
+  compact,
+}: {
+  username: string;
+  country: string | null;
+  compact: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const playerId = getStoredIdentity()?.id ?? null;
   const flag = country ? (COUNTRY_BY_ISO[country]?.flag ?? "🌐") : "🌐";
@@ -109,7 +130,9 @@ function AccountMenu({ username, country, compact }: { username: string; country
     try {
       localStorage.removeItem("quoridor.playerId");
       localStorage.removeItem("quoridor.playerName");
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     // Hard reload so every stale piece of app state resets and a new
     // anonymous session is minted on next boot.
     window.location.replace("/");
@@ -123,7 +146,14 @@ function AccountMenu({ username, country, compact }: { username: string; country
       >
         <span className="text-base leading-none">{flag}</span>
         <span className="max-w-[120px] truncate">{username}</span>
-        <svg className={"h-3 w-3 text-zinc-500 transition-transform " + (open ? "rotate-180" : "")} viewBox="0 0 12 12" fill="currentColor" aria-hidden><path d="M2 4l4 4 4-4z" /></svg>
+        <svg
+          className={"h-3 w-3 text-zinc-500 transition-transform " + (open ? "rotate-180" : "")}
+          viewBox="0 0 12 12"
+          fill="currentColor"
+          aria-hidden
+        >
+          <path d="M2 4l4 4 4-4z" />
+        </svg>
       </button>
       <AnimatePresence>
         {open && (
@@ -143,11 +173,7 @@ function AccountMenu({ username, country, compact }: { username: string; country
             <ul className="py-1 text-sm">
               <MenuItem to="/profile" label="Profile" />
               {playerId && (
-                <MenuItem
-                  to="/player/$playerId"
-                  params={{ playerId }}
-                  label="Public page"
-                />
+                <MenuItem to="/player/$playerId" params={{ playerId }} label="Public page" />
               )}
               <MenuItem to="/friends" label="Friends" />
               <MenuItem to="/history" label="Match history" />
@@ -156,7 +182,10 @@ function AccountMenu({ username, country, compact }: { username: string; country
               <MenuItem to="/stats" label="Leaderboard" />
               <li className="my-1 border-t border-zinc-800" />
               <li>
-                <button onClick={signOut} className="flex w-full items-center px-4 py-2 text-left text-rose-400 hover:bg-zinc-900">
+                <button
+                  onClick={signOut}
+                  className="flex w-full items-center px-4 py-2 text-left text-rose-400 hover:bg-zinc-900"
+                >
                   Sign out
                 </button>
               </li>
@@ -168,7 +197,15 @@ function AccountMenu({ username, country, compact }: { username: string; country
   );
 }
 
-function MenuItem({ to, label, params }: { to: string; label: string; params?: Record<string, string> }) {
+function MenuItem({
+  to,
+  label,
+  params,
+}: {
+  to: string;
+  label: string;
+  params?: Record<string, string>;
+}) {
   return (
     <li>
       <Link

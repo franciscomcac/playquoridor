@@ -18,13 +18,20 @@ export const Route = createFileRoute("/api/clip/render")({
         if (!token) return new Response("Missing token", { status: 400, headers: CORS });
 
         const payload = await verifyClipToken(token);
-        if (!payload) return new Response("Invalid or expired token", { status: 401, headers: CORS });
+        if (!payload)
+          return new Response("Invalid or expired token", { status: 401, headers: CORS });
 
         try {
-          const { bytes, mime, ext } = renderClip(payload.snapshot as unknown as Parameters<typeof renderClip>[0], payload.options);
+          const { bytes, mime, ext } = renderClip(
+            payload.snapshot as unknown as Parameters<typeof renderClip>[0],
+            payload.options,
+          );
           const stamp = new Date().toISOString().slice(0, 10);
           const filename = `quoridor-${stamp}.${ext}`;
-          const ab = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+          const ab = bytes.buffer.slice(
+            bytes.byteOffset,
+            bytes.byteOffset + bytes.byteLength,
+          ) as ArrayBuffer;
           return new Response(ab, {
             status: 200,
             headers: {

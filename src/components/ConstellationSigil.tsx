@@ -69,42 +69,42 @@ const PALETTES: Record<SigilTier, Palette> = {
 type Emblem = { c1: string; c2: string; accent?: string };
 const EMBLEMS: Record<string, Emblem> = {
   // fire / heat
-  flame:      { c1: "#ff4d1a", c2: "#ffd166", accent: "#ffe58a" },
-  phoenix:    { c1: "#ff2d55", c2: "#ffb347", accent: "#fff2b0" },
-  sunrise:    { c1: "#ff8a3d", c2: "#ffd97a", accent: "#ffe9a8" },
-  bolt:       { c1: "#ffd60a", c2: "#fff3a0", accent: "#ffffff" },
+  flame: { c1: "#ff4d1a", c2: "#ffd166", accent: "#ffe58a" },
+  phoenix: { c1: "#ff2d55", c2: "#ffb347", accent: "#fff2b0" },
+  sunrise: { c1: "#ff8a3d", c2: "#ffd97a", accent: "#ffe9a8" },
+  bolt: { c1: "#ffd60a", c2: "#fff3a0", accent: "#ffffff" },
   // gold / laurels / crowns
-  crown:      { c1: "#f4c430", c2: "#fff2a8", accent: "#ffe58a" },
+  crown: { c1: "#f4c430", c2: "#fff2a8", accent: "#ffe58a" },
   crown_star: { c1: "#ffd166", c2: "#fff2a8", accent: "#ffffff" },
-  laurel:     { c1: "#7ecf6a", c2: "#d5f5b8", accent: "#f4c430" },
-  wreath:     { c1: "#8ee08a", c2: "#f0ffcf", accent: "#f4c430" },
-  halo:       { c1: "#ffe58a", c2: "#ffffff", accent: "#ffd166" },
-  banner:     { c1: "#e5484d", c2: "#ffb2b8", accent: "#f4c430" },
+  laurel: { c1: "#7ecf6a", c2: "#d5f5b8", accent: "#f4c430" },
+  wreath: { c1: "#8ee08a", c2: "#f0ffcf", accent: "#f4c430" },
+  halo: { c1: "#ffe58a", c2: "#ffffff", accent: "#ffd166" },
+  banner: { c1: "#e5484d", c2: "#ffb2b8", accent: "#f4c430" },
   // stone / walls
-  pillar:     { c1: "#7ec4c9", c2: "#d9f2f4", accent: "#5aa4a9" },
-  maze:       { c1: "#5ec6a3", c2: "#c2f0dd", accent: "#2e7a63" },
+  pillar: { c1: "#7ec4c9", c2: "#d9f2f4", accent: "#5aa4a9" },
+  maze: { c1: "#5ec6a3", c2: "#c2f0dd", accent: "#2e7a63" },
   // steel / blades
-  sword:      { c1: "#c9d6e8", c2: "#ffffff", accent: "#e5484d" },
-  scalpel:    { c1: "#e8f0f8", c2: "#ffffff", accent: "#ff6b6b" },
-  arrow:      { c1: "#ff6b6b", c2: "#ffd6d6", accent: "#c9d6e8" },
+  sword: { c1: "#c9d6e8", c2: "#ffffff", accent: "#e5484d" },
+  scalpel: { c1: "#e8f0f8", c2: "#ffffff", accent: "#ff6b6b" },
+  arrow: { c1: "#ff6b6b", c2: "#ffd6d6", accent: "#c9d6e8" },
   // arcane / mystery
-  oracle:     { c1: "#c084fc", c2: "#f3e8ff", accent: "#22d3ee" },
-  void:       { c1: "#a855f7", c2: "#f0abfc", accent: "#0ea5e9" },
-  origin:     { c1: "#d59bff", c2: "#fbe8ff", accent: "#ffd166" },
+  oracle: { c1: "#c084fc", c2: "#f3e8ff", accent: "#22d3ee" },
+  void: { c1: "#a855f7", c2: "#f0abfc", accent: "#0ea5e9" },
+  origin: { c1: "#d59bff", c2: "#fbe8ff", accent: "#ffd166" },
   // night / cool
-  moon:       { c1: "#a8c5ff", c2: "#eaf1ff", accent: "#ffffff" },
-  owl:        { c1: "#b5a37a", c2: "#f2e7c9", accent: "#ffd166" },
-  mirror:     { c1: "#a8f0ff", c2: "#ffffff", accent: "#c084fc" },
-  clock:      { c1: "#7dd3fc", c2: "#e0f2fe", accent: "#f4c430" },
+  moon: { c1: "#a8c5ff", c2: "#eaf1ff", accent: "#ffffff" },
+  owl: { c1: "#b5a37a", c2: "#f2e7c9", accent: "#ffd166" },
+  mirror: { c1: "#a8f0ff", c2: "#ffffff", accent: "#c084fc" },
+  clock: { c1: "#7dd3fc", c2: "#e0f2fe", accent: "#f4c430" },
   // documents / arcana
-  key:        { c1: "#f4c430", c2: "#fff2a8", accent: "#c9d6e8" },
-  signature:  { c1: "#e0a874", c2: "#ffe4c4", accent: "#4a3812" },
+  key: { c1: "#f4c430", c2: "#fff2a8", accent: "#c9d6e8" },
+  signature: { c1: "#e0a874", c2: "#ffe4c4", accent: "#4a3812" },
   // social / geometry
-  link:       { c1: "#e0a874", c2: "#ffd6a5", accent: "#f4c430" },
-  pair:       { c1: "#22d3ee", c2: "#a5f3fc", accent: "#c084fc" },
-  triangle:   { c1: "#f472b6", c2: "#fbcfe8", accent: "#22d3ee" },
-  quad:       { c1: "#4ade80", c2: "#bbf7d0", accent: "#f472b6" },
-  disc:       { c1: "#38bdf8", c2: "#bae6fd", accent: "#ffffff" },
+  link: { c1: "#e0a874", c2: "#ffd6a5", accent: "#f4c430" },
+  pair: { c1: "#22d3ee", c2: "#a5f3fc", accent: "#c084fc" },
+  triangle: { c1: "#f472b6", c2: "#fbcfe8", accent: "#22d3ee" },
+  quad: { c1: "#4ade80", c2: "#bbf7d0", accent: "#f472b6" },
+  disc: { c1: "#38bdf8", c2: "#bae6fd", accent: "#ffffff" },
   // constellations fall through to the procedural stars renderer
   ursa_minor: { c1: "#e8f0f8", c2: "#ffffff", accent: "#7dd3fc" },
 };
@@ -192,14 +192,23 @@ function buildConstellation(sigilKey: string): { nodes: Node[]; edges: [number, 
 // ================= Emblem shapes =================
 // All shapes drawn inside a ~-30..30 box, centered. Kept intentionally
 // chunky and iconic so they read at 40px badge sizes on the profile grid.
-function renderEmblem(key: string, c1: string, c2: string, accent: string, gradId: string): ReactNode {
+function renderEmblem(
+  key: string,
+  c1: string,
+  c2: string,
+  accent: string,
+  gradId: string,
+): ReactNode {
   const g = `url(#${gradId})`;
   switch (key) {
     case "flame":
       return (
         <path
           d="M0,-26 C10,-14 18,-6 18,6 C18,18 9,26 0,26 C-9,26 -18,18 -18,6 C-18,-2 -12,-6 -8,-10 C-6,-4 -2,-4 -2,-10 C-2,-18 -4,-22 0,-26 Z"
-          fill={g} stroke={accent} strokeWidth="1" strokeLinejoin="round"
+          fill={g}
+          stroke={accent}
+          strokeWidth="1"
+          strokeLinejoin="round"
         />
       );
     case "phoenix":
@@ -216,16 +225,23 @@ function renderEmblem(key: string, c1: string, c2: string, accent: string, gradI
           <circle cx="0" cy="10" r="14" fill={g} />
           {Array.from({ length: 7 }).map((_, i) => {
             const a = (Math.PI * (i + 0.5)) / 7 + Math.PI;
-            const x1 = Math.cos(a) * 18, y1 = 10 + Math.sin(a) * 18;
-            const x2 = Math.cos(a) * 26, y2 = 10 + Math.sin(a) * 26;
+            const x1 = Math.cos(a) * 18,
+              y1 = 10 + Math.sin(a) * 18;
+            const x2 = Math.cos(a) * 26,
+              y2 = 10 + Math.sin(a) * 26;
             return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} />;
           })}
         </g>
       );
     case "bolt":
       return (
-        <path d="M4,-26 L-14,4 L-2,4 L-6,26 L14,-6 L2,-6 L6,-26 Z"
-          fill={g} stroke={accent} strokeWidth="1" strokeLinejoin="round" />
+        <path
+          d="M4,-26 L-14,4 L-2,4 L-6,26 L14,-6 L2,-6 L6,-26 Z"
+          fill={g}
+          stroke={accent}
+          strokeWidth="1"
+          strokeLinejoin="round"
+        />
       );
     case "crown":
       return (
@@ -242,7 +258,11 @@ function renderEmblem(key: string, c1: string, c2: string, accent: string, gradI
         <g stroke={accent} strokeWidth="1" strokeLinejoin="round">
           <path d="M-22,12 L-18,-10 L-6,2 L0,-14 L6,2 L18,-10 L22,12 Z" fill={g} />
           <rect x="-22" y="12" width="44" height="5" rx="1" fill={g} />
-          <path d="M0,-26 L2.4,-20 L8.4,-20 L3.6,-16.4 L5.6,-10.4 L0,-14 L-5.6,-10.4 L-3.6,-16.4 L-8.4,-20 L-2.4,-20 Z" fill={accent} stroke="none" />
+          <path
+            d="M0,-26 L2.4,-20 L8.4,-20 L3.6,-16.4 L5.6,-10.4 L0,-14 L-5.6,-10.4 L-3.6,-16.4 L-8.4,-20 L-2.4,-20 Z"
+            fill={accent}
+            stroke="none"
+          />
         </g>
       );
     case "laurel":
@@ -250,9 +270,17 @@ function renderEmblem(key: string, c1: string, c2: string, accent: string, gradI
       const leaf = (side: 1 | -1) => (
         <g>
           {[-18, -10, -2, 6, 14].map((y, i) => (
-            <ellipse key={i} cx={side * (18 - Math.abs(y) * 0.15)} cy={y}
-              rx="5" ry="2.4" fill={g} stroke={accent} strokeWidth="0.6"
-              transform={`rotate(${side * (35 - i * 8)} ${side * 18} ${y})`} />
+            <ellipse
+              key={i}
+              cx={side * (18 - Math.abs(y) * 0.15)}
+              cy={y}
+              rx="5"
+              ry="2.4"
+              fill={g}
+              stroke={accent}
+              strokeWidth="0.6"
+              transform={`rotate(${side * (35 - i * 8)} ${side * 18} ${y})`}
+            />
           ))}
         </g>
       );
@@ -261,7 +289,15 @@ function renderEmblem(key: string, c1: string, c2: string, accent: string, gradI
           {leaf(-1)}
           {leaf(1)}
           {key === "wreath" && <circle cx="0" cy="18" r="3" fill={accent} />}
-          {key === "laurel" && <path d="M-4,-2 L0,4 L4,-2 M0,4 L0,10" stroke={accent} strokeWidth="1.4" fill="none" strokeLinecap="round" />}
+          {key === "laurel" && (
+            <path
+              d="M-4,-2 L0,4 L4,-2 M0,4 L0,10"
+              stroke={accent}
+              strokeWidth="1.4"
+              fill="none"
+              strokeLinecap="round"
+            />
+          )}
         </g>
       );
     }
@@ -270,14 +306,34 @@ function renderEmblem(key: string, c1: string, c2: string, accent: string, gradI
         <g>
           <ellipse cx="0" cy="-4" rx="22" ry="6" fill="none" stroke={g} strokeWidth="4" />
           <ellipse cx="0" cy="-4" rx="22" ry="6" fill="none" stroke={accent} strokeWidth="1" />
-          <path d="M-14,8 Q0,22 14,8" stroke={c2} strokeWidth="2" fill="none" strokeLinecap="round" />
+          <path
+            d="M-14,8 Q0,22 14,8"
+            stroke={c2}
+            strokeWidth="2"
+            fill="none"
+            strokeLinecap="round"
+          />
         </g>
       );
     case "banner":
       return (
         <g>
-          <line x1="-16" y1="-26" x2="-16" y2="26" stroke={accent} strokeWidth="2" strokeLinecap="round" />
-          <path d="M-16,-22 L20,-18 L14,-8 L20,2 L-16,-2 Z" fill={g} stroke={accent} strokeWidth="1" strokeLinejoin="round" />
+          <line
+            x1="-16"
+            y1="-26"
+            x2="-16"
+            y2="26"
+            stroke={accent}
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+          <path
+            d="M-16,-22 L20,-18 L14,-8 L20,2 L-16,-2 Z"
+            fill={g}
+            stroke={accent}
+            strokeWidth="1"
+            strokeLinejoin="round"
+          />
           <circle cx="-16" cy="-26" r="2.5" fill={accent} />
         </g>
       );
@@ -304,7 +360,12 @@ function renderEmblem(key: string, c1: string, c2: string, accent: string, gradI
     case "sword": {
       const blade = (rot: number) => (
         <g transform={`rotate(${rot})`}>
-          <path d="M0,-22 L3,-16 L3,10 L-3,10 L-3,-16 Z" fill={g} stroke={accent} strokeWidth="0.8" />
+          <path
+            d="M0,-22 L3,-16 L3,10 L-3,10 L-3,-16 Z"
+            fill={g}
+            stroke={accent}
+            strokeWidth="0.8"
+          />
           <rect x="-8" y="10" width="16" height="3" fill={accent} />
           <rect x="-2" y="13" width="4" height="8" fill={c2} stroke={accent} strokeWidth="0.6" />
           <circle cx="0" cy="22" r="2.4" fill={accent} />
@@ -330,7 +391,12 @@ function renderEmblem(key: string, c1: string, c2: string, accent: string, gradI
         <g transform="rotate(-40)">
           <line x1="-22" y1="0" x2="18" y2="0" stroke={g} strokeWidth="3" strokeLinecap="round" />
           <path d="M22,0 L10,-8 L14,0 L10,8 Z" fill={accent} stroke={accent} strokeWidth="0.6" />
-          <path d="M-22,0 L-16,-4 M-22,0 L-16,4" stroke={accent} strokeWidth="1.4" strokeLinecap="round" />
+          <path
+            d="M-22,0 L-16,-4 M-22,0 L-16,4"
+            stroke={accent}
+            strokeWidth="1.4"
+            strokeLinecap="round"
+          />
         </g>
       );
     case "oracle":
@@ -385,7 +451,13 @@ function renderEmblem(key: string, c1: string, c2: string, accent: string, gradI
       return (
         <g>
           <ellipse cx="0" cy="-2" rx="14" ry="18" fill={g} stroke={accent} strokeWidth="1" />
-          <path d="M-4,-16 Q-10,-10 -10,-2" stroke="#fff" strokeWidth="1.4" fill="none" opacity="0.7" />
+          <path
+            d="M-4,-16 Q-10,-10 -10,-2"
+            stroke="#fff"
+            strokeWidth="1.4"
+            fill="none"
+            opacity="0.7"
+          />
           <rect x="-3" y="16" width="6" height="8" fill={accent} />
           <rect x="-8" y="22" width="16" height="3" fill={accent} />
         </g>
@@ -396,10 +468,36 @@ function renderEmblem(key: string, c1: string, c2: string, accent: string, gradI
           <circle cx="0" cy="0" r="20" fill={g} stroke={accent} strokeWidth="1.4" />
           {Array.from({ length: 12 }).map((_, i) => {
             const a = (i / 12) * Math.PI * 2;
-            return <line key={i} x1={Math.cos(a) * 17} y1={Math.sin(a) * 17} x2={Math.cos(a) * 20} y2={Math.sin(a) * 20} stroke={accent} strokeWidth="1" />;
+            return (
+              <line
+                key={i}
+                x1={Math.cos(a) * 17}
+                y1={Math.sin(a) * 17}
+                x2={Math.cos(a) * 20}
+                y2={Math.sin(a) * 20}
+                stroke={accent}
+                strokeWidth="1"
+              />
+            );
           })}
-          <line x1="0" y1="0" x2="0" y2="-12" stroke={accent} strokeWidth="1.6" strokeLinecap="round" />
-          <line x1="0" y1="0" x2="10" y2="4" stroke={accent} strokeWidth="1.6" strokeLinecap="round" />
+          <line
+            x1="0"
+            y1="0"
+            x2="0"
+            y2="-12"
+            stroke={accent}
+            strokeWidth="1.6"
+            strokeLinecap="round"
+          />
+          <line
+            x1="0"
+            y1="0"
+            x2="10"
+            y2="4"
+            stroke={accent}
+            strokeWidth="1.6"
+            strokeLinecap="round"
+          />
           <circle cx="0" cy="0" r="2" fill={accent} />
         </g>
       );
@@ -463,7 +561,13 @@ function renderEmblem(key: string, c1: string, c2: string, accent: string, gradI
   }
 }
 
-export function ConstellationSigil({ sigilKey, tier, size = 96, locked = false, className }: Props) {
+export function ConstellationSigil({
+  sigilKey,
+  tier,
+  size = 96,
+  locked = false,
+  className,
+}: Props) {
   const { nodes, edges } = useMemo(() => buildConstellation(sigilKey), [sigilKey]);
   const p = PALETTES[tier];
   const uid = useMemo(() => `sigil-${hash(sigilKey).toString(36)}-${tier}`, [sigilKey, tier]);
@@ -513,23 +617,39 @@ export function ConstellationSigil({ sigilKey, tier, size = 96, locked = false, 
       </defs>
 
       {/* Aura for prestigious tiers */}
-      {!locked && p.aura && (
-        <circle cx="0" cy="0" r="47" fill={p.aura} opacity="0.6" />
-      )}
+      {!locked && p.aura && <circle cx="0" cy="0" r="47" fill={p.aura} opacity="0.6" />}
 
       {/* Disc */}
       <circle cx="0" cy="0" r="46" fill={`url(#${discId})`} stroke={discEdge} strokeWidth="1" />
       {/* Inner rim */}
-      <circle cx="0" cy="0" r="43" fill="none" stroke={`url(#${ringId})`} strokeWidth="0.6" opacity="0.6" />
+      <circle
+        cx="0"
+        cy="0"
+        r="43"
+        fill="none"
+        stroke={`url(#${ringId})`}
+        strokeWidth="0.6"
+        opacity="0.6"
+      />
 
       {/* Scattered background stars */}
-      {!locked && Array.from({ length: useEmblem ? 8 : 14 }).map((_, i) => {
-        const a = (i / 14) * Math.PI * 2 + hash(sigilKey + i) * 0.0001;
-        const rd = 20 + ((hash(sigilKey + "bg" + i) % 100) / 100) * 20;
-        const x = Math.cos(a) * rd;
-        const y = Math.sin(a) * rd;
-        return <circle key={i} cx={x} cy={y} r={0.35} fill={p.glow} opacity={useEmblem ? 0.22 : 0.35} />;
-      })}
+      {!locked &&
+        Array.from({ length: useEmblem ? 8 : 14 }).map((_, i) => {
+          const a = (i / 14) * Math.PI * 2 + hash(sigilKey + i) * 0.0001;
+          const rd = 20 + ((hash(sigilKey + "bg" + i) % 100) / 100) * 20;
+          const x = Math.cos(a) * rd;
+          const y = Math.sin(a) * rd;
+          return (
+            <circle
+              key={i}
+              cx={x}
+              cy={y}
+              r={0.35}
+              fill={p.glow}
+              opacity={useEmblem ? 0.22 : 0.35}
+            />
+          );
+        })}
 
       {/* Emblem OR procedural constellation fallback */}
       {useEmblem ? (
@@ -543,8 +663,10 @@ export function ConstellationSigil({ sigilKey, tier, size = 96, locked = false, 
           {edges.map(([a, b], i) => (
             <line
               key={i}
-              x1={nodes[a].x} y1={nodes[a].y}
-              x2={nodes[b].x} y2={nodes[b].y}
+              x1={nodes[a].x}
+              y1={nodes[a].y}
+              x2={nodes[b].x}
+              y2={nodes[b].y}
               stroke={stroke}
               strokeWidth="0.6"
               strokeLinecap="round"
@@ -564,8 +686,22 @@ export function ConstellationSigil({ sigilKey, tier, size = 96, locked = false, 
       {/* Lock indicator */}
       {locked && (
         <g opacity="0.55">
-          <rect x="-6" y="-2" width="12" height="10" rx="1.5" fill="#1a1a22" stroke="#555560" strokeWidth="0.6" />
-          <path d="M-3.5,-2 v-3 a3.5,3.5 0 0 1 7,0 v3" fill="none" stroke="#555560" strokeWidth="0.9" />
+          <rect
+            x="-6"
+            y="-2"
+            width="12"
+            height="10"
+            rx="1.5"
+            fill="#1a1a22"
+            stroke="#555560"
+            strokeWidth="0.6"
+          />
+          <path
+            d="M-3.5,-2 v-3 a3.5,3.5 0 0 1 7,0 v3"
+            fill="none"
+            stroke="#555560"
+            strokeWidth="0.9"
+          />
         </g>
       )}
     </svg>

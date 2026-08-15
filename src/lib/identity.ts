@@ -17,10 +17,15 @@ export function ensureAuthSession(): Promise<string | null> {
   if (authReady) return authReady;
   authReady = (async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (session?.user) return session.user.id;
       const { data, error } = await supabase.auth.signInAnonymously();
-      if (error) { console.warn("anon sign-in failed", error); return null; }
+      if (error) {
+        console.warn("anon sign-in failed", error);
+        return null;
+      }
       return data.user?.id ?? null;
     } catch (e) {
       console.warn("ensureAuthSession failed", e);
@@ -34,7 +39,9 @@ export function ensureAuthSession(): Promise<string | null> {
 // on every SIGNED_IN event; RLS allows the first claim and no-op thereafter.
 export async function linkAuthToPlayer(): Promise<void> {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     const uid = session?.user?.id;
     const ident = getStoredIdentity();
     if (!uid) return;
@@ -45,7 +52,9 @@ export async function linkAuthToPlayer(): Promise<void> {
       return;
     }
     await supabase.from("players").upsert({
-      id: ident.id, name: ident.name, auth_user_id: uid,
+      id: ident.id,
+      name: ident.name,
+      auth_user_id: uid,
       updated_at: new Date().toISOString(),
     });
   } catch (e) {
@@ -79,13 +88,18 @@ export function getStoredIdentity(): Identity | null {
 export function setStoredIdentity(name: string): Identity {
   const clean = sanitizeName(name);
   let id = localStorage.getItem(ID_KEY);
-  if (!id) { id = randomUuid(); localStorage.setItem(ID_KEY, id); }
+  if (!id) {
+    id = randomUuid();
+    localStorage.setItem(ID_KEY, id);
+  }
   localStorage.setItem(NAME_KEY, clean);
   const ident = { id, name: clean };
   void (async () => {
     const uid = await ensureAuthSession();
     const { error } = await supabase.from("players").upsert({
-      id, name: clean, auth_user_id: uid,
+      id,
+      name: clean,
+      auth_user_id: uid,
       updated_at: new Date().toISOString(),
     });
     if (error) console.warn("player upsert failed", error);
@@ -109,7 +123,9 @@ export function ensureUniqueName(taken: string[], candidate: string): string {
 export async function restoreIdentityFromAuth(): Promise<Identity | null> {
   if (typeof window === "undefined") return null;
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     const uid = session?.user?.id;
     if (!uid) return null;
     // Skip anonymous auth sessions — those aren't a "real" account.

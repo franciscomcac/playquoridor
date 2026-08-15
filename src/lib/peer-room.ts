@@ -7,7 +7,10 @@ export type Mode = 2 | 4;
 export type RosterEntry = { slot: number; name: string; playerId: string | null };
 
 export type PeerMessage =
-  | { type: "assign"; payload: { slot: number; mode: Mode; expected: number; name: string; roster: RosterEntry[] } }
+  | {
+      type: "assign";
+      payload: { slot: number; mode: Mode; expected: number; name: string; roster: RosterEntry[] };
+    }
   | { type: "spectateAssign"; payload: { mode: Mode; expected: number; roster: RosterEntry[] } }
   | { type: "presence"; payload: { count: number; expected: number; roster: RosterEntry[] } }
   | { type: "state"; payload: unknown }
@@ -34,7 +37,9 @@ export function makeRoomCode(): string {
   for (let i = 0; i < 5; i++) s += chars[Math.floor(Math.random() * chars.length)];
   return s;
 }
-export function peerIdFor(code: string): string { return PREFIX + code.toUpperCase(); }
+export function peerIdFor(code: string): string {
+  return PREFIX + code.toUpperCase();
+}
 
 export type RoomHandlers = {
   onOpen?: () => void;
@@ -67,12 +72,20 @@ export type Room = {
 };
 
 export async function createHostRoom(
-  code: string, mode: Mode, host: { name: string; playerId: string | null }, handlers: RoomHandlers,
+  code: string,
+  mode: Mode,
+  host: { name: string; playerId: string | null },
+  handlers: RoomHandlers,
 ): Promise<Room> {
   const id = peerIdFor(code);
   const peer = new Peer(id, { debug: 1 });
   const expected = mode;
-  const conns: Array<{ conn: DataConnection; slot: number; name: string; playerId: string | null }> = [];
+  const conns: Array<{
+    conn: DataConnection;
+    slot: number;
+    name: string;
+    playerId: string | null;
+  }> = [];
   const roster: RosterEntry[] = [{ slot: 0, name: host.name, playerId: host.playerId }];
   const spectators: Array<{ conn: DataConnection; name: string }> = [];
   const virtualBots: RosterEntry[] = [];
@@ -96,14 +109,22 @@ export async function createHostRoom(
     for (const s of spectators) if (s.conn.open) s.conn.send(msg);
   };
 
-  peer.on("open", () => { handlers.onOpen?.(); handlers.onPresence?.(1, expected, roster.slice()); });
+  peer.on("open", () => {
+    handlers.onOpen?.();
+    handlers.onPresence?.(1, expected, roster.slice());
+  });
   peer.on("error", (err) => handlers.onError?.(err as Error));
 
   peer.on("connection", (c) => {
     // We don't know yet whether this connection is a player or a spectator —
     // wait for the first `hello` before deciding.
     let role: "player" | "spectator" | null = null;
-    let playerEntry: { conn: DataConnection; slot: number; name: string; playerId: string | null } | null = null;
+    let playerEntry: {
+      conn: DataConnection;
+      slot: number;
+      name: string;
+      playerId: string | null;
+    } | null = null;
     let spectatorEntry: { conn: DataConnection; name: string } | null = null;
 
     c.on("data", (data) => {
@@ -131,14 +152,23 @@ export async function createHostRoom(
           ? roster.find((r) => r.playerId === p.playerId && r.slot > 0)
           : null;
         if (existing && conns.some((entry) => entry.slot === existing.slot && entry.conn.open)) {
-          try { c.close(); } catch { /* noop */ }
+          try {
+            c.close();
+          } catch {
+            /* noop */
+          }
           return;
         }
         const reservedSlots = new Set(roster.map((r) => r.slot));
-        const openSlot = Array.from({ length: mode - 1 }, (_, i) => i + 1)
-          .find((candidate) => !reservedSlots.has(candidate));
+        const openSlot = Array.from({ length: mode - 1 }, (_, i) => i + 1).find(
+          (candidate) => !reservedSlots.has(candidate),
+        );
         if (!existing && openSlot === undefined) {
-          try { c.close(); } catch { /* noop */ }
+          try {
+            c.close();
+          } catch {
+            /* noop */
+          }
           return;
         }
         const slot = existing?.slot ?? openSlot!;
@@ -146,12 +176,18 @@ export async function createHostRoom(
         playerEntry = { conn: c, slot, name: finalName, playerId: p.playerId };
         conns.push(playerEntry);
         if (!existing) roster.push({ slot, name: finalName, playerId: p.playerId });
-        c.send({ type: "assign", payload: { slot, mode, expected, name: finalName, roster: roster.slice() } });
+        c.send({
+          type: "assign",
+          payload: { slot, mode, expected, name: finalName, roster: roster.slice() },
+        });
         if (lastState !== null) c.send({ type: "state", payload: lastState });
         if (lastCoinflip) c.send({ type: "coinflip", payload: lastCoinflip });
         if (lastAfk) c.send({ type: "afk", payload: lastAfk });
         const count = openCount();
-        const presence: PeerMessage = { type: "presence", payload: { count, expected, roster: roster.slice() } };
+        const presence: PeerMessage = {
+          type: "presence",
+          payload: { count, expected, roster: roster.slice() },
+        };
         handlers.onPresence?.(count, expected, roster.slice());
         // Send to ALL connections including the newcomer — otherwise the
         // guest never sees count===expected and onFull never fires on their
@@ -184,7 +220,10 @@ export async function createHostRoom(
       const gone = rIdx >= 0 ? roster[rIdx].name : `Guest ${entry.slot}`;
       if (lastState === null && rIdx >= 0) roster.splice(rIdx, 1);
       const count = openCount();
-      const presence: PeerMessage = { type: "presence", payload: { count, expected, roster: roster.slice() } };
+      const presence: PeerMessage = {
+        type: "presence",
+        payload: { count, expected, roster: roster.slice() },
+      };
       handlers.onPresence?.(count, expected, roster.slice());
       for (const other of conns) if (other.conn.open) other.conn.send(presence);
       broadcastToSpectators(presence);
@@ -194,7 +233,9 @@ export async function createHostRoom(
   });
 
   return {
-    peer, isHost: true, code,
+    peer,
+    isHost: true,
+    code,
     send: (msg) => {
       // Remember replayable state so late-joining spectators can catch up.
       if (msg.type === "state") lastState = msg.payload;
@@ -205,8 +246,20 @@ export async function createHostRoom(
       broadcastToSpectators(msg);
     },
     close: () => {
-      for (const c of conns) { try { c.conn.close(); } catch { /* noop */ } }
-      for (const s of spectators) { try { s.conn.close(); } catch { /* noop */ } }
+      for (const c of conns) {
+        try {
+          c.conn.close();
+        } catch {
+          /* noop */
+        }
+      }
+      for (const s of spectators) {
+        try {
+          s.conn.close();
+        } catch {
+          /* noop */
+        }
+      }
       peer.destroy();
     },
     getRoster: () => roster.slice(),
@@ -214,8 +267,9 @@ export async function createHostRoom(
       const reservedSlots = new Set(roster.map((r) => r.slot));
       const assigned: number[] = [];
       for (const b of bots) {
-        const openSlot = Array.from({ length: mode - 1 }, (_, i) => i + 1)
-          .find((c) => !reservedSlots.has(c));
+        const openSlot = Array.from({ length: mode - 1 }, (_, i) => i + 1).find(
+          (c) => !reservedSlots.has(c),
+        );
         if (openSlot === undefined) break;
         reservedSlots.add(openSlot);
         const entry: RosterEntry = { slot: openSlot, name: uniqueName(b.name), playerId: null };
@@ -225,7 +279,10 @@ export async function createHostRoom(
       }
       if (assigned.length === 0) return assigned;
       const count = openCount();
-      const presence: PeerMessage = { type: "presence", payload: { count, expected, roster: roster.slice() } };
+      const presence: PeerMessage = {
+        type: "presence",
+        payload: { count, expected, roster: roster.slice() },
+      };
       handlers.onPresence?.(count, expected, roster.slice());
       for (const other of conns) if (other.conn.open) other.conn.send(presence);
       broadcastToSpectators(presence);
@@ -278,14 +335,26 @@ export async function createGuestRoom(
       }
       handlers.onMessage?.(msg);
     });
-    c.on("close", () => { conn = null; handlers.onDisconnect?.(); });
+    c.on("close", () => {
+      conn = null;
+      handlers.onDisconnect?.();
+    });
     c.on("error", (err) => handlers.onError?.(err as Error));
   });
 
   return {
-    peer, isHost: false, code,
-    send: (msg) => { if (conn && conn.open) conn.send(msg); },
-    close: () => { try { conn?.close(); } catch {} peer.destroy(); },
+    peer,
+    isHost: false,
+    code,
+    send: (msg) => {
+      if (conn && conn.open) conn.send(msg);
+    },
+    close: () => {
+      try {
+        conn?.close();
+      } catch {}
+      peer.destroy();
+    },
     getRoster: () => roster.slice(),
   };
 }

@@ -19,15 +19,18 @@ const ACTIVE_GAME_TTL_MS = 2 * 60 * 60 * 1000;
 
 export function saveInterruptedGame(game: SavedGame) {
   try {
-    localStorage.setItem(
-      ACTIVE_GAME_KEY,
-      JSON.stringify({ ...game, savedAt: Date.now() }),
-    );
-  } catch { /* ignore */ }
+    localStorage.setItem(ACTIVE_GAME_KEY, JSON.stringify({ ...game, savedAt: Date.now() }));
+  } catch {
+    /* ignore */
+  }
 }
 
 export function clearInterruptedGame() {
-  try { localStorage.removeItem(ACTIVE_GAME_KEY); } catch { /* ignore */ }
+  try {
+    localStorage.removeItem(ACTIVE_GAME_KEY);
+  } catch {
+    /* ignore */
+  }
 }
 
 export function loadInterruptedGame(): SavedGame | null {

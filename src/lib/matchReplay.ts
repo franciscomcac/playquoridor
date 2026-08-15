@@ -1,15 +1,12 @@
 // Replay a MatchSnapshot into an array of GameStates, one per ply. Also
 // provides a canvas renderer used by the GIF exporter and the analyze page.
-import {
-  applyMove, initialState, newRound,
-  type GameState, type PlayerId,
-} from "@/lib/quoridor";
+import { applyMove, initialState, newRound, type GameState, type PlayerId } from "@/lib/quoridor";
 import type { MatchSnapshot } from "@/lib/matchHistory";
 
 export type ReplayFrame = {
   state: GameState;
   roundIndex: number;
-  plyIndex: number;   // index within the round, -1 for the initial frame
+  plyIndex: number; // index within the round, -1 for the initial frame
   by: PlayerId | null;
   isRoundEnd: boolean;
 };
@@ -19,9 +16,7 @@ export function replay(snap: MatchSnapshot): ReplayFrame[] {
   let state = initialState(snap.mode, snap.totalWalls, snap.totalRounds);
   for (let r = 0; r < snap.rounds.length; r++) {
     const round = snap.rounds[r];
-    state = r === 0
-      ? { ...state, turn: round.startingSlot }
-      : newRound(state, round.startingSlot);
+    state = r === 0 ? { ...state, turn: round.startingSlot } : newRound(state, round.startingSlot);
     frames.push({ state, roundIndex: r, plyIndex: -1, by: null, isRoundEnd: false });
     for (let i = 0; i < round.moves.length; i++) {
       const mr = round.moves[i];
@@ -29,7 +24,9 @@ export function replay(snap: MatchSnapshot): ReplayFrame[] {
       if (!next) break; // corrupt snapshot; bail this round
       state = next;
       frames.push({
-        state, roundIndex: r, plyIndex: i,
+        state,
+        roundIndex: r,
+        plyIndex: i,
         by: mr.by,
         isRoundEnd: i === round.moves.length - 1 && state.winner !== null,
       });
@@ -50,7 +47,7 @@ const WALL_NEUTRAL = "#e8dfa8";
 // Tint a player's wall so it reads clearly on the dark board while still
 // keeping the player's colour identifiable.
 function wallColorFor(by: number | undefined): string {
-  const base = by == null ? WALL_NEUTRAL : PLAYER_HEX[by] ?? WALL_NEUTRAL;
+  const base = by == null ? WALL_NEUTRAL : (PLAYER_HEX[by] ?? WALL_NEUTRAL);
   return base;
 }
 

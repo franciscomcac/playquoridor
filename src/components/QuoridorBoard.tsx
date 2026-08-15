@@ -1,8 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  BOARD, canPlaceWall, goalsFor, legalPawnMoves,
-  type GameState, type Move, type Orient, type PlayerId,
-  type Wall, type WallSpec,
+  BOARD,
+  canPlaceWall,
+  goalsFor,
+  legalPawnMoves,
+  type GameState,
+  type Move,
+  type Orient,
+  type PlayerId,
+  type Wall,
+  type WallSpec,
 } from "@/lib/quoridor";
 import { play } from "@/lib/sound";
 
@@ -37,7 +44,16 @@ type Pop = { key: number; player: PlayerId; r: number; c: number };
 
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h", "i"];
 
-export function QuoridorBoard({ state, you, onMove, interactive, onActivity, visibleWallKeys, fog, visibleCells }: Props) {
+export function QuoridorBoard({
+  state,
+  you,
+  onMove,
+  interactive,
+  onActivity,
+  visibleWallKeys,
+  fog,
+  visibleCells,
+}: Props) {
   const [hover, setHover] = useState<HoverTarget | null>(null);
   // Touch users get a two-tap flow: first tap arms a ghost wall; second tap
   // in the same spot places it. The armed spec also drives an on-board
@@ -54,11 +70,7 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity, vis
   // Per-player POV rotation so each seat sees their pawn on the bottom.
   // 2-player: player 1 flips 180°. 4-player: cardinal orientation per seat.
   const rotation =
-    state.mode === 4
-      ? ([0, 180, -90, 90][you] ?? 0)
-      : state.mode === 2 && you === 1
-        ? 180
-        : 0;
+    state.mode === 4 ? ([0, 180, -90, 90][you] ?? 0) : state.mode === 2 && you === 1 ? 180 : 0;
   const rotated = rotation !== 0;
 
   // Pawn elimination pops — track slots that just went inactive.
@@ -68,7 +80,12 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity, vis
     const now: Pop[] = [];
     for (let i = 0; i < state.mode; i++) {
       if (prevActive.current[i] && !state.active[i]) {
-        now.push({ key: Date.now() + i, player: i as PlayerId, r: state.pawns[i][0], c: state.pawns[i][1] });
+        now.push({
+          key: Date.now() + i,
+          player: i as PlayerId,
+          r: state.pawns[i][0],
+          c: state.pawns[i][1],
+        });
       }
     }
     if (now.length) {
@@ -81,7 +98,8 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity, vis
     prevActive.current = state.active;
   }, [state.active, state.mode, state.pawns]);
 
-  const isYourTurn = interactive && state.turn === you && state.winner === null && state.active[you];
+  const isYourTurn =
+    interactive && state.turn === you && state.winner === null && state.active[you];
   const legal = isYourTurn ? legalPawnMoves(state, you) : [];
   const legalSet = new Set(legal.map(([r, c]) => `${r},${c}`));
   const goals = goalsFor(state.mode);
@@ -95,7 +113,8 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity, vis
     let py = clientY - rect.top;
     if (rotation !== 0) {
       const S = rect.width;
-      const cx = px - S / 2, cy = py - S / 2;
+      const cx = px - S / 2,
+        cy = py - S / 2;
       const rad = (-rotation * Math.PI) / 180;
       const rx = cx * Math.cos(rad) - cy * Math.sin(rad);
       const ry = cx * Math.sin(rad) + cy * Math.cos(rad);
@@ -143,7 +162,10 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity, vis
   }
 
   function startWallDrag(o: Orient, e: React.PointerEvent) {
-    if (!isYourTurn || state.wallsLeft[you] <= 0) { play("denied"); return; }
+    if (!isYourTurn || state.wallsLeft[you] <= 0) {
+      play("denied");
+      return;
+    }
     e.preventDefault();
     setArmed(null);
     setDragOrient(o);
@@ -159,7 +181,8 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity, vis
     let py = e.clientY - rect.top;
     if (rotation !== 0) {
       const S = rect.width; // board is square
-      const cx = px - S / 2, cy = py - S / 2;
+      const cx = px - S / 2,
+        cy = py - S / 2;
       const rad = (-rotation * Math.PI) / 180;
       const rx = cx * Math.cos(rad) - cy * Math.sin(rad);
       const ry = cx * Math.sin(rad) + cy * Math.cos(rad);
@@ -195,13 +218,24 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity, vis
 
   function handlePointerMove(e: React.PointerEvent) {
     if (e.pointerType !== "mouse") return; // touch/pen use tap flow
-    if (!isYourTurn) { if (hover) setHover(null); return; }
+    if (!isYourTurn) {
+      if (hover) setHover(null);
+      return;
+    }
     const t = targetFor(e);
     setHover((prev) => {
       if (!t && !prev) return prev;
       if (!t || !prev) return t;
-      if (t.kind === "cell" && prev.kind === "cell" && t.r === prev.r && t.c === prev.c) return prev;
-      if (t.kind === "wall" && prev.kind === "wall" && t.wall.r === prev.wall.r && t.wall.c === prev.wall.c && t.wall.o === prev.wall.o) return prev;
+      if (t.kind === "cell" && prev.kind === "cell" && t.r === prev.r && t.c === prev.c)
+        return prev;
+      if (
+        t.kind === "wall" &&
+        prev.kind === "wall" &&
+        t.wall.r === prev.wall.r &&
+        t.wall.c === prev.wall.c &&
+        t.wall.o === prev.wall.o
+      )
+        return prev;
       return t;
     });
   }
@@ -211,7 +245,10 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity, vis
     const touch = e.pointerType !== "mouse";
     if (touch !== isTouch) setIsTouch(touch);
     const t = targetFor(e, touch);
-    if (!t) { setArmed(null); return; }
+    if (!t) {
+      setArmed(null);
+      return;
+    }
     onActivity?.();
 
     if (t.kind === "cell") {
@@ -252,25 +289,39 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity, vis
     const flipped: WallSpec = { ...armed, o: armed.o === "h" ? "v" : "h" };
     setArmed(flipped);
   }
-  function clearArmed() { setArmed(null); }
+  function clearArmed() {
+    setArmed(null);
+  }
 
   // Mouse hover ghost.
-  const hoverGhost = hover && hover.kind === "wall" && state.wallsLeft[you] > 0 && canPlaceWall(state, you, hover.wall) ? hover.wall : null;
+  const hoverGhost =
+    hover &&
+    hover.kind === "wall" &&
+    state.wallsLeft[you] > 0 &&
+    canPlaceWall(state, you, hover.wall)
+      ? hover.wall
+      : null;
   const hoverInvalid = hover && hover.kind === "wall" && !hoverGhost ? hover.wall : null;
   // Touch armed ghost (persistent until placed or cancelled).
-  const armedValid = armed && state.wallsLeft[you] > 0 && canPlaceWall(state, you, armed) ? armed : null;
+  const armedValid =
+    armed && state.wallsLeft[you] > 0 && canPlaceWall(state, you, armed) ? armed : null;
   const armedInvalid = armed && !armedValid ? armed : null;
-  const dragValid = dragWall && state.wallsLeft[you] > 0 && canPlaceWall(state, you, dragWall) ? dragWall : null;
+  const dragValid =
+    dragWall && state.wallsLeft[you] > 0 && canPlaceWall(state, you, dragWall) ? dragWall : null;
   const dragInvalid = dragWall && !dragValid ? dragWall : null;
   const ghostWall = dragValid ?? armedValid ?? hoverGhost;
   const invalidGhost = dragInvalid ?? armedInvalid ?? hoverInvalid;
   const hoverCell = hover && hover.kind === "cell" ? hover : null;
-  const cursor = ghostWall || (hoverCell && legalSet.has(`${hoverCell.r},${hoverCell.c}`)) ? "pointer" : "default";
+  const cursor =
+    ghostWall || (hoverCell && legalSet.has(`${hoverCell.r},${hoverCell.c}`))
+      ? "pointer"
+      : "default";
 
   const goalTint: Record<string, string> = {};
   for (let i = 0; i < state.mode; i++) {
     const g = goals[i];
-    if (g.kind === "row") for (let c = 0; c < BOARD; c++) goalTint[`${g.value},${c}`] = PLAYER_COLORS[i];
+    if (g.kind === "row")
+      for (let c = 0; c < BOARD; c++) goalTint[`${g.value},${c}`] = PLAYER_COLORS[i];
     else for (let r = 0; r < BOARD; r++) goalTint[`${r},${g.value}`] = PLAYER_COLORS[i];
   }
 
@@ -290,33 +341,46 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity, vis
       const tint = fog ? undefined : goalTint[`${r},${c}`];
       const isOpp = !!oppRowRange && r >= oppRowRange[0] && r <= oppRowRange[1];
       const baseCell = fog
-        ? (alt
-            ? "oklch(0.42 0.13 275)"   // blue haze
-            : "oklch(0.38 0.15 305)")  // purple haze
-        : (alt ? "var(--board-cell)" : "var(--board-cell-alt)");
-      const bg = isOpp
-        ? `color-mix(in oklab, ${baseCell} 95%, oklch(0.35 0.05 55))`
-        : baseCell;
+        ? alt
+          ? "oklch(0.42 0.13 275)" // blue haze
+          : "oklch(0.38 0.15 305)" // purple haze
+        : alt
+          ? "var(--board-cell)"
+          : "var(--board-cell-alt)";
+      const bg = isOpp ? `color-mix(in oklab, ${baseCell} 95%, oklch(0.35 0.05 55))` : baseCell;
       cells.push(
-        <div key={`${r}-${c}`} style={{
-          gridRow: r + 1, gridColumn: c + 1,
-          background: tint
-            ? `radial-gradient(circle at center, color-mix(in oklab, ${tint} 28%, ${bg}) 0%, ${bg} 78%)`
-            : bg,
-          boxShadow: `inset 0 0 0 1px var(--board-line)` +
-            (tint
-              ? `, inset 0 0 0 2px color-mix(in oklab, ${tint} 55%, transparent), inset 0 0 18px color-mix(in oklab, ${tint} 45%, transparent)`
-              : ""),
-          animation: tint ? "goalPulse 2.4s ease-in-out infinite" : undefined,
-        }} className="relative">
+        <div
+          key={`${r}-${c}`}
+          style={{
+            gridRow: r + 1,
+            gridColumn: c + 1,
+            background: tint
+              ? `radial-gradient(circle at center, color-mix(in oklab, ${tint} 28%, ${bg}) 0%, ${bg} 78%)`
+              : bg,
+            boxShadow:
+              `inset 0 0 0 1px var(--board-line)` +
+              (tint
+                ? `, inset 0 0 0 2px color-mix(in oklab, ${tint} 55%, transparent), inset 0 0 18px color-mix(in oklab, ${tint} 45%, transparent)`
+                : ""),
+            animation: tint ? "goalPulse 2.4s ease-in-out infinite" : undefined,
+          }}
+          className="relative"
+        >
           {isLegal && (
-            <span className={"pointer-events-none absolute left-1/2 top-1/2 block rounded-full " + (isHovered ? "move-target-hover" : "legal-breathe")}
+            <span
+              className={
+                "pointer-events-none absolute left-1/2 top-1/2 block rounded-full " +
+                (isHovered ? "move-target-hover" : "legal-breathe")
+              }
               style={{
-                width: isHovered ? "52%" : "24%", height: isHovered ? "52%" : "24%",
-                background: yourColor, opacity: isHovered ? 0.75 : 0.4,
+                width: isHovered ? "52%" : "24%",
+                height: isHovered ? "52%" : "24%",
+                background: yourColor,
+                opacity: isHovered ? 0.75 : 0.4,
                 transform: "translate(-50%,-50%)",
                 transition: "width 120ms ease-out, height 120ms ease-out, opacity 120ms ease-out",
-              }} />
+              }}
+            />
           )}
         </div>,
       );
@@ -325,141 +389,202 @@ export function QuoridorBoard({ state, you, onMove, interactive, onActivity, vis
 
   return (
     <div className="flex w-full flex-col gap-2">
-    <div className="mx-auto w-full" style={{
-      maxWidth: "min(100%, 72vh, 700px)",
-      display: "grid",
-      gridTemplateColumns: "0.875rem minmax(0,1fr)",
-      gridTemplateRows: "minmax(0,1fr) 0.875rem",
-      gap: "0.1875rem",
-    }}>
-      <div aria-hidden className="flex flex-col justify-around py-[3%] text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground" style={{ visibility: rotated ? "hidden" : undefined }}>
-        {Array.from({ length: BOARD }, (_, i) => (
-          <span key={i} className="text-center leading-none">{BOARD - i}</span>
-        ))}
-      </div>
-      <div className={"aspect-square w-full min-w-0 " + (fog ? "fog-frame" : "wood-frame")}>
-      <div ref={boardRef}
-        onPointerMove={handlePointerMove}
-        onPointerLeave={() => setHover(null)}
-        onPointerUp={handlePointerUp}
-        className="relative h-full w-full select-none overflow-hidden rounded-md"
+      <div
+        className="mx-auto w-full"
         style={{
-          cursor,
-          background: fog
-            ? "radial-gradient(120% 90% at 50% 0%, #3a2a8a 0%, #1e2270 45%, #0f1240 100%)"
-            : "var(--board-bg)",
-          transform: rotation ? `rotate(${rotation}deg)` : undefined,
-          transition: "transform 240ms ease",
-          touchAction: "manipulation",
-        }}>
-        <div className="grid h-full w-full"
-          style={{ gridTemplateColumns: `repeat(${BOARD}, 1fr)`, gridTemplateRows: `repeat(${BOARD}, 1fr)` }}>
-          {cells}
+          maxWidth: "min(100%, 72vh, 700px)",
+          display: "grid",
+          gridTemplateColumns: "0.875rem minmax(0,1fr)",
+          gridTemplateRows: "minmax(0,1fr) 0.875rem",
+          gap: "0.1875rem",
+        }}
+      >
+        <div
+          aria-hidden
+          className="flex flex-col justify-around py-[3%] text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground"
+          style={{ visibility: rotated ? "hidden" : undefined }}
+        >
+          {Array.from({ length: BOARD }, (_, i) => (
+            <span key={i} className="text-center leading-none">
+              {BOARD - i}
+            </span>
+          ))}
         </div>
-
-        {state.pawns.map((p, i) => {
-          if (!state.active[i]) return null;
-          const hidden = fog && i !== you && visibleCells && !visibleCells.has(p[0] * BOARD + p[1]);
-          if (hidden) return null;
-          return (
-            <div key={`pawn-${i}`} className="pawn-glide pointer-events-none absolute grid place-items-center"
+        <div className={"aspect-square w-full min-w-0 " + (fog ? "fog-frame" : "wood-frame")}>
+          <div
+            ref={boardRef}
+            onPointerMove={handlePointerMove}
+            onPointerLeave={() => setHover(null)}
+            onPointerUp={handlePointerUp}
+            className="relative h-full w-full select-none overflow-hidden rounded-md"
+            style={{
+              cursor,
+              background: fog
+                ? "radial-gradient(120% 90% at 50% 0%, #3a2a8a 0%, #1e2270 45%, #0f1240 100%)"
+                : "var(--board-bg)",
+              transform: rotation ? `rotate(${rotation}deg)` : undefined,
+              transition: "transform 240ms ease",
+              touchAction: "manipulation",
+            }}
+          >
+            <div
+              className="grid h-full w-full"
               style={{
-                left: `${(p[1] / BOARD) * 100}%`, top: `${(p[0] / BOARD) * 100}%`,
-                width: `${(1 / BOARD) * 100}%`, height: `${(1 / BOARD) * 100}%`, zIndex: 3,
-              }}>
-              <Pawn key={`${p[0]}-${p[1]}`} player={i as PlayerId} you={you} active={state.turn === i && state.winner === null} counterRotate={rotation} />
+                gridTemplateColumns: `repeat(${BOARD}, 1fr)`,
+                gridTemplateRows: `repeat(${BOARD}, 1fr)`,
+              }}
+            >
+              {cells}
             </div>
-          );
-        })}
 
-        {state.walls
-          .filter((w) => !visibleWallKeys || visibleWallKeys.has(`${w.o}-${w.r}-${w.c}`))
-          .map((w) => (
-          <WallView key={`w-${w.o}-${w.r}-${w.c}`} wall={w} tone="solid"
-            latest={state.lastWall !== null && state.lastWall.o === w.o && state.lastWall.r === w.r && state.lastWall.c === w.c} />
-        ))}
-
-        {ghostWall && <WallView wall={{ ...ghostWall, by: you }} tone="ghost" />}
-        {invalidGhost && <WallView wall={{ ...invalidGhost, by: you }} tone="invalid" />}
-
-        {/* Pawn elimination FX */}
-        {pops.map((p) => (
-          <PopFX key={p.key} r={p.r} c={p.c} color={PLAYER_COLORS[p.player]} />
-        ))}
-
-        {fog && (
-          <div className="pointer-events-none absolute inset-0 z-[4]">
-            {Array.from({ length: BOARD * BOARD }, (_, i) => {
-              const r = Math.floor(i / BOARD), c = i % BOARD;
-              if (visibleCells && visibleCells.has(i)) return null;
-              const delay = ((r * 7 + c * 11) % 13) * -0.9;
-              const drift = ((r * 3 + c * 5) % 5) * -1.3;
+            {state.pawns.map((p, i) => {
+              if (!state.active[i]) return null;
+              const hidden =
+                fog && i !== you && visibleCells && !visibleCells.has(p[0] * BOARD + p[1]);
+              if (hidden) return null;
               return (
-                <div key={`fog-${i}`} className="fog-cell"
+                <div
+                  key={`pawn-${i}`}
+                  className="pawn-glide pointer-events-none absolute grid place-items-center"
                   style={{
-                    left: `${(c / BOARD) * 100}%`,
-                    top: `${(r / BOARD) * 100}%`,
+                    left: `${(p[1] / BOARD) * 100}%`,
+                    top: `${(p[0] / BOARD) * 100}%`,
                     width: `${(1 / BOARD) * 100}%`,
                     height: `${(1 / BOARD) * 100}%`,
-                    animationDelay: `${delay}s, ${drift}s`,
-                  }} />
+                    zIndex: 3,
+                  }}
+                >
+                  <Pawn
+                    key={`${p[0]}-${p[1]}`}
+                    player={i as PlayerId}
+                    you={you}
+                    active={state.turn === i && state.winner === null}
+                    counterRotate={rotation}
+                  />
+                </div>
               );
             })}
-            <div className="fog-vignette" />
+
+            {state.walls
+              .filter((w) => !visibleWallKeys || visibleWallKeys.has(`${w.o}-${w.r}-${w.c}`))
+              .map((w) => (
+                <WallView
+                  key={`w-${w.o}-${w.r}-${w.c}`}
+                  wall={w}
+                  tone="solid"
+                  latest={
+                    state.lastWall !== null &&
+                    state.lastWall.o === w.o &&
+                    state.lastWall.r === w.r &&
+                    state.lastWall.c === w.c
+                  }
+                />
+              ))}
+
+            {ghostWall && <WallView wall={{ ...ghostWall, by: you }} tone="ghost" />}
+            {invalidGhost && <WallView wall={{ ...invalidGhost, by: you }} tone="invalid" />}
+
+            {/* Pawn elimination FX */}
+            {pops.map((p) => (
+              <PopFX key={p.key} r={p.r} c={p.c} color={PLAYER_COLORS[p.player]} />
+            ))}
+
+            {fog && (
+              <div className="pointer-events-none absolute inset-0 z-[4]">
+                {Array.from({ length: BOARD * BOARD }, (_, i) => {
+                  const r = Math.floor(i / BOARD),
+                    c = i % BOARD;
+                  if (visibleCells && visibleCells.has(i)) return null;
+                  const delay = ((r * 7 + c * 11) % 13) * -0.9;
+                  const drift = ((r * 3 + c * 5) % 5) * -1.3;
+                  return (
+                    <div
+                      key={`fog-${i}`}
+                      className="fog-cell"
+                      style={{
+                        left: `${(c / BOARD) * 100}%`,
+                        top: `${(r / BOARD) * 100}%`,
+                        width: `${(1 / BOARD) * 100}%`,
+                        height: `${(1 / BOARD) * 100}%`,
+                        animationDelay: `${delay}s, ${drift}s`,
+                      }}
+                    />
+                  );
+                })}
+                <div className="fog-vignette" />
+              </div>
+            )}
+          </div>
+        </div>
+        <div />
+        <div
+          aria-hidden
+          className="flex justify-around px-[3%] text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground"
+          style={{ visibility: rotated ? "hidden" : undefined }}
+        >
+          {FILES.map((f) => (
+            <span key={f} className="text-center leading-none">
+              {f}
+            </span>
+          ))}
+        </div>
+        {armed && (
+          <div className="pointer-events-auto col-span-2 -mt-1 flex items-center justify-center gap-2 rounded-lg border border-border bg-card/95 px-3 py-2 text-xs shadow-lg backdrop-blur">
+            <span className="uppercase tracking-widest text-muted-foreground">
+              Tap again to place
+            </span>
+            <button
+              onClick={rotateArmed}
+              className="rounded-md border border-border bg-secondary/60 px-2 py-1 text-[11px] font-semibold uppercase tracking-widest hover:bg-secondary"
+            >
+              Rotate {armed.o === "h" ? "→ V" : "→ H"}
+            </button>
+            <button
+              onClick={clearArmed}
+              className="rounded-md border border-border bg-secondary/30 px-2 py-1 text-[11px] uppercase tracking-widest hover:bg-secondary"
+            >
+              Cancel
+            </button>
           </div>
         )}
       </div>
-      </div>
-      <div />
-      <div aria-hidden className="flex justify-around px-[3%] text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground" style={{ visibility: rotated ? "hidden" : undefined }}>
-        {FILES.map((f) => (
-          <span key={f} className="text-center leading-none">{f}</span>
-        ))}
-      </div>
-      {armed && (
-        <div className="pointer-events-auto col-span-2 -mt-1 flex items-center justify-center gap-2 rounded-lg border border-border bg-card/95 px-3 py-2 text-xs shadow-lg backdrop-blur">
-          <span className="uppercase tracking-widest text-muted-foreground">
-            Tap again to place
-          </span>
-          <button onClick={rotateArmed}
-            className="rounded-md border border-border bg-secondary/60 px-2 py-1 text-[11px] font-semibold uppercase tracking-widest hover:bg-secondary">
-            Rotate {armed.o === "h" ? "→ V" : "→ H"}
-          </button>
-          <button onClick={clearArmed}
-            className="rounded-md border border-border bg-secondary/30 px-2 py-1 text-[11px] uppercase tracking-widest hover:bg-secondary">
-            Cancel
-          </button>
-        </div>
-      )}
-    </div>
 
-    {/* Wall-drag handles: press and drag onto the board to place a wall.
+      {/* Wall-drag handles: press and drag onto the board to place a wall.
         Mobile only — on desktop we show a player + walls summary instead. */}
-    <div className="mt-1 flex gap-2 self-start md:hidden" aria-hidden={!isYourTurn}>
-      <WallHandle
-        orient="h"
-        color={yourColor}
-        disabled={!isYourTurn || state.wallsLeft[you] <= 0}
-        active={dragOrient === "h"}
-        onPointerDown={(e) => startWallDrag("h", e)}
-      />
-      <WallHandle
-        orient="v"
-        color={yourColor}
-        disabled={!isYourTurn || state.wallsLeft[you] <= 0}
-        active={dragOrient === "v"}
-        onPointerDown={(e) => startWallDrag("v", e)}
-      />
-    </div>
+      <div className="mt-1 flex gap-2 self-start md:hidden" aria-hidden={!isYourTurn}>
+        <WallHandle
+          orient="h"
+          color={yourColor}
+          disabled={!isYourTurn || state.wallsLeft[you] <= 0}
+          active={dragOrient === "h"}
+          onPointerDown={(e) => startWallDrag("h", e)}
+        />
+        <WallHandle
+          orient="v"
+          color={yourColor}
+          disabled={!isYourTurn || state.wallsLeft[you] <= 0}
+          active={dragOrient === "v"}
+          onPointerDown={(e) => startWallDrag("v", e)}
+        />
+      </div>
 
-    {/* Player + walls summary now lives in the top/bottom PlayerBanner
+      {/* Player + walls summary now lives in the top/bottom PlayerBanner
         rendered outside this component (see game.tsx). */}
     </div>
   );
 }
 
-function WallHandle({ orient, color, disabled, active, onPointerDown }: {
-  orient: Orient; color: string; disabled: boolean; active: boolean;
+function WallHandle({
+  orient,
+  color,
+  disabled,
+  active,
+  onPointerDown,
+}: {
+  orient: Orient;
+  color: string;
+  disabled: boolean;
+  active: boolean;
   onPointerDown: (e: React.PointerEvent) => void;
 }) {
   return (
@@ -475,7 +600,9 @@ function WallHandle({ orient, color, disabled, active, onPointerDown }: {
         (disabled ? " opacity-40" : "")
       }
       style={{ touchAction: "none" }}
-      aria-label={orient === "h" ? "Drag horizontal wall onto board" : "Drag vertical wall onto board"}
+      aria-label={
+        orient === "h" ? "Drag horizontal wall onto board" : "Drag vertical wall onto board"
+      }
     >
       <span
         aria-hidden
@@ -492,7 +619,15 @@ function WallHandle({ orient, color, disabled, active, onPointerDown }: {
   );
 }
 
-function WallView({ wall, tone, latest }: { wall: Wall; tone: "solid" | "ghost" | "invalid"; latest?: boolean; }) {
+function WallView({
+  wall,
+  tone,
+  latest,
+}: {
+  wall: Wall;
+  tone: "solid" | "ghost" | "invalid";
+  latest?: boolean;
+}) {
   const color = PLAYER_COLORS[wall.by ?? 0];
   const thickness = 18;
   const bg =
@@ -506,39 +641,61 @@ function WallView({ wall, tone, latest }: { wall: Wall; tone: "solid" | "ghost" 
       ? `0 2px 4px rgba(0,0,0,0.55), 0 0 12px color-mix(in oklab, ${color} 35%, transparent)`
       : "none";
   const common: React.CSSProperties = {
-    position: "absolute", background: bg, borderRadius: "4px",
-    boxShadow: shadow, pointerEvents: "none", zIndex: 2, color,
+    position: "absolute",
+    background: bg,
+    borderRadius: "4px",
+    boxShadow: shadow,
+    pointerEvents: "none",
+    zIndex: 2,
+    color,
   };
   const cls = (wall.o === "h" ? "wall-h " : "wall-v ") + (latest ? "wall-latest" : "");
   if (wall.o === "h") {
     return (
-      <div className={cls} style={{
-        ...common,
-        top: `${((wall.r + 1) / BOARD) * 100}%`,
-        left: `${(wall.c / BOARD) * 100}%`,
-        width: `${(2 / BOARD) * 100}%`,
-        height: thickness,
-        transform: "translateY(-50%)",
-      }} />
+      <div
+        className={cls}
+        style={{
+          ...common,
+          top: `${((wall.r + 1) / BOARD) * 100}%`,
+          left: `${(wall.c / BOARD) * 100}%`,
+          width: `${(2 / BOARD) * 100}%`,
+          height: thickness,
+          transform: "translateY(-50%)",
+        }}
+      />
     );
   }
   return (
-    <div className={cls} style={{
-      ...common,
-      left: `${((wall.c + 1) / BOARD) * 100}%`,
-      top: `${(wall.r / BOARD) * 100}%`,
-      height: `${(2 / BOARD) * 100}%`,
-      width: thickness,
-      transform: "translateX(-50%)",
-    }} />
+    <div
+      className={cls}
+      style={{
+        ...common,
+        left: `${((wall.c + 1) / BOARD) * 100}%`,
+        top: `${(wall.r / BOARD) * 100}%`,
+        height: `${(2 / BOARD) * 100}%`,
+        width: thickness,
+        transform: "translateX(-50%)",
+      }}
+    />
   );
 }
 
-function Pawn({ player, you, active, counterRotate = 0 }: { player: PlayerId; you: PlayerId; active: boolean; counterRotate?: number; }) {
+function Pawn({
+  player,
+  you,
+  active,
+  counterRotate = 0,
+}: {
+  player: PlayerId;
+  you: PlayerId;
+  active: boolean;
+  counterRotate?: number;
+}) {
   const color = PLAYER_COLORS[player];
   const isYou = player === you;
   return (
-    <span className="pawn-land grid h-[72%] w-[72%] place-items-center rounded-full text-sm font-semibold"
+    <span
+      className="pawn-land grid h-[72%] w-[72%] place-items-center rounded-full text-sm font-semibold"
       style={{
         background: `radial-gradient(circle at 30% 25%, color-mix(in oklab, ${color} 60%, white 45%), ${color} 60%, color-mix(in oklab, ${color} 70%, black 35%) 100%)`,
         boxShadow:
@@ -546,8 +703,14 @@ function Pawn({ player, you, active, counterRotate = 0 }: { player: PlayerId; yo
           (isYou ? `, 0 0 0 2px oklch(0.98 0.02 82)` : "") +
           (active ? `, 0 0 16px color-mix(in oklab, ${color} 65%, transparent)` : ""),
         color: "oklch(0.15 0.02 55)",
-      }}>
-      <span style={{ display: "inline-block", transform: counterRotate ? `rotate(${-counterRotate}deg)` : undefined }}>
+      }}
+    >
+      <span
+        style={{
+          display: "inline-block",
+          transform: counterRotate ? `rotate(${-counterRotate}deg)` : undefined,
+        }}
+      >
         {player + 1}
       </span>
     </span>
@@ -563,19 +726,47 @@ function PopFX({ r, c, color }: { r: number; c: number; color: string }) {
     return { sx: Math.cos(angle) * dist, sy: Math.sin(angle) * dist, key: i };
   });
   return (
-    <div className="pointer-events-none absolute" style={{ left, top, width: 0, height: 0, zIndex: 4 }}>
-      <span className="pop-flash absolute rounded-full"
-        style={{ left: 0, top: 0, width: 60, height: 60, background: `radial-gradient(circle, white, ${color} 60%, transparent 70%)` }} />
-      <span className="pawn-pop absolute grid place-items-center rounded-full text-sm font-semibold"
-        style={{ left: 0, top: 0, width: 40, height: 40,
+    <div
+      className="pointer-events-none absolute"
+      style={{ left, top, width: 0, height: 0, zIndex: 4 }}
+    >
+      <span
+        className="pop-flash absolute rounded-full"
+        style={{
+          left: 0,
+          top: 0,
+          width: 60,
+          height: 60,
+          background: `radial-gradient(circle, white, ${color} 60%, transparent 70%)`,
+        }}
+      />
+      <span
+        className="pawn-pop absolute grid place-items-center rounded-full text-sm font-semibold"
+        style={{
+          left: 0,
+          top: 0,
+          width: 40,
+          height: 40,
           background: `radial-gradient(circle at 30% 25%, color-mix(in oklab, ${color} 60%, white 45%), ${color} 60%)`,
-          color: "oklch(0.15 0.02 55)" }} />
+          color: "oklch(0.15 0.02 55)",
+        }}
+      />
       {shards.map((s) => (
-        <span key={s.key} className="pop-shard absolute block rounded-sm"
-          style={{
-            left: 0, top: 0, width: 8, height: 10, background: color,
-            ["--sx" as string]: `${s.sx}px`, ["--sy" as string]: `${s.sy}px`,
-          } as React.CSSProperties} />
+        <span
+          key={s.key}
+          className="pop-shard absolute block rounded-sm"
+          style={
+            {
+              left: 0,
+              top: 0,
+              width: 8,
+              height: 10,
+              background: color,
+              ["--sx" as string]: `${s.sx}px`,
+              ["--sy" as string]: `${s.sy}px`,
+            } as React.CSSProperties
+          }
+        />
       ))}
     </div>
   );

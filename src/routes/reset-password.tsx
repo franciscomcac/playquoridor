@@ -34,7 +34,8 @@ function ResetPasswordPage() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null); setBusy(true);
+    setError(null);
+    setBusy(true);
     try {
       const { error: err } = await supabase.auth.updateUser({ password });
       if (err) throw err;
@@ -42,15 +43,24 @@ function ResetPasswordPage() {
       setTimeout(() => navigate({ to: "/" }), 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not update password.");
-    } finally { setBusy(false); }
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
     <main className="min-h-screen bg-background px-4 py-10 text-foreground">
       <div className="mx-auto max-w-md">
-        <Link to="/" className="text-xs uppercase tracking-widest text-muted-foreground hover:text-foreground">← Back</Link>
+        <Link
+          to="/"
+          className="text-xs uppercase tracking-widest text-muted-foreground hover:text-foreground"
+        >
+          ← Back
+        </Link>
         <h1 className="mt-4 text-3xl font-semibold tracking-tight">Reset password</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Choose a new password for your account.</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Choose a new password for your account.
+        </p>
 
         {done ? (
           <p className="mt-6 rounded-lg border border-border bg-card p-4 text-sm text-emerald-500">
@@ -81,7 +91,11 @@ function ResetPasswordPage() {
               </div>
             </label>
             {error && <p className="text-xs text-destructive">{error}</p>}
-            {!ready && <p className="text-xs text-muted-foreground">Waiting for reset link session… open this page from the email link.</p>}
+            {!ready && (
+              <p className="text-xs text-muted-foreground">
+                Waiting for reset link session… open this page from the email link.
+              </p>
+            )}
             <button
               type="submit"
               disabled={busy || !ready}

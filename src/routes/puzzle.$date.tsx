@@ -3,12 +3,22 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PLAYER_COLORS, QuoridorBoard } from "@/components/QuoridorBoard";
 import {
-  applyMove, goalsFor, reachedGoal,
-  type GameState, type Move, type Pos, type Wall,
+  applyMove,
+  goalsFor,
+  reachedGoal,
+  type GameState,
+  type Move,
+  type Pos,
+  type Wall,
 } from "@/lib/quoridor";
 import { pickBotMove } from "@/lib/bot";
 import { play } from "@/lib/sound";
-import { buildPuzzleGameState, generatePuzzle, seedFromString, type GeneratedPuzzle } from "@/lib/puzzleGen";
+import {
+  buildPuzzleGameState,
+  generatePuzzle,
+  seedFromString,
+  type GeneratedPuzzle,
+} from "@/lib/puzzleGen";
 
 const SITE_URL = "https://playquoridor.online";
 const DATE_RX = /^\d{4}-\d{2}-\d{2}$/;
@@ -34,13 +44,19 @@ function pickDailyEntries(date: string): PuzzleEntry[] {
   const idxM = ((d % POOL_MED) + POOL_MED) % POOL_MED;
   const idxH = ((d % POOL_HARD) + POOL_HARD) % POOL_HARD;
   const specs: Array<{ label: string; d: 1 | 2 | 3; seedTag: string }> = [
-    { label: "Easy",   d: 1, seedTag: `pool:easy:${idxE}` },
+    { label: "Easy", d: 1, seedTag: `pool:easy:${idxE}` },
     { label: "Medium", d: 2, seedTag: `pool:med:${idxM}` },
-    { label: "Hard",   d: 3, seedTag: `pool:hard:v3:${idxH}` },
+    { label: "Hard", d: 3, seedTag: `pool:hard:v3:${idxH}` },
   ];
   return specs.map(({ label, d, seedTag }, i) => {
     const gen = generatePuzzle(seedFromString(`quoridor:${seedTag}`), d);
-    return { ...gen, id: `${date}-${i}`, title: `${label} — Puzzle ${i + 1}`, difficulty: d, label };
+    return {
+      ...gen,
+      id: `${date}-${i}`,
+      title: `${label} — Puzzle ${i + 1}`,
+      difficulty: d,
+      label,
+    };
   });
 }
 
@@ -54,19 +70,24 @@ function loadSolved(date: string): boolean[] {
     if (Array.isArray(parsed) && parsed.length === 3) {
       return parsed.map(Boolean);
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return [false, false, false];
 }
 function saveSolved(date: string, solved: boolean[]) {
   if (typeof window === "undefined") return;
-  try { window.localStorage.setItem(SOLVED_KEY(date), JSON.stringify(solved)); } catch { /* ignore */ }
+  try {
+    window.localStorage.setItem(SOLVED_KEY(date), JSON.stringify(solved));
+  } catch {
+    /* ignore */
+  }
 }
 
 export const Route = createFileRoute("/puzzle/$date")({
   head: ({ params }) => {
     const title = `Daily Quoridor Race Puzzles — ${params.date}`;
-    const description =
-      `Three daily Quoridor race puzzles: place walls to slow your opponent and win the race to the far row. Play free at playquoridor.online — no login required.`;
+    const description = `Three daily Quoridor race puzzles: place walls to slow your opponent and win the race to the far row. Play free at playquoridor.online — no login required.`;
     const url = `${SITE_URL}/puzzle/${params.date}`;
     return {
       meta: [
@@ -96,34 +117,40 @@ function PuzzlePage() {
   const initialSolved = useMemo(() => loadSolved(date), [date]);
   const initialAllDone = initialSolved.every(Boolean);
   const firstUnsolved = initialSolved.findIndex((s) => !s);
-  const [activeIdx, setActiveIdx] = useState(() => (initialAllDone ? 2 : Math.max(0, firstUnsolved)));
+  const [activeIdx, setActiveIdx] = useState(() =>
+    initialAllDone ? 2 : Math.max(0, firstUnsolved),
+  );
   const [solved, setSolved] = useState<boolean[]>(() => initialSolved);
   const [transition, setTransition] = useState<null | "solved-flash" | "advancing" | "all-done">(
     initialAllDone ? "all-done" : null,
   );
   const puzzle = puzzles[activeIdx];
-  const markSolved = useCallback((i: number) => {
-    setSolved((s) => {
-      if (s[i]) return s;
-      const n = [...s]; n[i] = true;
-      saveSolved(date, n);
-      const isLast = i === 2 || n.every(Boolean);
-      // Flash "solved" then either advance or show completion.
-      setTransition("solved-flash");
-      window.setTimeout(() => {
-        if (isLast) {
-          setTransition("all-done");
-        } else {
-          setTransition("advancing");
-          window.setTimeout(() => {
-            setActiveIdx((idx) => Math.min(2, idx + 1));
-            setTransition(null);
-          }, 550);
-        }
-      }, 900);
-      return n;
-    });
-  }, [date]);
+  const markSolved = useCallback(
+    (i: number) => {
+      setSolved((s) => {
+        if (s[i]) return s;
+        const n = [...s];
+        n[i] = true;
+        saveSolved(date, n);
+        const isLast = i === 2 || n.every(Boolean);
+        // Flash "solved" then either advance or show completion.
+        setTransition("solved-flash");
+        window.setTimeout(() => {
+          if (isLast) {
+            setTransition("all-done");
+          } else {
+            setTransition("advancing");
+            window.setTimeout(() => {
+              setActiveIdx((idx) => Math.min(2, idx + 1));
+              setTransition(null);
+            }, 550);
+          }
+        }, 900);
+        return n;
+      });
+    },
+    [date],
+  );
 
   const allDone = transition === "all-done";
   const solvedCount = solved.filter(Boolean).length;
@@ -133,7 +160,9 @@ function PuzzlePage() {
   return (
     <main className="mx-auto flex h-[100dvh] w-full max-w-3xl flex-col gap-3 overflow-hidden px-4 py-3 sm:gap-4 sm:px-6 sm:py-5">
       <nav className="flex flex-none items-center justify-between text-xs text-muted-foreground">
-        <Link to="/" className="hover:text-foreground">← Back to game</Link>
+        <Link to="/" className="hover:text-foreground">
+          ← Back to game
+        </Link>
         <span className="tracking-widest uppercase">Daily Race Puzzles</span>
       </nav>
 
@@ -154,7 +183,9 @@ function PuzzlePage() {
           return (
             <button
               key={p.id}
-              onClick={() => { if (!transition && unlocked) setActiveIdx(i); }}
+              onClick={() => {
+                if (!transition && unlocked) setActiveIdx(i);
+              }}
               disabled={!!transition || !unlocked}
               title={unlocked ? undefined : "Finish the previous puzzle first"}
               className={
@@ -165,10 +196,17 @@ function PuzzlePage() {
               }
             >
               <div className="flex items-center justify-between gap-1 text-[10px] uppercase tracking-[0.15em] text-muted-foreground sm:tracking-widest">
-                <span className="truncate">P{i + 1}<span className="hidden sm:inline">uzzle {""}</span></span>
-                {solved[i]
-                  ? <span className="text-emerald-500 shrink-0">✓<span className="hidden sm:inline"> Solved</span></span>
-                  : !unlocked ? <span className="shrink-0">🔒</span> : null}
+                <span className="truncate">
+                  P{i + 1}
+                  <span className="hidden sm:inline">uzzle {""}</span>
+                </span>
+                {solved[i] ? (
+                  <span className="text-emerald-500 shrink-0">
+                    ✓<span className="hidden sm:inline"> Solved</span>
+                  </span>
+                ) : !unlocked ? (
+                  <span className="shrink-0">🔒</span>
+                ) : null}
               </div>
               <div className="truncate text-sm font-semibold">{p.label}</div>
             </button>
@@ -177,18 +215,25 @@ function PuzzlePage() {
       </div>
 
       <div className="relative min-h-0 flex-1">
-        <div className={"h-full transition-all duration-500 " + (transition === "advancing" ? "-translate-x-6 opacity-0" : "opacity-100")}>
+        <div
+          className={
+            "h-full transition-all duration-500 " +
+            (transition === "advancing" ? "-translate-x-6 opacity-0" : "opacity-100")
+          }
+        >
           <PuzzleBoard puzzle={puzzle} key={puzzle.id} onSolved={() => markSolved(activeIdx)} />
         </div>
-        {transition === "solved-flash" && (
-          <SolvedFlash index={activeIdx + 1} total={3} />
-        )}
+        {transition === "solved-flash" && <SolvedFlash index={activeIdx + 1} total={3} />}
         {allDone && (
           <AllDoneOverlay
             solvedCount={solvedCount}
             onLobby={() => navigate({ to: "/" })}
             onCasual={() => {
-              try { sessionStorage.setItem("quoridor:pendingAction", "quick2"); } catch { /* noop */ }
+              try {
+                sessionStorage.setItem("quoridor:pendingAction", "quick2");
+              } catch {
+                /* noop */
+              }
               void navigate({ to: "/game" });
             }}
           />
@@ -202,7 +247,8 @@ function ProgressPips({ solved, active }: { solved: boolean[]; active: number })
   return (
     <div className="flex items-center gap-1.5">
       {solved.map((s, i) => (
-        <span key={i}
+        <span
+          key={i}
           className={
             "h-2.5 w-2.5 rounded-full transition-all " +
             (s
@@ -236,8 +282,14 @@ function SolvedFlash({ index, total }: { index: number; total: number }) {
   );
 }
 
-function AllDoneOverlay({ solvedCount, onLobby, onCasual }: {
-  solvedCount: number; onLobby: () => void; onCasual: () => void;
+function AllDoneOverlay({
+  solvedCount,
+  onLobby,
+  onCasual,
+}: {
+  solvedCount: number;
+  onLobby: () => void;
+  onCasual: () => void;
 }) {
   return (
     <div className="absolute inset-0 z-30 flex items-center justify-center rounded-lg bg-background/85 backdrop-blur-sm animate-fade-in">
@@ -299,25 +351,36 @@ function PuzzleBoard({ puzzle, onSolved }: { puzzle: PuzzleEntry; onSolved: () =
         window.setTimeout(() => play("denied"), 120);
       }
     }, 550);
-    return () => { window.clearTimeout(t); busy.current = false; };
+    return () => {
+      window.clearTimeout(t);
+      busy.current = false;
+    };
   }, [state, status, oppGoal]);
 
-  const onMove = useCallback((m: Move) => {
-    if (status !== "playing") return;
-    if (state.turn !== you) return;
-    const next = applyMove(state, you, m);
-    if (!next) { play("denied"); return; }
-    setState(next);
-    play(m.kind === "wall" ? "pop" : "pop");
-    if (m.kind === "pawn" && reachedGoal(m.to, yourGoal)) {
-      setStatus("solved");
-      onSolved();
-      window.setTimeout(() => play("roundWin"), 120);
-    }
-  }, [state, status, yourGoal, onSolved]);
+  const onMove = useCallback(
+    (m: Move) => {
+      if (status !== "playing") return;
+      if (state.turn !== you) return;
+      const next = applyMove(state, you, m);
+      if (!next) {
+        play("denied");
+        return;
+      }
+      setState(next);
+      play(m.kind === "wall" ? "pop" : "pop");
+      if (m.kind === "pawn" && reachedGoal(m.to, yourGoal)) {
+        setStatus("solved");
+        onSolved();
+        window.setTimeout(() => play("roundWin"), 120);
+      }
+    },
+    [state, status, yourGoal, onSolved],
+  );
 
   const reset = () => {
-    setState(initial); setStatus("playing"); busy.current = false;
+    setState(initial);
+    setStatus("playing");
+    busy.current = false;
   };
 
   const wallsLeft = state.wallsLeft[you] ?? 0;
@@ -329,16 +392,29 @@ function PuzzleBoard({ puzzle, onSolved }: { puzzle: PuzzleEntry; onSolved: () =
       <div className="flex flex-none flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-card px-3 py-2 sm:gap-3 sm:px-4">
         <div className="flex items-center gap-3 sm:gap-4">
           <div>
-            <p className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground sm:text-[10px] sm:tracking-[0.25em]">Your walls</p>
+            <p className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground sm:text-[10px] sm:tracking-[0.25em]">
+              Your walls
+            </p>
             <p className="text-lg font-semibold leading-none sm:text-xl">{wallsLeft}</p>
           </div>
           <div>
-            <p className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground sm:text-[10px] sm:tracking-[0.25em]">Opp walls</p>
-            <p className="text-lg font-semibold leading-none text-destructive sm:text-xl">{oppWallsLeft}</p>
+            <p className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground sm:text-[10px] sm:tracking-[0.25em]">
+              Opp walls
+            </p>
+            <p className="text-lg font-semibold leading-none text-destructive sm:text-xl">
+              {oppWallsLeft}
+            </p>
           </div>
           <div>
-            <p className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground sm:text-[10px] sm:tracking-[0.25em]">Turn</p>
-            <p className={"text-xs font-semibold leading-none sm:text-sm " + (oppTurn ? "text-destructive" : "text-emerald-500")}>
+            <p className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground sm:text-[10px] sm:tracking-[0.25em]">
+              Turn
+            </p>
+            <p
+              className={
+                "text-xs font-semibold leading-none sm:text-sm " +
+                (oppTurn ? "text-destructive" : "text-emerald-500")
+              }
+            >
               {oppTurn ? "Opponent…" : "You"}
             </p>
           </div>
@@ -353,22 +429,27 @@ function PuzzleBoard({ puzzle, onSolved }: { puzzle: PuzzleEntry; onSolved: () =
 
       <div className="relative mx-auto flex min-h-0 w-full flex-1 items-center justify-center">
         <div className="wood-frame relative aspect-square h-full max-h-full w-auto max-w-full">
-          <QuoridorBoard state={state} you={you} onMove={onMove} interactive={status === "playing" && state.turn === you} />
-          {status === "failed" && (
-            <PuzzleOverlay
-              solved={false}
-              you={you}
-              onReset={reset}
-            />
-          )}
+          <QuoridorBoard
+            state={state}
+            you={you}
+            onMove={onMove}
+            interactive={status === "playing" && state.turn === you}
+          />
+          {status === "failed" && <PuzzleOverlay solved={false} you={you} onReset={reset} />}
         </div>
       </div>
     </div>
   );
 }
 
-function PuzzleOverlay({ solved, you, onReset }: {
-  solved: boolean; you: number; onReset: () => void;
+function PuzzleOverlay({
+  solved,
+  you,
+  onReset,
+}: {
+  solved: boolean;
+  you: number;
+  onReset: () => void;
 }) {
   const color = PLAYER_COLORS[you];
   const title = solved ? "You won the race" : "Opponent got there first";
@@ -378,26 +459,52 @@ function PuzzleOverlay({ solved, you, onReset }: {
   const shareUrl = typeof window !== "undefined" ? window.location.href : "";
   const share = async () => {
     const nav = navigator as Navigator & { share?: (d: ShareData) => Promise<void> };
-    if (nav.share) { try { await nav.share({ title: "Daily Quoridor Puzzle", url: shareUrl }); return; } catch { /* fall through */ } }
-    try { await navigator.clipboard.writeText(shareUrl); } catch { /* ignore */ }
+    if (nav.share) {
+      try {
+        await nav.share({ title: "Daily Quoridor Puzzle", url: shareUrl });
+        return;
+      } catch {
+        /* fall through */
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+    } catch {
+      /* ignore */
+    }
   };
   return (
     <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/80 backdrop-blur-sm">
       <div className="results-in mx-4 flex max-w-sm flex-col items-center gap-3 rounded-2xl border border-border bg-card px-6 py-6 text-center shadow-2xl">
-        <span className="grid h-14 w-14 place-items-center rounded-full text-xl font-semibold"
-          style={{ background: color, color: "oklch(0.15 0.02 55)", boxShadow: `0 0 26px color-mix(in oklab, ${color} 60%, transparent)` }}>
+        <span
+          className="grid h-14 w-14 place-items-center rounded-full text-xl font-semibold"
+          style={{
+            background: color,
+            color: "oklch(0.15 0.02 55)",
+            boxShadow: `0 0 26px color-mix(in oklab, ${color} 60%, transparent)`,
+          }}
+        >
           {you + 1}
         </span>
         <p className="text-2xl">{title}</p>
         <p className="text-sm text-muted-foreground">{sub}</p>
         <div className="mt-2 flex flex-wrap justify-center gap-2">
-          <button onClick={onReset} className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground hover:-translate-y-0.5 transition-transform">
+          <button
+            onClick={onReset}
+            className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground hover:-translate-y-0.5 transition-transform"
+          >
             Try again
           </button>
-          <button onClick={share} className="rounded-lg border border-border bg-accent/70 px-5 py-2 text-sm font-medium">
+          <button
+            onClick={share}
+            className="rounded-lg border border-border bg-accent/70 px-5 py-2 text-sm font-medium"
+          >
             Share
           </button>
-          <Link to="/" className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary">
+          <Link
+            to="/"
+            className="rounded-lg border border-border bg-secondary/40 px-5 py-2 text-sm font-medium hover:bg-secondary"
+          >
             Home
           </Link>
         </div>

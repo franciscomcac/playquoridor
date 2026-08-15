@@ -27,15 +27,36 @@ const FINALE_MS = 1800;
 const ROUND_TITLE_MS = 1300;
 const FPS = 30;
 const TICK_MS = Math.round(1000 / FPS);
-const CONFETTI_COLORS = ["#f59e0b", "#ec4899", "#8b5cf6", "#22d3ee", "#34d399", "#f43f5e", "#fbbf24"];
+const CONFETTI_COLORS = [
+  "#f59e0b",
+  "#ec4899",
+  "#8b5cf6",
+  "#22d3ee",
+  "#34d399",
+  "#f43f5e",
+  "#fbbf24",
+];
 
-type Confetto = { x: number; vx: number; vy: number; g: number; rot: number; vr: number; size: number; color: string; shape: 0 | 1; };
+type Confetto = {
+  x: number;
+  vx: number;
+  vy: number;
+  g: number;
+  rot: number;
+  vr: number;
+  size: number;
+  color: string;
+  shape: 0 | 1;
+};
 
 function makeConfetti(w: number, count = 90): Confetto[] {
   const arr: Confetto[] = [];
   // Deterministic seeded RNG so preview & export match
   let s = 1337;
-  const rnd = () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+  const rnd = () => {
+    s = (s * 9301 + 49297) % 233280;
+    return s / 233280;
+  };
   for (let i = 0; i < count; i++) {
     arr.push({
       x: rnd() * w,
@@ -52,7 +73,13 @@ function makeConfetti(w: number, count = 90): Confetto[] {
   return arr;
 }
 
-function drawConfetti(ctx: CanvasRenderingContext2D, w: number, h: number, t: number, parts: Confetto[]) {
+function drawConfetti(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  t: number,
+  parts: Confetto[],
+) {
   for (const p of parts) {
     const x = p.x + p.vx * t;
     const y = h * 0.75 + p.vy * t + 0.5 * p.g * t * t;
@@ -87,7 +114,13 @@ function beep(ctx: AudioContext, freq = 620, ms = 55) {
   osc.stop(t + ms / 1000 + 0.02);
 }
 
-function drawBoard(ctx: CanvasRenderingContext2D, w: number, h: number, frame: ReplayFrame, pov: "bottom" | "top") {
+function drawBoard(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  frame: ReplayFrame,
+  pov: "bottom" | "top",
+) {
   ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, w, h);
   const size = Math.min(w, h);
@@ -103,7 +136,14 @@ function drawBoard(ctx: CanvasRenderingContext2D, w: number, h: number, frame: R
   ctx.restore();
 }
 
-function drawRoundTitle(ctx: CanvasRenderingContext2D, w: number, h: number, roundIndex: number, totalRounds: number, progress: number) {
+function drawRoundTitle(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  roundIndex: number,
+  totalRounds: number,
+  progress: number,
+) {
   // Solid black backdrop
   ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, w, h);
@@ -145,7 +185,12 @@ function buildTimeline(frames: ReplayFrame[], speed: number): { scenes: Scene[];
   for (let i = 0; i < frames.length; i++) {
     const f = frames[i];
     if (f.roundIndex !== prevRound) {
-      scenes.push({ kind: "roundTitle", roundIndex: f.roundIndex, totalRounds, ms: Math.round(ROUND_TITLE_MS / speed) });
+      scenes.push({
+        kind: "roundTitle",
+        roundIndex: f.roundIndex,
+        totalRounds,
+        ms: Math.round(ROUND_TITLE_MS / speed),
+      });
       prevRound = f.roundIndex;
     }
     const isStart = f.plyIndex === -1;
@@ -197,7 +242,10 @@ function renderAt(
   const s = scenes[scenes.length - 1];
   if (s.kind === "roundTitle") drawRoundTitle(ctx, w, h, s.roundIndex, s.totalRounds, 1);
   else if (s.kind === "frame") drawBoard(ctx, w, h, s.frame, pov);
-  else { drawBoard(ctx, w, h, s.frame, pov); drawConfetti(ctx, w, h, (s.ms / 1000) * speed, confetti); }
+  else {
+    drawBoard(ctx, w, h, s.frame, pov);
+    drawConfetti(ctx, w, h, (s.ms / 1000) * speed, confetti);
+  }
   return { sceneIndex: scenes.length - 1, sceneLocalMs: s.ms };
 }
 
@@ -247,23 +295,39 @@ export function ExportClipModal({ open, snapshot, onClose, filename }: Props) {
     let lastSoundKey = -1;
     const loop = (now: number) => {
       const elapsed = (now - start) % Math.max(1, timeline.totalMs);
-      const { sceneIndex } = renderAt(ctx, c.width, c.height, timeline.scenes, elapsed, pov, confetti, speed);
+      const { sceneIndex } = renderAt(
+        ctx,
+        c.width,
+        c.height,
+        timeline.scenes,
+        elapsed,
+        pov,
+        confetti,
+        speed,
+      );
       // Sound triggers on scene entry
       const scene = timeline.scenes[sceneIndex];
       if (sound && scene.kind === "frame" && scene.playSound && scene.soundKey !== lastSoundKey) {
         lastSoundKey = scene.soundKey;
         try {
           if (!audioRef.current) {
-            const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+            const AC =
+              window.AudioContext ??
+              (window as unknown as { webkitAudioContext?: typeof AudioContext })
+                .webkitAudioContext;
             if (AC) audioRef.current = new AC();
           }
           if (audioRef.current) beep(audioRef.current, 520 + (scene.soundKey % 5) * 40);
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
       rafRef.current = requestAnimationFrame(loop);
     };
     rafRef.current = requestAnimationFrame(loop);
-    return () => { if (rafRef.current !== null) cancelAnimationFrame(rafRef.current); };
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    };
   }, [open, phase, timeline, pov, speed, sound]);
 
   const download = useCallback(async () => {
@@ -272,7 +336,9 @@ export function ExportClipModal({ open, snapshot, onClose, filename }: Props) {
     setErrorMsg(null);
     try {
       if (typeof MediaRecorder === "undefined") {
-        throw new Error("Your browser doesn't support video recording. Try Chrome, Edge, or Safari.");
+        throw new Error(
+          "Your browser doesn't support video recording. Try Chrome, Edge, or Safari.",
+        );
       }
       const { mime, ext } = pickMime();
       const canvas = document.createElement("canvas");
@@ -282,10 +348,19 @@ export function ExportClipModal({ open, snapshot, onClose, filename }: Props) {
       if (!ctx) throw new Error("Canvas unavailable");
 
       const stream = canvas.captureStream(FPS);
-      const rec = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 8_000_000 } : { videoBitsPerSecond: 8_000_000 });
+      const rec = new MediaRecorder(
+        stream,
+        mime
+          ? { mimeType: mime, videoBitsPerSecond: 8_000_000 }
+          : { videoBitsPerSecond: 8_000_000 },
+      );
       const chunks: BlobPart[] = [];
-      rec.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
-      const stopped = new Promise<void>((resolve) => { rec.onstop = () => resolve(); });
+      rec.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+      const stopped = new Promise<void>((resolve) => {
+        rec.onstop = () => resolve();
+      });
 
       const { scenes, totalMs } = buildTimeline(frames, speed);
       const confetti = makeConfetti(canvas.width);
@@ -307,7 +382,8 @@ export function ExportClipModal({ open, snapshot, onClose, filename }: Props) {
           }
           renderAt(ctx, canvas.width, canvas.height, scenes, elapsed, pov, confetti, speed);
           // requestFrame nudges MediaRecorder in case content is judged unchanged
-          const track = stream.getVideoTracks()[0] as (MediaStreamTrack & { requestFrame?: () => void }) | undefined;
+          const track = stream.getVideoTracks()[0] as
+            (MediaStreamTrack & { requestFrame?: () => void }) | undefined;
           track?.requestFrame?.();
           setTimeout(tick, TICK_MS);
         };
@@ -343,11 +419,15 @@ export function ExportClipModal({ open, snapshot, onClose, filename }: Props) {
       role="dialog"
       aria-modal="true"
       aria-label="Export clip"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div className="flex max-h-[92dvh] w-full max-w-lg flex-col overflow-y-auto rounded-2xl border border-white/10 bg-zinc-950 p-3 shadow-2xl sm:p-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-zinc-300">Export clip</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-zinc-300">
+            Export clip
+          </h2>
           <button
             onClick={onClose}
             className="rounded-md border border-white/10 px-2 py-1 text-xs text-zinc-400 hover:bg-white/5"
@@ -374,16 +454,26 @@ export function ExportClipModal({ open, snapshot, onClose, filename }: Props) {
         <fieldset className="mt-4 space-y-3" disabled={phase === "rendering"}>
           <Row label="Speed">
             {([0.5, 1, 2] as const).map((s) => (
-              <SegBtn key={s} active={speed === s} onClick={() => setSpeed(s)}>{s}x</SegBtn>
+              <SegBtn key={s} active={speed === s} onClick={() => setSpeed(s)}>
+                {s}x
+              </SegBtn>
             ))}
           </Row>
           <Row label="POV">
-            <SegBtn active={pov === "bottom"} onClick={() => setPov("bottom")}>Bottom</SegBtn>
-            <SegBtn active={pov === "top"} onClick={() => setPov("top")}>Top</SegBtn>
+            <SegBtn active={pov === "bottom"} onClick={() => setPov("bottom")}>
+              Bottom
+            </SegBtn>
+            <SegBtn active={pov === "top"} onClick={() => setPov("top")}>
+              Top
+            </SegBtn>
           </Row>
           <Row label="Sound">
-            <SegBtn active={sound} onClick={() => setSound(true)}>On</SegBtn>
-            <SegBtn active={!sound} onClick={() => setSound(false)}>Off</SegBtn>
+            <SegBtn active={sound} onClick={() => setSound(true)}>
+              On
+            </SegBtn>
+            <SegBtn active={!sound} onClick={() => setSound(false)}>
+              Off
+            </SegBtn>
             <span className="ml-2 text-[10px] text-zinc-500">Preview only</span>
           </Row>
         </fieldset>
@@ -405,21 +495,27 @@ export function ExportClipModal({ open, snapshot, onClose, filename }: Props) {
                 Rendering on server...
               </p>
               <p className="mt-1 text-[11px] text-zinc-500">
-                You can close this and keep playing - your clip will finish downloading in the background.
+                You can close this and keep playing - your clip will finish downloading in the
+                background.
               </p>
             </div>
           )}
           {phase === "done" && (
             <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/5 px-4 py-3 text-center text-sm text-emerald-300">
               Clip downloaded
-              <button onClick={() => setPhase("preview")} className="ml-3 text-xs underline">Export another</button>
+              <button onClick={() => setPhase("preview")} className="ml-3 text-xs underline">
+                Export another
+              </button>
             </div>
           )}
           {phase === "error" && (
             <div className="rounded-lg border border-rose-500/40 bg-rose-500/5 px-4 py-3 text-center text-xs text-rose-300">
               <p className="font-medium">Render failed</p>
               {errorMsg && <p className="mt-1 opacity-80">{errorMsg}</p>}
-              <button onClick={() => setPhase("preview")} className="mt-2 rounded-md border border-rose-500/40 px-3 py-1 text-xs hover:bg-rose-500/10">
+              <button
+                onClick={() => setPhase("preview")}
+                className="mt-2 rounded-md border border-rose-500/40 px-3 py-1 text-xs hover:bg-rose-500/10"
+              >
                 Try again
               </button>
             </div>
@@ -439,7 +535,15 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-function SegBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+function SegBtn({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
   return (
     <button
       type="button"

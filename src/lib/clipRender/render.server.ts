@@ -29,11 +29,23 @@ const PLAYER_RGB: RGB[] = [
 function fillAll(buf: Uint8ClampedArray, w: number, h: number, c: RGB) {
   for (let i = 0; i < w * h; i++) {
     const p = i * 4;
-    buf[p] = c[0]; buf[p + 1] = c[1]; buf[p + 2] = c[2]; buf[p + 3] = 255;
+    buf[p] = c[0];
+    buf[p + 1] = c[1];
+    buf[p + 2] = c[2];
+    buf[p + 3] = 255;
   }
 }
 
-function fillRect(buf: Uint8ClampedArray, w: number, h: number, x: number, y: number, rw: number, rh: number, c: RGB) {
+function fillRect(
+  buf: Uint8ClampedArray,
+  w: number,
+  h: number,
+  x: number,
+  y: number,
+  rw: number,
+  rh: number,
+  c: RGB,
+) {
   const x0 = Math.max(0, Math.floor(x));
   const y0 = Math.max(0, Math.floor(y));
   const x1 = Math.min(w, Math.floor(x + rw));
@@ -41,13 +53,25 @@ function fillRect(buf: Uint8ClampedArray, w: number, h: number, x: number, y: nu
   for (let yy = y0; yy < y1; yy++) {
     let p = (yy * w + x0) * 4;
     for (let xx = x0; xx < x1; xx++) {
-      buf[p] = c[0]; buf[p + 1] = c[1]; buf[p + 2] = c[2]; buf[p + 3] = 255;
+      buf[p] = c[0];
+      buf[p + 1] = c[1];
+      buf[p + 2] = c[2];
+      buf[p + 3] = 255;
       p += 4;
     }
   }
 }
 
-function fillCircle(buf: Uint8ClampedArray, w: number, h: number, cx: number, cy: number, r: number, c: RGB, outline?: RGB) {
+function fillCircle(
+  buf: Uint8ClampedArray,
+  w: number,
+  h: number,
+  cx: number,
+  cy: number,
+  r: number,
+  c: RGB,
+  outline?: RGB,
+) {
   const r2 = r * r;
   const rOut2 = (r + 1.2) * (r + 1.2);
   const x0 = Math.max(0, Math.floor(cx - r - 1));
@@ -61,10 +85,16 @@ function fillCircle(buf: Uint8ClampedArray, w: number, h: number, cx: number, cy
       const d2 = dx * dx + dy * dy;
       if (d2 <= r2) {
         const p = (yy * w + xx) * 4;
-        buf[p] = c[0]; buf[p + 1] = c[1]; buf[p + 2] = c[2]; buf[p + 3] = 255;
+        buf[p] = c[0];
+        buf[p + 1] = c[1];
+        buf[p + 2] = c[2];
+        buf[p + 3] = 255;
       } else if (outline && d2 <= rOut2) {
         const p = (yy * w + xx) * 4;
-        buf[p] = outline[0]; buf[p + 1] = outline[1]; buf[p + 2] = outline[2]; buf[p + 3] = 255;
+        buf[p] = outline[0];
+        buf[p + 1] = outline[1];
+        buf[p + 2] = outline[2];
+        buf[p + 3] = 255;
       }
     }
   }
@@ -76,8 +106,10 @@ function rotate180(buf: Uint8ClampedArray, w: number, h: number) {
     for (let x = 0; x < w; x++) {
       const src = (y * w + x) * 4;
       const dst = ((h - 1 - y) * w + (w - 1 - x)) * 4;
-      out[dst] = buf[src]; out[dst + 1] = buf[src + 1];
-      out[dst + 2] = buf[src + 2]; out[dst + 3] = buf[src + 3];
+      out[dst] = buf[src];
+      out[dst + 1] = buf[src + 1];
+      out[dst + 2] = buf[src + 2];
+      out[dst + 3] = buf[src + 3];
     }
   }
   buf.set(out);
@@ -169,11 +201,7 @@ export function renderClip(
     const index = applyPalette(buf, palette);
 
     const isLast = i === frames.length - 1;
-    const delay = isLast
-      ? endHold
-      : f.plyIndex === -1
-        ? startHold
-        : msPerPly;
+    const delay = isLast ? endHold : f.plyIndex === -1 ? startHold : msPerPly;
 
     enc.writeFrame(index, W, H, { palette, delay });
   }

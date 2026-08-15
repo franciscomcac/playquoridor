@@ -3,9 +3,19 @@
 // pruning of blunders, aggressive trap-blocking when the opponent is
 // close to their goal.
 import {
-  BOARD, canPlaceWall, goalsFor, isBlocked, legalPawnMoves, reachedGoal,
-  type GameState, type Goal, type Move, type Orient, type PlayerId,
-  type Pos, type Wall,
+  BOARD,
+  canPlaceWall,
+  goalsFor,
+  isBlocked,
+  legalPawnMoves,
+  reachedGoal,
+  type GameState,
+  type Goal,
+  type Move,
+  type Orient,
+  type PlayerId,
+  type Pos,
+  type Wall,
 } from "./quoridor";
 import { pickTitaniumMove } from "./bot-titanium";
 
@@ -35,8 +45,13 @@ export type RankedBot = {
 export function difficultyForRating(rating: number): number {
   const points: Array<[number, number]> = [
     // Old top (0.98) is now mid-strong; Titanium takes the crown at 1.0.
-    [400, 0.28], [700, 0.42], [1000, 0.55],
-    [1300, 0.72], [1600, 0.85], [1800, 0.94], [2000, 1.00],
+    [400, 0.28],
+    [700, 0.42],
+    [1000, 0.55],
+    [1300, 0.72],
+    [1600, 0.85],
+    [1800, 0.94],
+    [2000, 1.0],
   ];
   if (rating <= points[0][0]) return points[0][1];
   if (rating >= points[points.length - 1][0]) return points[points.length - 1][1];
@@ -55,7 +70,12 @@ export function difficultyForRating(rating: number): number {
 export async function pickRankedBotForRating(rating: number): Promise<RankedBot | null> {
   const { data, error } = await supabase.rpc("pick_ranked_bot", { _rating: Math.round(rating) });
   if (error || !data || !Array.isArray(data) || data.length === 0) return null;
-  const row = data[0] as { player_id: string; name: string; initial_rating: number; current_rating: number };
+  const row = data[0] as {
+    player_id: string;
+    name: string;
+    initial_rating: number;
+    current_rating: number;
+  };
   return {
     playerId: row.player_id,
     name: row.name,
@@ -79,11 +99,17 @@ function bfsDist(from: Pos, goal: Goal, walls: Wall[]): number {
   const seen = new Uint8Array(BOARD * BOARD);
   seen[from[0] * BOARD + from[1]] = 1;
   const q: Array<[number, number, number]> = [[from[0], from[1], 0]];
-  const dirs: Array<[number, number]> = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+  const dirs: Array<[number, number]> = [
+    [-1, 0],
+    [1, 0],
+    [0, -1],
+    [0, 1],
+  ];
   while (q.length) {
     const [r, c, d] = q.shift()!;
     for (const [dr, dc] of dirs) {
-      const nr = r + dr, nc = c + dc;
+      const nr = r + dr,
+        nc = c + dc;
       if (nr < 0 || nr >= BOARD || nc < 0 || nc >= BOARD) continue;
       const idx = nr * BOARD + nc;
       if (seen[idx]) continue;
@@ -123,7 +149,9 @@ export function pickBotMove(state: GameState, bot: PlayerId, difficulty: number)
       const depth = difficulty >= 0.99 ? 6 : 5;
       const t = pickTitaniumMove(state, bot, { budgetMs: budget, maxDepth: depth, wallBudget: 16 });
       if (t) return t;
-    } catch { /* fall through to classic engine */ }
+    } catch {
+      /* fall through to classic engine */
+    }
   }
 
   const legal = legalPawnMoves(state, bot);
@@ -173,7 +201,7 @@ export function pickBotMove(state: GameState, bot: PlayerId, difficulty: number)
 
   // ----- Should we even look at walls this turn? -----
   // Base propensity climbs with difficulty; panic mode always considers walls.
-  const wallChance = critical ? 1 : (0.18 + difficulty * 0.55);
+  const wallChance = critical ? 1 : 0.18 + difficulty * 0.55;
   const considerWalls =
     state.wallsLeft[bot] > 0 && opps.length > 0 && (critical || Math.random() < wallChance);
 
@@ -202,7 +230,12 @@ export function pickBotMove(state: GameState, bot: PlayerId, difficulty: number)
   const searchRadius = critical ? 8 : nearCritical ? 6 : 4;
 
   const orients: Orient[] = ["h", "v"];
-  type WallCand = { w: { r: number; c: number; o: Orient }; score: number; oppDelta: number; myDelta: number };
+  type WallCand = {
+    w: { r: number; c: number; o: Orient };
+    score: number;
+    oppDelta: number;
+    myDelta: number;
+  };
   const cands: WallCand[] = [];
 
   for (let r = 0; r < BOARD - 1; r++) {
@@ -281,7 +314,10 @@ export function pickBotMove(state: GameState, bot: PlayerId, difficulty: number)
       let oppBestD = bfsDist(state.pawns[opp], oppGoal, walls2);
       for (const to of oppMoves) {
         const d = bfsDist(to, oppGoal, walls2);
-        if (d < oppBestD) { oppBestD = d; oppBestPos = to; }
+        if (d < oppBestD) {
+          oppBestD = d;
+          oppBestPos = to;
+        }
       }
 
       // Now our best pawn reply from myD2 → (myD2 - 1) usually.
@@ -312,9 +348,10 @@ export function pickBotMove(state: GameState, bot: PlayerId, difficulty: number)
   // Race lead reference: if we're already winning the race, don't waste walls.
   const raceLead = oppMinD - myDNow; // >0 = we're ahead
   let threshold = difficulty < 0.4 ? 2.2 : difficulty < 0.7 ? 1.5 : 1.0;
-  if (raceLead >= 4) threshold += 1.5;      // way ahead — keep walls in bank
+  if (raceLead >= 4)
+    threshold += 1.5; // way ahead — keep walls in bank
   else if (raceLead >= 2) threshold += 0.5;
-  if (critical) threshold = -Infinity;       // must block
+  if (critical) threshold = -Infinity; // must block
 
   // Also: on high difficulty, if the current best wall is a clean +2 or
   // better, take it even if the random propensity would've said skip.
@@ -332,12 +369,12 @@ export function pickBotMove(state: GameState, bot: PlayerId, difficulty: number)
 export function humanThinkTimeMs(state: GameState, move: Move, difficulty: number): number {
   let base: number;
   if (move.kind === "wall") {
-    base = 1800 + Math.random() * 1900;                   // walls: 1.8–3.7s
+    base = 1800 + Math.random() * 1900; // walls: 1.8–3.7s
   } else {
-    base = 900 + Math.random() * 1200;                     // pawns: 0.9–2.1s
+    base = 900 + Math.random() * 1200; // pawns: 0.9–2.1s
   }
   // Complex boards take longer to read.
-  const clutter = Math.min(1, state.walls.length / 12);    // 0..1
+  const clutter = Math.min(1, state.walls.length / 12); // 0..1
   base += clutter * 700;
   // Higher-difficulty "player" looks a touch longer on strategic turns.
   base += difficulty * 250;

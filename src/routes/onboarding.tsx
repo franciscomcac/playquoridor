@@ -10,7 +10,10 @@ export const Route = createFileRoute("/onboarding")({
   head: () => ({
     meta: [
       { title: "Set up your profile · playquoridor.online" },
-      { name: "description", content: "Pick your permanent username and country to complete your Quoridor profile." },
+      {
+        name: "description",
+        content: "Pick your permanent username and country to complete your Quoridor profile.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -23,7 +26,9 @@ function OnboardingPage() {
   const navigate = useNavigate();
   const [step, setStep] = useState<0 | 1>(0);
   const [name, setName] = useState("");
-  const [nameStatus, setNameStatus] = useState<"idle" | "checking" | "ok" | "taken" | "invalid">("idle");
+  const [nameStatus, setNameStatus] = useState<"idle" | "checking" | "ok" | "taken" | "invalid">(
+    "idle",
+  );
   const [country, setCountry] = useState<Country | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +37,8 @@ function OnboardingPage() {
   useEffect(() => {
     void supabase.auth.getUser().then(({ data }) => {
       const u = data.user;
-      const isAnon = !u || u.is_anonymous === true || (u.app_metadata?.provider ?? "") === "anonymous";
+      const isAnon =
+        !u || u.is_anonymous === true || (u.app_metadata?.provider ?? "") === "anonymous";
       if (isAnon) {
         void navigate({ to: "/auth", search: { mode: "signup" } });
         return;
@@ -44,14 +50,21 @@ function OnboardingPage() {
   // Live username availability
   useEffect(() => {
     const trimmed = name.trim();
-    if (!trimmed) { setNameStatus("idle"); return; }
+    if (!trimmed) {
+      setNameStatus("idle");
+      return;
+    }
     if (trimmed.length < 3 || trimmed.length > 16 || !NAME_RE.test(trimmed)) {
-      setNameStatus("invalid"); return;
+      setNameStatus("invalid");
+      return;
     }
     setNameStatus("checking");
     const t = window.setTimeout(async () => {
       const { data, error } = await supabase.rpc("check_username_available", { _name: trimmed });
-      if (error) { setNameStatus("idle"); return; }
+      if (error) {
+        setNameStatus("idle");
+        return;
+      }
       setNameStatus(data ? "ok" : "taken");
     }, 300);
     return () => window.clearTimeout(t);
@@ -61,13 +74,16 @@ function OnboardingPage() {
 
   async function finish() {
     if (!country || !canContinueName) return;
-    setBusy(true); setError(null);
+    setBusy(true);
+    setError(null);
     try {
       await ensureAuthSession();
       let ident = getStoredIdentity();
       if (!ident) ident = setStoredIdentity(name.trim());
       const { moderateUsername } = await import("@/lib/moderation.functions");
-      const modn = await moderateUsername({ data: { name: name.trim() } }).catch(() => ({ allow: true } as { allow: boolean; reason?: string }));
+      const modn = await moderateUsername({ data: { name: name.trim() } }).catch(
+        () => ({ allow: true }) as { allow: boolean; reason?: string },
+      );
       if (!modn.allow) {
         throw new Error(`Username not allowed: ${modn.reason ?? "policy violation"}`);
       }
@@ -79,15 +95,23 @@ function OnboardingPage() {
       if (error) throw error;
       // Refresh stored identity name
       setStoredIdentity(name.trim());
-      try { localStorage.setItem("quoridor.country", country.iso); } catch {}
+      try {
+        localStorage.setItem("quoridor.country", country.iso);
+      } catch {}
       void navigate({ to: "/" });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
-    } finally { setBusy(false); }
+    } finally {
+      setBusy(false);
+    }
   }
 
   if (authed === null) {
-    return <main className="grid min-h-screen place-items-center bg-background text-muted-foreground">Loading…</main>;
+    return (
+      <main className="grid min-h-screen place-items-center bg-background text-muted-foreground">
+        Loading…
+      </main>
+    );
   }
 
   return (
@@ -97,7 +121,13 @@ function OnboardingPage() {
           <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">Playquoridor · Setup</p>
           <div className="flex gap-2">
             {[0, 1].map((i) => (
-              <span key={i} className={"h-1.5 w-10 rounded-full transition-colors " + (i <= step ? "bg-emerald-400" : "bg-zinc-800")} />
+              <span
+                key={i}
+                className={
+                  "h-1.5 w-10 rounded-full transition-colors " +
+                  (i <= step ? "bg-emerald-400" : "bg-zinc-800")
+                }
+              />
             ))}
           </div>
         </div>
@@ -113,10 +143,16 @@ function OnboardingPage() {
                 transition={{ duration: 0.35, ease: "easeOut" }}
                 className="mx-auto max-w-lg"
               >
-                <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">Pick your username.</h1>
-                <p className="mt-3 text-sm text-zinc-400">This is your permanent handle. 3–16 characters, letters, numbers, underscores.</p>
+                <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
+                  Pick your username.
+                </h1>
+                <p className="mt-3 text-sm text-zinc-400">
+                  This is your permanent handle. 3–16 characters, letters, numbers, underscores.
+                </p>
                 <div className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 shadow-2xl">
-                  <label className="text-[10px] uppercase tracking-[0.3em] text-zinc-500">Username</label>
+                  <label className="text-[10px] uppercase tracking-[0.3em] text-zinc-500">
+                    Username
+                  </label>
                   <div className="mt-2 flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3">
                     <span className="text-zinc-500">@</span>
                     <input
@@ -130,11 +166,21 @@ function OnboardingPage() {
                     <StatusDot status={nameStatus} />
                   </div>
                   <p className="mt-2 text-xs">
-                    {nameStatus === "invalid" && <span className="text-rose-400">Only letters, numbers, and underscores (3–16).</span>}
-                    {nameStatus === "taken" && <span className="text-rose-400">Someone already took that one.</span>}
-                    {nameStatus === "ok" && <span className="text-emerald-400">Available — nice pick.</span>}
+                    {nameStatus === "invalid" && (
+                      <span className="text-rose-400">
+                        Only letters, numbers, and underscores (3–16).
+                      </span>
+                    )}
+                    {nameStatus === "taken" && (
+                      <span className="text-rose-400">Someone already took that one.</span>
+                    )}
+                    {nameStatus === "ok" && (
+                      <span className="text-emerald-400">Available — nice pick.</span>
+                    )}
                     {nameStatus === "checking" && <span className="text-zinc-500">Checking…</span>}
-                    {nameStatus === "idle" && <span className="text-zinc-600">{name.length}/16</span>}
+                    {nameStatus === "idle" && (
+                      <span className="text-zinc-600">{name.length}/16</span>
+                    )}
                   </p>
                 </div>
                 <div className="mt-6 flex justify-end">
@@ -160,8 +206,12 @@ function OnboardingPage() {
                 className="grid gap-6 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)]"
               >
                 <div>
-                  <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">Where are you?</h1>
-                  <p className="mt-3 text-sm text-zinc-400">Type a country. Watch it light up on the map.</p>
+                  <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
+                    Where are you?
+                  </h1>
+                  <p className="mt-3 text-sm text-zinc-400">
+                    Type a country. Watch it light up on the map.
+                  </p>
                   <CountryPicker value={country} onChange={setCountry} />
                   {error && <p className="mt-3 text-xs text-rose-400">{error}</p>}
                   <div className="mt-6 flex justify-between gap-3">
@@ -193,20 +243,32 @@ function OnboardingPage() {
 
 function StatusDot({ status }: { status: "idle" | "checking" | "ok" | "taken" | "invalid" }) {
   const color =
-    status === "ok" ? "bg-emerald-400" :
-    status === "taken" || status === "invalid" ? "bg-rose-400" :
-    status === "checking" ? "bg-amber-400" : "bg-zinc-700";
+    status === "ok"
+      ? "bg-emerald-400"
+      : status === "taken" || status === "invalid"
+        ? "bg-rose-400"
+        : status === "checking"
+          ? "bg-amber-400"
+          : "bg-zinc-700";
   return (
     <motion.span
       key={status}
       initial={{ scale: 0 }}
       animate={{ scale: 1 }}
-      className={"h-2.5 w-2.5 rounded-full " + color + (status === "checking" ? " animate-pulse" : "")}
+      className={
+        "h-2.5 w-2.5 rounded-full " + color + (status === "checking" ? " animate-pulse" : "")
+      }
     />
   );
 }
 
-function CountryPicker({ value, onChange }: { value: Country | null; onChange: (c: Country) => void }) {
+function CountryPicker({
+  value,
+  onChange,
+}: {
+  value: Country | null;
+  onChange: (c: Country) => void;
+}) {
   const [q, setQ] = useState("");
   const [highlight, setHighlight] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -224,9 +286,14 @@ function CountryPicker({ value, onChange }: { value: Country | null; onChange: (
     return [...starts, ...contains].slice(0, 8);
   }, [q]);
 
-  useEffect(() => { setHighlight(0); }, [q]);
+  useEffect(() => {
+    setHighlight(0);
+  }, [q]);
 
-  const pick = (c: Country) => { onChange(c); setQ(c.name); };
+  const pick = (c: Country) => {
+    onChange(c);
+    setQ(c.name);
+  };
 
   return (
     <div className="mt-6">
@@ -237,9 +304,16 @@ function CountryPicker({ value, onChange }: { value: Country | null; onChange: (
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "ArrowDown") { e.preventDefault(); setHighlight((h) => Math.min(h + 1, results.length - 1)); }
-            else if (e.key === "ArrowUp") { e.preventDefault(); setHighlight((h) => Math.max(h - 1, 0)); }
-            else if (e.key === "Enter") { e.preventDefault(); if (results[highlight]) pick(results[highlight]); }
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              setHighlight((h) => Math.min(h + 1, results.length - 1));
+            } else if (e.key === "ArrowUp") {
+              e.preventDefault();
+              setHighlight((h) => Math.max(h - 1, 0));
+            } else if (e.key === "Enter") {
+              e.preventDefault();
+              if (results[highlight]) pick(results[highlight]);
+            }
           }}
           placeholder="Type a country…"
           className="flex-1 bg-transparent outline-none placeholder:text-zinc-700"
@@ -252,12 +326,18 @@ function CountryPicker({ value, onChange }: { value: Country | null; onChange: (
               <button
                 onClick={() => pick(c)}
                 onMouseEnter={() => setHighlight(i)}
-                className={"flex w-full items-center gap-3 px-4 py-2 text-left text-sm transition-colors " +
-                  (i === highlight ? "bg-emerald-500/15 text-white" : "text-zinc-300 hover:bg-zinc-900")}
+                className={
+                  "flex w-full items-center gap-3 px-4 py-2 text-left text-sm transition-colors " +
+                  (i === highlight
+                    ? "bg-emerald-500/15 text-white"
+                    : "text-zinc-300 hover:bg-zinc-900")
+                }
               >
                 <span className="text-lg">{c.flag}</span>
                 <span>{c.name}</span>
-                <span className="ml-auto text-[10px] uppercase tracking-widest text-zinc-500">{c.iso}</span>
+                <span className="ml-auto text-[10px] uppercase tracking-widest text-zinc-500">
+                  {c.iso}
+                </span>
               </button>
             </li>
           ))}
@@ -272,7 +352,11 @@ function WorldMap({ country }: { country: Country | null }) {
   const hlPath = country ? COUNTRY_PATHS[country.iso] : null;
   return (
     <div className="relative self-start overflow-hidden rounded-2xl border border-zinc-800 bg-gradient-to-br from-zinc-900 via-zinc-950 to-black p-4 shadow-2xl lg:sticky lg:top-8">
-      <svg viewBox={WORLD_VIEWBOX} preserveAspectRatio="xMidYMid meet" className="block h-auto w-full">
+      <svg
+        viewBox={WORLD_VIEWBOX}
+        preserveAspectRatio="xMidYMid meet"
+        className="block h-auto w-full"
+      >
         {/* Ocean glow */}
         <defs>
           <radialGradient id="ocean" cx="50%" cy="50%" r="65%">
@@ -310,7 +394,8 @@ function WorldMap({ country }: { country: Country | null }) {
           <>
             <motion.circle
               key={"glow-" + country?.iso}
-              cx={pin.x} cy={pin.y}
+              cx={pin.x}
+              cy={pin.y}
               r={18}
               fill="rgb(52 211 153)"
               opacity={0.35}
@@ -321,7 +406,8 @@ function WorldMap({ country }: { country: Country | null }) {
             />
             <motion.circle
               key={"pin-" + country?.iso}
-              cx={pin.x} cy={pin.y}
+              cx={pin.x}
+              cy={pin.y}
               r={5}
               fill="rgb(255 255 255)"
               stroke="rgb(16 185 129)"

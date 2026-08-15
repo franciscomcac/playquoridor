@@ -24,9 +24,14 @@ export const Route = createFileRoute("/api/clip/sign")({
         const cl = request.headers.get("content-length");
         if (cl && Number(cl) > 64 * 1024) return json({ error: "Payload too large" }, 413);
         let body: unknown;
-        try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
+        try {
+          body = await request.json();
+        } catch {
+          return json({ error: "Invalid JSON" }, 400);
+        }
         const parsed = CLIP_REQUEST.safeParse(body);
-        if (!parsed.success) return json({ error: "Invalid payload", detail: parsed.error.issues.slice(0, 3) }, 400);
+        if (!parsed.success)
+          return json({ error: "Invalid payload", detail: parsed.error.issues.slice(0, 3) }, 400);
 
         const totalMoves = parsed.data.snapshot.rounds.reduce((s, r) => s + r.moves.length, 0);
         if (totalMoves > 400) return json({ error: "Too many moves" }, 400);

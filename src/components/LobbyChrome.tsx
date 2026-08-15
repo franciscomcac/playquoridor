@@ -12,13 +12,7 @@ const FONT_LINKS = (
   </>
 );
 
-export function LobbyChrome({
-  children,
-  online,
-}: {
-  children: React.ReactNode;
-  online?: number;
-}) {
+export function LobbyChrome({ children, online }: { children: React.ReactNode; online?: number }) {
   const [driftOnline, setDriftOnline] = useState<number>(online ?? 179);
   useEffect(() => {
     if (online != null) return;
@@ -36,7 +30,13 @@ export function LobbyChrome({
       <header className="h-[68px] border-b border-[#1a1a1f]">
         <div className="mx-auto grid h-full max-w-[1600px] grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 sm:px-8">
           <Link to="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
-            <img src="/favicon.svg" alt="playquoridor.online logo" width={36} height={36} className="h-9 w-9 shrink-0" />
+            <img
+              src="/favicon.svg"
+              alt="playquoridor.online logo"
+              width={36}
+              height={36}
+              className="h-9 w-9 shrink-0"
+            />
             <span className="truncate text-[14px] font-bold sm:text-[15px]">
               playquoridor<span className="text-[#5c5c66]">.online</span>
             </span>
@@ -59,14 +59,33 @@ export function LobbyChrome({
             © {new Date().getFullYear()} playquoridor.online
           </span>
           <nav className="-mx-2 flex flex-wrap gap-x-4 gap-y-1 text-[12px] sm:gap-x-5">
-            <Link to="/about" className="px-2 py-2 text-[#5c5c66] hover:text-[#a7a7b2]">About</Link>
-            <Link to="/blog" className="px-2 py-2 text-[#5c5c66] hover:text-[#a7a7b2]">Blog</Link>
-            <Link to="/forum" className="px-2 py-2 text-[#5c5c66] hover:text-[#a7a7b2]">Forum</Link>
-            <Link to="/stats" className="px-2 py-2 text-[#5c5c66] hover:text-[#a7a7b2]">Leaderboard</Link>
-            <Link to="/puzzle" className="px-2 py-2 text-[#5c5c66] hover:text-[#a7a7b2]">Puzzles</Link>
-            <a href="mailto:hi@playquoridor.online" className="px-2 py-2 text-[#5c5c66] hover:text-[#a7a7b2]">Contact</a>
-            <Link to="/terms" className="px-2 py-2 text-[#5c5c66] hover:text-[#a7a7b2]">Terms</Link>
-            <Link to="/privacy" className="px-2 py-2 text-[#5c5c66] hover:text-[#a7a7b2]">Privacy</Link>
+            <Link to="/about" className="px-2 py-2 text-[#5c5c66] hover:text-[#a7a7b2]">
+              About
+            </Link>
+            <Link to="/blog" className="px-2 py-2 text-[#5c5c66] hover:text-[#a7a7b2]">
+              Blog
+            </Link>
+            <Link to="/forum" className="px-2 py-2 text-[#5c5c66] hover:text-[#a7a7b2]">
+              Forum
+            </Link>
+            <Link to="/stats" className="px-2 py-2 text-[#5c5c66] hover:text-[#a7a7b2]">
+              Leaderboard
+            </Link>
+            <Link to="/puzzle" className="px-2 py-2 text-[#5c5c66] hover:text-[#a7a7b2]">
+              Puzzles
+            </Link>
+            <a
+              href="mailto:hi@playquoridor.online"
+              className="px-2 py-2 text-[#5c5c66] hover:text-[#a7a7b2]"
+            >
+              Contact
+            </a>
+            <Link to="/terms" className="px-2 py-2 text-[#5c5c66] hover:text-[#a7a7b2]">
+              Terms
+            </Link>
+            <Link to="/privacy" className="px-2 py-2 text-[#5c5c66] hover:text-[#a7a7b2]">
+              Privacy
+            </Link>
           </nav>
         </div>
       </footer>

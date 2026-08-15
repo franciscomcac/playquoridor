@@ -23,9 +23,11 @@ export async function isOnboarded(): Promise<boolean> {
   }
 }
 
-export async function fetchMyProfile(): Promise<
-  { username: string; country: string | null; playerId: string } | null
-> {
+export async function fetchMyProfile(): Promise<{
+  username: string;
+  country: string | null;
+  playerId: string;
+} | null> {
   const { data: userData } = await supabase.auth.getUser();
   const u = userData.user;
   if (!u) return null;

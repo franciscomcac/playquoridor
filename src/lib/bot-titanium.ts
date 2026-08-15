@@ -7,10 +7,20 @@
 // prefers pawn steps toward goal and walls near the opponent, which makes
 // alpha-beta prune aggressively.
 import {
-  BOARD, canPlaceWall, goalsFor, isBlocked, legalPawnMoves,
-  reachedGoal, shortestPathToGoal,
-  type GameState, type Move, type Orient, type PlayerId,
-  type Pos, type Wall, type WallSpec,
+  BOARD,
+  canPlaceWall,
+  goalsFor,
+  isBlocked,
+  legalPawnMoves,
+  reachedGoal,
+  shortestPathToGoal,
+  type GameState,
+  type Move,
+  type Orient,
+  type PlayerId,
+  type Pos,
+  type Wall,
+  type WallSpec,
 } from "./quoridor";
 
 type MoveGen = { move: Move; sortKey: number };
@@ -50,8 +60,9 @@ function applyMoveFast(state: GameState, mover: PlayerId, move: Move): GameState
     );
     const winner = reachedGoal(move.to, goals[mover]) ? mover : null;
     return {
-      ...state, pawns,
-      turn: (winner !== null ? mover : ((mover + 1) % state.mode)) as PlayerId,
+      ...state,
+      pawns,
+      turn: (winner !== null ? mover : (mover + 1) % state.mode) as PlayerId,
       winner,
     };
   }
@@ -62,12 +73,18 @@ function applyMoveFast(state: GameState, mover: PlayerId, move: Move): GameState
   return {
     ...state,
     walls: [...state.walls, placed],
-    wallsLeft, lastWall: placed,
+    wallsLeft,
+    lastWall: placed,
     turn: ((mover + 1) % state.mode) as PlayerId,
   };
 }
 
-function generateMoves(state: GameState, mover: PlayerId, opp: PlayerId, wallBudget: number): MoveGen[] {
+function generateMoves(
+  state: GameState,
+  mover: PlayerId,
+  opp: PlayerId,
+  wallBudget: number,
+): MoveGen[] {
   const out: MoveGen[] = [];
   const goals = goalsFor(state.mode);
   const myGoal = goals[mover];
@@ -148,7 +165,13 @@ export function pickTitaniumMove(
   let bestMove: Move = rootMoves[0].move;
   let bestScore = -INF;
 
-  const search = (s: GameState, mover: PlayerId, depth: number, alpha: number, beta: number): number => {
+  const search = (
+    s: GameState,
+    mover: PlayerId,
+    depth: number,
+    alpha: number,
+    beta: number,
+  ): number => {
     if (Date.now() > deadline) throw new Error("timeout");
     if (s.winner !== null) return s.winner === me ? INF / 2 : -INF / 2;
     if (depth === 0) return evalState(s, me);
@@ -164,10 +187,14 @@ export function pickTitaniumMove(
       if (!ns) continue;
       const v = search(ns, ((mover + 1) % 2) as PlayerId, depth - 1, alpha, beta);
       if (isMax) {
-        if (v > value) { value = v; }
+        if (v > value) {
+          value = v;
+        }
         if (value > alpha) alpha = value;
       } else {
-        if (v < value) { value = v; }
+        if (v < value) {
+          value = v;
+        }
         if (value < beta) beta = value;
       }
       if (alpha >= beta) break;
@@ -178,14 +205,18 @@ export function pickTitaniumMove(
   // Iterative deepening — best move so far is preserved across depths.
   try {
     for (let depth = 1; depth <= maxDepth; depth++) {
-      let alpha = -INF, beta = INF;
+      let alpha = -INF,
+        beta = INF;
       let localBest = rootMoves[0].move;
       let localBestScore = -INF;
       for (const m of rootMoves) {
         const ns = applyMoveFast(state, me, m.move);
         if (!ns) continue;
         const v = search(ns, opp, depth - 1, alpha, beta);
-        if (v > localBestScore) { localBestScore = v; localBest = m.move; }
+        if (v > localBestScore) {
+          localBestScore = v;
+          localBest = m.move;
+        }
         if (localBestScore > alpha) alpha = localBestScore;
       }
       bestMove = localBest;

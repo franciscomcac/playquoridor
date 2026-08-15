@@ -16,8 +16,8 @@ export type MoveRecord = { move: Move; by: PlayerId };
 export type GameState = {
   mode: Mode;
   pawns: Pos[];
-  active: boolean[];              // active this round
-  leftMatch: boolean[];           // permanently out for the rest of the match
+  active: boolean[]; // active this round
+  leftMatch: boolean[]; // permanently out for the rest of the match
   wallsLeft: number[];
   walls: Wall[];
   lastWall: Wall | null;
@@ -48,19 +48,36 @@ export const BOARD = 9;
 // Fallback names when a display name is missing.
 export const PLAYER_NAMES = ["Gold", "Slate", "Crimson", "Jade"];
 
-const STARTS_2: Pos[] = [[8, 4], [0, 4]];
-const STARTS_4: Pos[] = [[8, 4], [0, 4], [4, 0], [4, 8]];
-const GOALS_2: Goal[] = [{ kind: "row", value: 0 }, { kind: "row", value: 8 }];
+const STARTS_2: Pos[] = [
+  [8, 4],
+  [0, 4],
+];
+const STARTS_4: Pos[] = [
+  [8, 4],
+  [0, 4],
+  [4, 0],
+  [4, 8],
+];
+const GOALS_2: Goal[] = [
+  { kind: "row", value: 0 },
+  { kind: "row", value: 8 },
+];
 const GOALS_4: Goal[] = [
-  { kind: "row", value: 0 }, { kind: "row", value: 8 },
-  { kind: "col", value: 8 }, { kind: "col", value: 0 },
+  { kind: "row", value: 0 },
+  { kind: "row", value: 8 },
+  { kind: "col", value: 8 },
+  { kind: "col", value: 0 },
 ];
 
 export function startsFor(mode: Mode): Pos[] {
   return (mode === 2 ? STARTS_2 : STARTS_4).map((p) => [p[0], p[1]] as Pos);
 }
-export function goalsFor(mode: Mode): Goal[] { return mode === 2 ? GOALS_2 : GOALS_4; }
-export function defaultWallsFor(mode: Mode): number { return mode === 2 ? 10 : 5; }
+export function goalsFor(mode: Mode): Goal[] {
+  return mode === 2 ? GOALS_2 : GOALS_4;
+}
+export function defaultWallsFor(mode: Mode): number {
+  return mode === 2 ? 10 : 5;
+}
 // 4-player matches end as soon as someone banks 2 round wins (short and
 // snappy with 4 players in the pool). 2-player matches use best-of.
 export function winsNeeded(totalRounds: number, mode: Mode = 2): number {
@@ -68,16 +85,25 @@ export function winsNeeded(totalRounds: number, mode: Mode = 2): number {
   return Math.floor(totalRounds / 2) + 1;
 }
 
-export function initialState(mode: Mode = 2, totalWalls = defaultWallsFor(mode), totalRounds = 5): GameState {
+export function initialState(
+  mode: Mode = 2,
+  totalWalls = defaultWallsFor(mode),
+  totalRounds = 5,
+): GameState {
   return {
     mode,
     pawns: startsFor(mode),
     active: Array.from({ length: mode }, () => true),
     leftMatch: Array.from({ length: mode }, () => false),
     wallsLeft: Array.from({ length: mode }, () => totalWalls),
-    walls: [], lastWall: null, turn: 0, winner: null,
-    totalWalls, score: Array.from({ length: mode }, () => 0),
-    totalRounds, matchWinner: null,
+    walls: [],
+    lastWall: null,
+    turn: 0,
+    winner: null,
+    totalWalls,
+    score: Array.from({ length: mode }, () => 0),
+    totalRounds,
+    matchWinner: null,
     wallsPlacedByPlayer: Array.from({ length: mode }, () => 0),
     pawnsEliminatedByPlayer: Array.from({ length: mode }, () => 0),
     moveCount: 0,
@@ -99,20 +125,34 @@ export function newRound(state: GameState, starter: PlayerId): GameState {
     pawns: startsFor(state.mode),
     active,
     wallsLeft: state.wallsLeft.map((_, i) => (active[i] ? state.totalWalls : 0)),
-    walls: [], lastWall: null, turn: s, winner: null,
-    endReason: undefined, endLoser: undefined, moveCount: 0, moves: [],
+    walls: [],
+    lastWall: null,
+    turn: s,
+    winner: null,
+    endReason: undefined,
+    endLoser: undefined,
+    moveCount: 0,
+    moves: [],
   };
 }
 
-function inBounds(r: number, c: number) { return r >= 0 && r < BOARD && c >= 0 && c < BOARD; }
+function inBounds(r: number, c: number) {
+  return r >= 0 && r < BOARD && c >= 0 && c < BOARD;
+}
 
 export function isBlocked(r: number, c: number, r2: number, c2: number, walls: Wall[]): boolean {
-  const dr = r2 - r, dc = c2 - c;
+  const dr = r2 - r,
+    dc = c2 - c;
   for (const w of walls) {
-    if (dr === 0 && dc === 1) { if (w.o === "v" && w.c === c && (w.r === r || w.r === r - 1)) return true; }
-    else if (dr === 0 && dc === -1) { if (w.o === "v" && w.c === c - 1 && (w.r === r || w.r === r - 1)) return true; }
-    else if (dr === 1 && dc === 0) { if (w.o === "h" && w.r === r && (w.c === c || w.c === c - 1)) return true; }
-    else if (dr === -1 && dc === 0) { if (w.o === "h" && w.r === r - 1 && (w.c === c || w.c === c - 1)) return true; }
+    if (dr === 0 && dc === 1) {
+      if (w.o === "v" && w.c === c && (w.r === r || w.r === r - 1)) return true;
+    } else if (dr === 0 && dc === -1) {
+      if (w.o === "v" && w.c === c - 1 && (w.r === r || w.r === r - 1)) return true;
+    } else if (dr === 1 && dc === 0) {
+      if (w.o === "h" && w.r === r && (w.c === c || w.c === c - 1)) return true;
+    } else if (dr === -1 && dc === 0) {
+      if (w.o === "h" && w.r === r - 1 && (w.c === c || w.c === c - 1)) return true;
+    }
   }
   return false;
 }
@@ -120,7 +160,12 @@ export function isBlocked(r: number, c: number, r2: number, c2: number, walls: W
 export function legalPawnMoves(state: GameState, player: PlayerId): Pos[] {
   if (!state.active[player]) return [];
   const [r, c] = state.pawns[player];
-  const dirs: Array<[number, number]> = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+  const dirs: Array<[number, number]> = [
+    [-1, 0],
+    [1, 0],
+    [0, -1],
+    [0, 1],
+  ];
   const results: Pos[] = [];
   const pushUnique = (p: Pos) => {
     if (!results.some(([a, b]) => a === p[0] && b === p[1])) results.push(p);
@@ -133,7 +178,8 @@ export function legalPawnMoves(state: GameState, player: PlayerId): Pos[] {
     return -1;
   };
   for (const [dr, dc] of dirs) {
-    const nr = r + dr, nc = c + dc;
+    const nr = r + dr,
+      nc = c + dc;
     if (!inBounds(nr, nc)) continue;
     if (isBlocked(r, c, nr, nc, state.walls)) continue;
     const occ = occupantAt(nr, nc);
@@ -143,7 +189,8 @@ export function legalPawnMoves(state: GameState, player: PlayerId): Pos[] {
     }
     if (occ === player) continue;
     // Adjacent opponent — try to jump straight over.
-    const jr = nr + dr, jc = nc + dc;
+    const jr = nr + dr,
+      jc = nc + dc;
     const jumpInBounds = inBounds(jr, jc);
     const jumpWallClear = jumpInBounds && !isBlocked(nr, nc, jr, jc, state.walls);
     const jumpTargetFree = jumpInBounds && occupantAt(jr, jc) === -1;
@@ -153,9 +200,19 @@ export function legalPawnMoves(state: GameState, player: PlayerId): Pos[] {
     }
     // Straight jump blocked (edge, wall behind, or another pawn) — allow diagonals
     // to the squares perpendicular to the jump direction, from the opponent's square.
-    const perps: Array<[number, number]> = dr === 0 ? [[-1, 0], [1, 0]] : [[0, -1], [0, 1]];
+    const perps: Array<[number, number]> =
+      dr === 0
+        ? [
+            [-1, 0],
+            [1, 0],
+          ]
+        : [
+            [0, -1],
+            [0, 1],
+          ];
     for (const [pdr, pdc] of perps) {
-      const dr2 = nr + pdr, dc2 = nc + pdc;
+      const dr2 = nr + pdr,
+        dc2 = nc + pdc;
       if (!inBounds(dr2, dc2)) continue;
       if (isBlocked(nr, nc, dr2, dc2, state.walls)) continue;
       if (occupantAt(dr2, dc2) !== -1) continue;
@@ -172,23 +229,28 @@ export function reachedGoal(pos: Pos, goal: Goal): boolean {
 // Best neighbour step toward `goal` under `walls` — returns undefined if
 // no legal neighbour reduces the shortest-path distance. Used by bots and
 // by fog-of-walls opponent inference to advance a stale last-seen pawn.
-export function stepTowardGoal(
-  from: Pos,
-  goal: Goal,
-  walls: Wall[],
-): Pos | undefined {
+export function stepTowardGoal(from: Pos, goal: Goal, walls: Wall[]): Pos | undefined {
   if (reachedGoal(from, goal)) return from;
   const baseD = shortestPathToGoal(from, goal, walls);
   if (!isFinite(baseD)) return undefined;
-  const dirs: Array<[number, number]> = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+  const dirs: Array<[number, number]> = [
+    [-1, 0],
+    [1, 0],
+    [0, -1],
+    [0, 1],
+  ];
   let best: Pos | undefined;
   let bestD = baseD;
   for (const [dr, dc] of dirs) {
-    const nr = from[0] + dr, nc = from[1] + dc;
+    const nr = from[0] + dr,
+      nc = from[1] + dc;
     if (nr < 0 || nr >= BOARD || nc < 0 || nc >= BOARD) continue;
     if (isBlocked(from[0], from[1], nr, nc, walls)) continue;
     const d = shortestPathToGoal([nr, nc], goal, walls);
-    if (d < bestD) { bestD = d; best = [nr, nc]; }
+    if (d < bestD) {
+      bestD = d;
+      best = [nr, nc];
+    }
   }
   return best;
 }
@@ -200,11 +262,17 @@ export function shortestPathToGoal(from: Pos, goal: Goal, walls: Wall[]): number
   const seen = new Set<string>();
   const q: Array<[Pos, number]> = [[from, 0]];
   seen.add(`${from[0]},${from[1]}`);
-  const dirs: Array<[number, number]> = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+  const dirs: Array<[number, number]> = [
+    [-1, 0],
+    [1, 0],
+    [0, -1],
+    [0, 1],
+  ];
   while (q.length) {
     const [[r, c], d] = q.shift()!;
     for (const [dr, dc] of dirs) {
-      const nr = r + dr, nc = c + dc;
+      const nr = r + dr,
+        nc = c + dc;
       if (nr < 0 || nr >= BOARD || nc < 0 || nc >= BOARD) continue;
       const k = `${nr},${nc}`;
       if (seen.has(k)) continue;
@@ -220,12 +288,19 @@ export function shortestPathToGoal(from: Pos, goal: Goal, walls: Wall[]): number
 function hasPathToGoal(from: Pos, goal: Goal, walls: Wall[]): boolean {
   if (reachedGoal(from, goal)) return true;
   const seen = new Set<string>();
-  const q: Pos[] = [from]; seen.add(`${from[0]},${from[1]}`);
-  const dirs: Array<[number, number]> = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+  const q: Pos[] = [from];
+  seen.add(`${from[0]},${from[1]}`);
+  const dirs: Array<[number, number]> = [
+    [-1, 0],
+    [1, 0],
+    [0, -1],
+    [0, 1],
+  ];
   while (q.length) {
     const [r, c] = q.shift()!;
     for (const [dr, dc] of dirs) {
-      const nr = r + dr, nc = c + dc;
+      const nr = r + dr,
+        nc = c + dc;
       if (!inBounds(nr, nc)) continue;
       const k = `${nr},${nc}`;
       if (seen.has(k)) continue;
@@ -283,7 +358,10 @@ export function applyMove(state: GameState, player: PlayerId, move: Move): GameS
     const goals = goalsFor(state.mode);
     const active = [...state.active];
     let winner: PlayerId | null = null;
-    if (reachedGoal(move.to, goals[player])) { winner = player; active[player] = false; }
+    if (reachedGoal(move.to, goals[player])) {
+      winner = player;
+      active[player] = false;
+    }
     let score = state.score;
     let matchWinner = state.matchWinner;
     if (winner !== null) {
@@ -291,26 +369,44 @@ export function applyMove(state: GameState, player: PlayerId, move: Move): GameS
       score[winner] += 1;
       if (score[winner] >= winsNeeded(state.totalRounds, state.mode)) matchWinner = winner;
     }
-    return { ...state, pawns, active,
+    return {
+      ...state,
+      pawns,
+      active,
       turn: winner !== null ? player : nextTurn(state.mode, active, player),
-      winner, score, matchWinner, moveCount: (state.moveCount ?? 0) + 1,
-      moves: [...(state.moves ?? []), { move, by: player }] };
+      winner,
+      score,
+      matchWinner,
+      moveCount: (state.moveCount ?? 0) + 1,
+      moves: [...(state.moves ?? []), { move, by: player }],
+    };
   } else {
     if (!canPlaceWall(state, player, move.wall)) return null;
     const placed: Wall = { ...move.wall, by: player };
-    const wallsLeft = [...state.wallsLeft]; wallsLeft[player] -= 1;
+    const wallsLeft = [...state.wallsLeft];
+    wallsLeft[player] -= 1;
     const wallsPlacedByPlayer = [...state.wallsPlacedByPlayer];
     wallsPlacedByPlayer[player] = (wallsPlacedByPlayer[player] ?? 0) + 1;
-    return { ...state, walls: [...state.walls, placed], wallsLeft, lastWall: placed,
-      turn: nextTurn(state.mode, state.active, player), wallsPlacedByPlayer,
+    return {
+      ...state,
+      walls: [...state.walls, placed],
+      wallsLeft,
+      lastWall: placed,
+      turn: nextTurn(state.mode, state.active, player),
+      wallsPlacedByPlayer,
       moveCount: (state.moveCount ?? 0) + 1,
-      moves: [...(state.moves ?? []), { move, by: player }] };
+      moves: [...(state.moves ?? []), { move, by: player }],
+    };
   }
 }
 
 // Forfeit the current round. Optional `permanent` also marks the player out of
 // the whole match (leaver / AFK timeout).
-export function applyForfeit(state: GameState, player: PlayerId, permanent = false): GameState | null {
+export function applyForfeit(
+  state: GameState,
+  player: PlayerId,
+  permanent = false,
+): GameState | null {
   if (state.matchWinner !== null) return null;
   if (!state.active[player] && !permanent) return null;
   const active = [...state.active];
@@ -323,7 +419,8 @@ export function applyForfeit(state: GameState, player: PlayerId, permanent = fal
     pawnsEliminatedByPlayer[credit] = (pawnsEliminatedByPlayer[credit] ?? 0) + 1;
   }
   if (permanent) leftMatch[player] = true;
-  const remaining = active.map((v, i) => (v && !leftMatch[i] ? (i as PlayerId) : -1))
+  const remaining = active
+    .map((v, i) => (v && !leftMatch[i] ? (i as PlayerId) : -1))
     .filter((i): i is PlayerId => i >= 0);
   let winner: PlayerId | null = state.winner;
   let score = state.score;
@@ -332,7 +429,8 @@ export function applyForfeit(state: GameState, player: PlayerId, permanent = fal
   if (state.winner === null) {
     if (remaining.length === 1) {
       winner = remaining[0];
-      score = [...state.score]; score[winner] += 1;
+      score = [...state.score];
+      score[winner] += 1;
       if (score[winner] >= winsNeeded(state.totalRounds, state.mode)) matchWinner = winner;
       turn = winner;
     } else if (remaining.length === 0) {
@@ -343,7 +441,8 @@ export function applyForfeit(state: GameState, player: PlayerId, permanent = fal
     }
   }
   // Also: if leaver leaves only one player left in the match overall → match win.
-  const matchRemaining = leftMatch.map((l, i) => (!l ? (i as PlayerId) : -1))
+  const matchRemaining = leftMatch
+    .map((l, i) => (!l ? (i as PlayerId) : -1))
     .filter((i): i is PlayerId => i >= 0);
   if (permanent && matchWinner === null && matchRemaining.length === 1) {
     matchWinner = matchRemaining[0];

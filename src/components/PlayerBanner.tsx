@@ -10,16 +10,16 @@ import type { BannerData } from "@/lib/stats";
 import { fetchAchievementMeta, fetchBannerDataMany } from "@/lib/stats";
 
 type Props = {
-  slot: number;                 // 0..3 (drives seat number + color)
-  color: string;                // PLAYER_COLORS[slot]
+  slot: number; // 0..3 (drives seat number + color)
+  color: string; // PLAYER_COLORS[slot]
   name: string;
   isYou: boolean;
   isTurn: boolean;
   wallsLeft: number;
-  totalWalls?: number;          // default 10
-  playerId?: string | null;     // for looking up country/ELO/showcased
+  totalWalls?: number; // default 10
+  playerId?: string | null; // for looking up country/ELO/showcased
   align?: "top" | "bottom";
-  clock?: React.ReactNode;      // merged monospace clock on the trailing edge
+  clock?: React.ReactNode; // merged monospace clock on the trailing edge
 };
 
 const COUNTRY_MAP: Map<string, { flag: string; name: string }> = (() => {
@@ -28,15 +28,31 @@ const COUNTRY_MAP: Map<string, { flag: string; name: string }> = (() => {
   return m;
 })();
 
-export function PlayerBanner({ slot, color, name, isYou, isTurn, wallsLeft, totalWalls = 10, playerId, align = "bottom", clock }: Props) {
+export function PlayerBanner({
+  slot,
+  color,
+  name,
+  isYou,
+  isTurn,
+  wallsLeft,
+  totalWalls = 10,
+  playerId,
+  align = "bottom",
+  clock,
+}: Props) {
   const [banner, setBanner] = useState<BannerData | null>(null);
   useEffect(() => {
-    if (!playerId) { setBanner(null); return; }
+    if (!playerId) {
+      setBanner(null);
+      return;
+    }
     let cancel = false;
     void fetchBannerDataMany([playerId]).then((m) => {
       if (!cancel) setBanner(m.get(playerId) ?? null);
     });
-    return () => { cancel = true; };
+    return () => {
+      cancel = true;
+    };
   }, [playerId]);
 
   const country = banner?.country ? COUNTRY_MAP.get(banner.country.toUpperCase()) : null;
@@ -44,14 +60,26 @@ export function PlayerBanner({ slot, color, name, isYou, isTurn, wallsLeft, tota
   const showcased = banner?.showcased ?? [];
 
   // Fetch metadata for the showcased slugs so we can render the correct sigils.
-  const [sigilMeta, setSigilMeta] = useState<Map<string, { sigil_key: string; tier: string }>>(new Map());
+  const [sigilMeta, setSigilMeta] = useState<Map<string, { sigil_key: string; tier: string }>>(
+    new Map(),
+  );
   useEffect(() => {
-    if (showcased.length === 0) { setSigilMeta(new Map()); return; }
+    if (showcased.length === 0) {
+      setSigilMeta(new Map());
+      return;
+    }
     let cancel = false;
     void fetchAchievementMeta(showcased).then((m) => {
-      if (!cancel) setSigilMeta(new Map(Array.from(m.entries()).map(([k, v]) => [k, { sigil_key: v.sigil_key, tier: v.tier }])));
+      if (!cancel)
+        setSigilMeta(
+          new Map(
+            Array.from(m.entries()).map(([k, v]) => [k, { sigil_key: v.sigil_key, tier: v.tier }]),
+          ),
+        );
     });
-    return () => { cancel = true; };
+    return () => {
+      cancel = true;
+    };
   }, [showcased.join(",")]);
 
   const shown = Math.min(wallsLeft, totalWalls);
@@ -71,7 +99,9 @@ export function PlayerBanner({ slot, color, name, isYou, isTurn, wallsLeft, tota
         background: isTurn
           ? `color-mix(in oklab, ${color} 10%, var(--card))`
           : "color-mix(in oklab, var(--card) 94%, black 6%)",
-        boxShadow: isTurn ? `0 0 0 1px ${color}, 0 4px 22px -8px ${color}` : "0 2px 10px rgba(0,0,0,0.25)",
+        boxShadow: isTurn
+          ? `0 0 0 1px ${color}, 0 4px 22px -8px ${color}`
+          : "0 2px 10px rgba(0,0,0,0.25)",
         transition: "background .25s ease, border-color .25s ease, box-shadow .25s ease",
       }}
     >
@@ -92,17 +122,30 @@ export function PlayerBanner({ slot, color, name, isYou, isTurn, wallsLeft, tota
       {/* Name / country / ELO / showcased */}
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <div className="flex min-w-0 items-center gap-1.5">
-          <span className="grid h-4 w-4 flex-none place-items-center rounded-full text-[9px] font-bold" style={{ background: color, color: "oklch(0.15 0.02 55)" }}>
+          <span
+            className="grid h-4 w-4 flex-none place-items-center rounded-full text-[9px] font-bold"
+            style={{ background: color, color: "oklch(0.15 0.02 55)" }}
+          >
             {slot + 1}
           </span>
           <span className="truncate text-[12px] font-extrabold text-foreground sm:text-[13px]">
-            {name}{isYou && <span className="ml-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">you</span>}
+            {name}
+            {isYou && (
+              <span className="ml-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                you
+              </span>
+            )}
           </span>
         </div>
         <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[10px] text-muted-foreground">
           {country && (
-            <span title={country.name} className="inline-flex items-center gap-1 rounded-full border border-white/5 bg-white/5 px-1 py-0 font-semibold uppercase tracking-[0.14em]">
-              <span aria-hidden className="text-[11px] leading-none">{country.flag}</span>
+            <span
+              title={country.name}
+              className="inline-flex items-center gap-1 rounded-full border border-white/5 bg-white/5 px-1 py-0 font-semibold uppercase tracking-[0.14em]"
+            >
+              <span aria-hidden className="text-[11px] leading-none">
+                {country.flag}
+              </span>
               <span>{banner?.country?.toUpperCase()}</span>
             </span>
           )}
@@ -126,7 +169,12 @@ export function PlayerBanner({ slot, color, name, isYou, isTurn, wallsLeft, tota
                 );
               }
               if (!meta) {
-                return <span key={slug} className="h-4 w-4 rounded-full border border-dashed border-white/10" />;
+                return (
+                  <span
+                    key={slug}
+                    className="h-4 w-4 rounded-full border border-dashed border-white/10"
+                  />
+                );
               }
               return (
                 <ConstellationSigil
@@ -148,11 +196,17 @@ export function PlayerBanner({ slot, color, name, isYou, isTurn, wallsLeft, tota
             <span
               key={i}
               className="block h-4 w-[5px] rounded-sm sm:h-5 sm:w-1.5"
-              style={{ background: i < shown ? color : "var(--border)", opacity: i < shown ? 1 : 0.5 }}
+              style={{
+                background: i < shown ? color : "var(--border)",
+                opacity: i < shown ? 1 : 0.5,
+              }}
             />
           ))}
         </div>
-        <span className="ml-0.5 hidden font-mono text-xs font-bold tabular-nums sm:inline" style={{ color }}>
+        <span
+          className="ml-0.5 hidden font-mono text-xs font-bold tabular-nums sm:inline"
+          style={{ color }}
+        >
           {wallsLeft}
         </span>
       </div>

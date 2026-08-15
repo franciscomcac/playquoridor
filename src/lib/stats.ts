@@ -11,7 +11,8 @@ function openRoomCutoffIso(): string {
 }
 
 // Public-safe column list: never selects auth_user_id (account linkage).
-const STATS_COLS = "player_id,matches,wins,losses,pawns_eliminated,walls_placed,forfeits,updated_at,rating,ranked_matches,ranked_wins,ranked_losses";
+const STATS_COLS =
+  "player_id,matches,wins,losses,pawns_eliminated,walls_placed,forfeits,updated_at,rating,ranked_matches,ranked_wins,ranked_losses";
 
 export type MatchResult = {
   mode: 2 | 4;
@@ -46,7 +47,7 @@ export type BannerData = {
   playerId: string;
   country: string | null;
   rating: number | null;
-  showcased: string[];        // slug list, up to 3
+  showcased: string[]; // slug list, up to 3
   avatarColor: string | null;
   avatarUrl: string | null;
 };
@@ -57,7 +58,10 @@ export async function fetchBannerDataMany(playerIds: string[]): Promise<Map<stri
   const ids = playerIds.filter((x): x is string => !!x);
   if (ids.length === 0) return out;
   const [{ data: players }, { data: stats }] = await Promise.all([
-    supabase.from("players").select("id,country,avatar_color,avatar_url,showcased_achievements").in("id", ids),
+    supabase
+      .from("players")
+      .select("id,country,avatar_color,avatar_url,showcased_achievements")
+      .in("id", ids),
     supabase.from("player_stats").select("player_id,rating").in("player_id", ids),
   ]);
   const sById = new Map<string, { rating?: number }>();
@@ -67,8 +71,12 @@ export async function fetchBannerDataMany(playerIds: string[]): Promise<Map<stri
   // Fallback showcased: for any player with an empty showcased list, pull
   // their 3 most-recently unlocked achievements so the banner never looks
   // empty when they haven't picked a showcase yet.
-  const needFallback = ((players ?? []) as Array<{ id: string; showcased_achievements: string[] | null }>)
-    .filter((p) => !Array.isArray(p.showcased_achievements) || p.showcased_achievements.length === 0)
+  const needFallback = (
+    (players ?? []) as Array<{ id: string; showcased_achievements: string[] | null }>
+  )
+    .filter(
+      (p) => !Array.isArray(p.showcased_achievements) || p.showcased_achievements.length === 0,
+    )
     .map((p) => p.id);
   const fallbackByPlayer = new Map<string, string[]>();
   if (needFallback.length) {
@@ -79,13 +87,23 @@ export async function fetchBannerDataMany(playerIds: string[]): Promise<Map<stri
       .order("unlocked_at", { ascending: false });
     for (const r of (unlocks ?? []) as Array<{ player_id: string; achievement_slug: string }>) {
       const arr = fallbackByPlayer.get(r.player_id) ?? [];
-      if (arr.length < 3) { arr.push(r.achievement_slug); fallbackByPlayer.set(r.player_id, arr); }
+      if (arr.length < 3) {
+        arr.push(r.achievement_slug);
+        fallbackByPlayer.set(r.player_id, arr);
+      }
     }
   }
-  for (const p of (players ?? []) as Array<{ id: string; country: string | null; avatar_color: string | null; avatar_url: string | null; showcased_achievements: string[] | null }>) {
-    const chosen = Array.isArray(p.showcased_achievements) && p.showcased_achievements.length > 0
-      ? p.showcased_achievements.slice(0, 3)
-      : (fallbackByPlayer.get(p.id) ?? []);
+  for (const p of (players ?? []) as Array<{
+    id: string;
+    country: string | null;
+    avatar_color: string | null;
+    avatar_url: string | null;
+    showcased_achievements: string[] | null;
+  }>) {
+    const chosen =
+      Array.isArray(p.showcased_achievements) && p.showcased_achievements.length > 0
+        ? p.showcased_achievements.slice(0, 3)
+        : (fallbackByPlayer.get(p.id) ?? []);
     out.set(p.id, {
       playerId: p.id,
       country: p.country ?? null,
@@ -99,12 +117,22 @@ export async function fetchBannerDataMany(playerIds: string[]): Promise<Map<stri
 }
 
 /** Fetch (slug, sigil_key, tier) for a set of achievement slugs. */
-export async function fetchAchievementMeta(slugs: string[]): Promise<Map<string, { sigil_key: string; tier: string; name: string }>> {
+export async function fetchAchievementMeta(
+  slugs: string[],
+): Promise<Map<string, { sigil_key: string; tier: string; name: string }>> {
   const out = new Map<string, { sigil_key: string; tier: string; name: string }>();
   const unique = Array.from(new Set(slugs.filter(Boolean)));
   if (unique.length === 0) return out;
-  const { data } = await supabase.from("achievements").select("slug,sigil_key,tier,name").in("slug", unique);
-  for (const r of (data ?? []) as Array<{ slug: string; sigil_key: string; tier: string; name: string }>) {
+  const { data } = await supabase
+    .from("achievements")
+    .select("slug,sigil_key,tier,name")
+    .in("slug", unique);
+  for (const r of (data ?? []) as Array<{
+    slug: string;
+    sigil_key: string;
+    tier: string;
+    name: string;
+  }>) {
     out.set(r.slug, { sigil_key: r.sigil_key, tier: r.tier, name: r.name });
   }
   return out;
@@ -117,24 +145,35 @@ export async function recordMatch(m: MatchResult): Promise<string | null> {
     const { data: match, error } = await supabase
       .from("matches")
       .insert({
-        mode: m.mode, rounds: m.rounds,
-        winner_player_id: m.winnerId, ranked: !!m.ranked,
+        mode: m.mode,
+        rounds: m.rounds,
+        winner_player_id: m.winnerId,
+        ranked: !!m.ranked,
         ...(m.snapshot ? { snapshot: m.snapshot as never } : {}),
       })
-      .select("id").single();
+      .select("id")
+      .single();
     if (error || !match) throw error;
     const rows = m.players.map((p) => ({
-      match_id: match.id, slot: p.slot, player_id: p.id, name: p.name,
+      match_id: match.id,
+      slot: p.slot,
+      player_id: p.id,
+      name: p.name,
       result: p.id && p.id === m.winnerId ? "win" : p.forfeited ? "forfeit" : "loss",
-      rounds_won: p.roundsWon, walls_placed: p.wallsPlaced,
-      pawns_eliminated: p.pawnsEliminated, forfeited: p.forfeited,
+      rounds_won: p.roundsWon,
+      walls_placed: p.wallsPlaced,
+      pawns_eliminated: p.pawnsEliminated,
+      forfeited: p.forfeited,
       // Only tag the caller's own row; bots and remote peers stay null so RLS
       // (auth_user_id IS NULL OR = auth.uid()) accepts the whole batch.
       auth_user_id: uid && p.id && p.id === myLocalId ? uid : null,
     }));
     await supabase.from("match_players").insert(rows);
     return match.id as string;
-  } catch (err) { console.warn("recordMatch failed", err); return null; }
+  } catch (err) {
+    console.warn("recordMatch failed", err);
+    return null;
+  }
 }
 
 /**
@@ -145,8 +184,10 @@ export async function recordMatch(m: MatchResult): Promise<string | null> {
  * null on failure.
  */
 export async function applyElo1v1(
-  winnerPlayerId: string, winnerName: string,
-  loserPlayerId: string, loserName: string,
+  winnerPlayerId: string,
+  winnerName: string,
+  loserPlayerId: string,
+  loserName: string,
 ): Promise<number | null> {
   try {
     await ensureAuthSession();
@@ -158,7 +199,10 @@ export async function applyElo1v1(
     });
     if (error) throw error;
     return typeof data === "number" ? data : null;
-  } catch (err) { console.warn("applyElo1v1 failed", err); return null; }
+  } catch (err) {
+    console.warn("applyElo1v1 failed", err);
+    return null;
+  }
 }
 
 /** Stamp a match row with the ELO delta transferred for that ranked game. */
@@ -166,17 +210,38 @@ export async function setMatchEloDelta(matchId: string, delta: number) {
   try {
     await ensureAuthSession();
     await supabase.from("matches").update({ elo_delta: delta }).eq("id", matchId);
-  } catch (err) { console.warn("setMatchEloDelta failed", err); }
+  } catch (err) {
+    console.warn("setMatchEloDelta failed", err);
+  }
 }
 
-export async function bumpMyStats(playerId: string, delta: Partial<{
-  matches: number; wins: number; losses: number;
-  walls_placed: number; pawns_eliminated: number; forfeits: number;
-}>) {
+export async function bumpMyStats(
+  playerId: string,
+  delta: Partial<{
+    matches: number;
+    wins: number;
+    losses: number;
+    walls_placed: number;
+    pawns_eliminated: number;
+    forfeits: number;
+  }>,
+) {
   try {
     const uid = await ensureAuthSession();
-    const { data: cur } = await supabase.from("player_stats").select(STATS_COLS).eq("player_id", playerId).maybeSingle();
-    const base = cur ?? { player_id: playerId, matches: 0, wins: 0, losses: 0, walls_placed: 0, pawns_eliminated: 0, forfeits: 0 };
+    const { data: cur } = await supabase
+      .from("player_stats")
+      .select(STATS_COLS)
+      .eq("player_id", playerId)
+      .maybeSingle();
+    const base = cur ?? {
+      player_id: playerId,
+      matches: 0,
+      wins: 0,
+      losses: 0,
+      walls_placed: 0,
+      pawns_eliminated: 0,
+      forfeits: 0,
+    };
     const next = {
       player_id: playerId,
       matches: base.matches + (delta.matches ?? 0),
@@ -189,11 +254,17 @@ export async function bumpMyStats(playerId: string, delta: Partial<{
       updated_at: new Date().toISOString(),
     };
     await supabase.from("player_stats").upsert(next);
-  } catch (err) { console.warn("bumpMyStats failed", err); }
+  } catch (err) {
+    console.warn("bumpMyStats failed", err);
+  }
 }
 
 export async function fetchMyStats(playerId: string) {
-  const { data } = await supabase.from("player_stats").select(STATS_COLS).eq("player_id", playerId).maybeSingle();
+  const { data } = await supabase
+    .from("player_stats")
+    .select(STATS_COLS)
+    .eq("player_id", playerId)
+    .maybeSingle();
   return data;
 }
 
@@ -240,40 +311,66 @@ export async function fetchLeaderboard(limit = 20, rankedOnly = true): Promise<L
     })
     .slice(0, limit)
     .map((s) => ({
-      id: s.player_id, name: meta.get(s.player_id)?.name ?? "Unknown",
+      id: s.player_id,
+      name: meta.get(s.player_id)?.name ?? "Unknown",
       rating: (s as { rating?: number }).rating ?? 1000,
-      wins: s.wins, matches: s.matches, losses: s.losses,
-      walls_placed: s.walls_placed, pawns_eliminated: s.pawns_eliminated,
+      wins: s.wins,
+      matches: s.matches,
+      losses: s.losses,
+      walls_placed: s.walls_placed,
+      pawns_eliminated: s.pawns_eliminated,
     }));
 }
 
-export async function registerOpenRoom(code: string, mode: 2 | 4, hostName: string, ranked = false) {
+export async function registerOpenRoom(
+  code: string,
+  mode: 2 | 4,
+  hostName: string,
+  ranked = false,
+) {
   try {
     const uid = await ensureAuthSession();
     await supabase.from("open_rooms").upsert({
-      code, mode, host_name: hostName,
-      seats_taken: 1, seats_total: mode,
+      code,
+      mode,
+      host_name: hostName,
+      seats_taken: 1,
+      seats_total: mode,
       ranked,
       auth_user_id: uid,
       updated_at: new Date().toISOString(),
     });
-  } catch (err) { console.warn("registerOpenRoom failed", err); }
+  } catch (err) {
+    console.warn("registerOpenRoom failed", err);
+  }
 }
 export async function updateOpenRoomSeats(code: string, seats: number) {
   try {
     await ensureAuthSession();
-    await supabase.from("open_rooms").update({ seats_taken: seats, updated_at: new Date().toISOString() }).eq("code", code);
-  } catch (err) { console.warn("updateOpenRoomSeats failed", err); }
+    await supabase
+      .from("open_rooms")
+      .update({ seats_taken: seats, updated_at: new Date().toISOString() })
+      .eq("code", code);
+  } catch (err) {
+    console.warn("updateOpenRoomSeats failed", err);
+  }
 }
 export async function removeOpenRoom(code: string) {
-  try { await ensureAuthSession(); await supabase.from("open_rooms").delete().eq("code", code); } catch {}
+  try {
+    await ensureAuthSession();
+    await supabase.from("open_rooms").delete().eq("code", code);
+  } catch {}
 }
 export async function findOpenRoom(mode: 2 | 4, ranked = false): Promise<string | null> {
   const cutoff = openRoomCutoffIso();
-  const { data } = await supabase.from("open_rooms")
+  const { data } = await supabase
+    .from("open_rooms")
     .select("code, seats_taken, seats_total, ranked, updated_at")
-    .eq("mode", mode).eq("ranked", ranked).gte("updated_at", cutoff)
-    .order("created_at", { ascending: true }).limit(10);
+    .eq("mode", mode)
+    .eq("ranked", ranked)
+    .gte("updated_at", cutoff)
+    .order("created_at", { ascending: true })
+    .limit(10);
   if (!data?.length) return null;
   for (const r of data) if (r.seats_taken < r.seats_total) return r.code;
   return null;
@@ -286,14 +383,20 @@ export async function findOpenRoom(mode: 2 | 4, ranked = false): Promise<string 
  * room with the same mode/ranked so the caller can decide to hand off.
  */
 export async function findOpenRoomOlderThan(
-  myCode: string, mode: 2 | 4, ranked = false,
+  myCode: string,
+  mode: 2 | 4,
+  ranked = false,
 ): Promise<string | null> {
   const cutoff = openRoomCutoffIso();
-  const { data } = await supabase.from("open_rooms")
+  const { data } = await supabase
+    .from("open_rooms")
     .select("code, seats_taken, seats_total, updated_at")
-    .eq("mode", mode).eq("ranked", ranked).gte("updated_at", cutoff)
+    .eq("mode", mode)
+    .eq("ranked", ranked)
+    .gte("updated_at", cutoff)
     .neq("code", myCode)
-    .order("created_at", { ascending: true }).limit(5);
+    .order("created_at", { ascending: true })
+    .limit(5);
   if (!data?.length) return null;
   for (const r of data) if (r.seats_taken < r.seats_total) return r.code;
   return null;
@@ -340,9 +443,12 @@ export async function fetchLiveRooms(limit = 6): Promise<LiveRoom[]> {
     .order("updated_at", { ascending: false })
     .limit(limit);
   return (data ?? []).map((r) => ({
-    code: r.code, mode: r.mode as 2 | 4, ranked: !!r.ranked,
+    code: r.code,
+    mode: r.mode as 2 | 4,
+    ranked: !!r.ranked,
     hostName: r.host_name ?? "Host",
-    seatsTaken: r.seats_taken, seatsTotal: r.seats_total,
+    seatsTaken: r.seats_taken,
+    seatsTotal: r.seats_total,
   }));
 }
 
@@ -368,15 +474,37 @@ export async function fetchRecentMatches(playerId: string, limit = 5): Promise<R
   const ids = Array.from(new Set((mine ?? []).map((r) => r.match_id)));
   if (ids.length === 0) return [];
   const { data: others } = await supabase
-    .from("match_players").select("match_id, player_id, name").in("match_id", ids);
-  const myResultByMatch = new Map((mine ?? []).map((r) => [r.match_id, r.result as RecentMatchRow["result"]]));
-  const matches = (mine ?? []).map((r) => (r as unknown as { match: { id: string; mode: number; ranked: boolean; ended_at: string; winner_player_id: string | null } }).match).filter(Boolean);
+    .from("match_players")
+    .select("match_id, player_id, name")
+    .in("match_id", ids);
+  const myResultByMatch = new Map(
+    (mine ?? []).map((r) => [r.match_id, r.result as RecentMatchRow["result"]]),
+  );
+  const matches = (mine ?? [])
+    .map(
+      (r) =>
+        (
+          r as unknown as {
+            match: {
+              id: string;
+              mode: number;
+              ranked: boolean;
+              ended_at: string;
+              winner_player_id: string | null;
+            };
+          }
+        ).match,
+    )
+    .filter(Boolean);
   return matches.map((m) => {
     const opps = (others ?? []).filter((p) => p.match_id === m.id && p.player_id !== playerId);
     const opp = opps[0]?.name ?? "Opponent";
     return {
-      matchId: m.id, mode: m.mode as 2 | 4, ranked: !!m.ranked,
-      endedAt: m.ended_at, result: myResultByMatch.get(m.id) ?? "loss",
+      matchId: m.id,
+      mode: m.mode as 2 | 4,
+      ranked: !!m.ranked,
+      endedAt: m.ended_at,
+      result: myResultByMatch.get(m.id) ?? "loss",
       opponentName: opp,
     };
   });
@@ -414,7 +542,10 @@ async function fetchStreakMap(playerIds: string[]): Promise<Map<string, number>>
   return out;
 }
 
-export async function fetchFullLeaderboard(limit = 50, rankedOnly = true): Promise<FullLeaderRow[]> {
+export async function fetchFullLeaderboard(
+  limit = 50,
+  rankedOnly = true,
+): Promise<FullLeaderRow[]> {
   const base = await fetchLeaderboard(limit, rankedOnly);
   const ids = base.map((r) => r.id);
   const [dmap, smap] = await Promise.all([fetchDelta7dMap(ids), fetchStreakMap(ids)]);
@@ -422,16 +553,25 @@ export async function fetchFullLeaderboard(limit = 50, rankedOnly = true): Promi
 }
 
 /** Head-to-head record between two players (wins for a, wins for b). */
-export async function fetchHeadToHead(aPlayerId: string, bPlayerId: string): Promise<{ a: number; b: number }> {
+export async function fetchHeadToHead(
+  aPlayerId: string,
+  bPlayerId: string,
+): Promise<{ a: number; b: number }> {
   const { data: aRows } = await supabase
-    .from("match_players").select("match_id, result").eq("player_id", aPlayerId);
+    .from("match_players")
+    .select("match_id, result")
+    .eq("player_id", aPlayerId);
   const { data: bRows } = await supabase
-    .from("match_players").select("match_id, result").eq("player_id", bPlayerId);
+    .from("match_players")
+    .select("match_id, result")
+    .eq("player_id", bPlayerId);
   const aById = new Map((aRows ?? []).map((r) => [r.match_id, r.result]));
   const bById = new Map((bRows ?? []).map((r) => [r.match_id, r.result]));
-  let a = 0, b = 0;
+  let a = 0,
+    b = 0;
   for (const [mid, ar] of aById) {
-    const br = bById.get(mid); if (!br) continue;
+    const br = bById.get(mid);
+    if (!br) continue;
     if (ar === "win" && br !== "win") a++;
     if (br === "win" && ar !== "win") b++;
   }
@@ -462,13 +602,19 @@ export async function updateMyProfile(
 }
 
 /** Rename the caller's display name (30-day cooldown, server-enforced). */
-export async function renameMyPlayer(playerId: string, newName: string): Promise<{
-  ok: boolean; nextAllowedAt: string | null; message: string;
+export async function renameMyPlayer(
+  playerId: string,
+  newName: string,
+): Promise<{
+  ok: boolean;
+  nextAllowedAt: string | null;
+  message: string;
 }> {
   try {
     await ensureAuthSession();
     const { data, error } = await supabase.rpc("rename_player", {
-      _player_id: playerId, _new_name: newName,
+      _player_id: playerId,
+      _new_name: newName,
     });
     if (error) return { ok: false, nextAllowedAt: null, message: error.message };
     const row = Array.isArray(data) ? data[0] : data;
@@ -485,7 +631,11 @@ export async function renameMyPlayer(playerId: string, newName: string): Promise
 /** Get a full profile view for the given player (players + stats + rank). */
 export async function fetchProfile(playerId: string) {
   const [{ data: p }, { data: s }] = await Promise.all([
-    supabase.from("players").select("id,name,country,bio,avatar_color,avatar_url,created_at,name_changed_at").eq("id", playerId).maybeSingle(),
+    supabase
+      .from("players")
+      .select("id,name,country,bio,avatar_color,avatar_url,created_at,name_changed_at")
+      .eq("id", playerId)
+      .maybeSingle(),
     supabase.from("player_stats").select(STATS_COLS).eq("player_id", playerId).maybeSingle(),
   ]);
   let rank: number | null = null;
@@ -520,25 +670,43 @@ export async function fetchAcceptedFriends(myAuthId: string): Promise<FriendList
     .select("id, requester_id, addressee_id, requester_auth, addressee_auth, status")
     .eq("status", "accepted");
   if (!data?.length) return [];
-  const items = data
-    .map((r: { id: string; requester_id: string; addressee_id: string; requester_auth: string; addressee_auth: string }) => {
+  const items = data.map(
+    (r: {
+      id: string;
+      requester_id: string;
+      addressee_id: string;
+      requester_auth: string;
+      addressee_auth: string;
+    }) => {
       const iAmReq = r.requester_auth === myAuthId;
       return {
         friendshipId: r.id,
         otherPlayerId: iAmReq ? r.addressee_id : r.requester_id,
         otherAuth: iAmReq ? r.addressee_auth : r.requester_auth,
       };
-    });
+    },
+  );
   const ids = items.map((i) => i.otherPlayerId);
   const [{ data: players }, { data: stats }] = await Promise.all([
     supabase.from("players").select("id,name,country,avatar_color,auth_user_id").in("id", ids),
     supabase.from("player_stats").select("player_id,rating,matches").in("player_id", ids),
   ]);
-  const pById = new Map((players ?? []).map((p: { id: string } & Record<string, unknown>) => [p.id, p]));
-  const sById = new Map((stats ?? []).map((s: { player_id: string } & Record<string, unknown>) => [s.player_id, s]));
+  const pById = new Map(
+    (players ?? []).map((p: { id: string } & Record<string, unknown>) => [p.id, p]),
+  );
+  const sById = new Map(
+    (stats ?? []).map((s: { player_id: string } & Record<string, unknown>) => [s.player_id, s]),
+  );
   return items
     .map((i) => {
-      const p = pById.get(i.otherPlayerId) as { name?: string; country?: string | null; avatar_color?: string | null; auth_user_id?: string } | undefined;
+      const p = pById.get(i.otherPlayerId) as
+        | {
+            name?: string;
+            country?: string | null;
+            avatar_color?: string | null;
+            auth_user_id?: string;
+          }
+        | undefined;
       const s = sById.get(i.otherPlayerId) as { rating?: number; matches?: number } | undefined;
       if (!p) return null;
       return {
@@ -562,7 +730,10 @@ export type RecentOpponent = {
   when: string;
   mode: string;
 };
-export async function fetchRecentOpponents(myPlayerId: string, limit = 8): Promise<RecentOpponent[]> {
+export async function fetchRecentOpponents(
+  myPlayerId: string,
+  limit = 8,
+): Promise<RecentOpponent[]> {
   const { data: mine } = await supabase
     .from("match_players")
     .select("match_id")
@@ -575,14 +746,21 @@ export async function fetchRecentOpponents(myPlayerId: string, limit = 8): Promi
     supabase.from("match_players").select("match_id, player_id, name").in("match_id", ids),
     supabase.from("matches").select("id, mode, ranked, ended_at").in("id", ids),
   ]);
-  const mById = new Map((matches ?? []).map((m: { id: string } & Record<string, unknown>) => [m.id, m]));
+  const mById = new Map(
+    (matches ?? []).map((m: { id: string } & Record<string, unknown>) => [m.id, m]),
+  );
   const seen = new Set<string>();
   const out: RecentOpponent[] = [];
-  for (const o of (others ?? []) as Array<{ match_id: string; player_id: string | null; name: string }>) {
+  for (const o of (others ?? []) as Array<{
+    match_id: string;
+    player_id: string | null;
+    name: string;
+  }>) {
     if (!o.player_id || o.player_id === myPlayerId || seen.has(o.player_id)) continue;
     const pid = o.player_id;
     seen.add(pid);
-    const m = mById.get(o.match_id) as { mode: number; ranked: boolean; ended_at: string } | undefined;
+    const m = mById.get(o.match_id) as
+      { mode: number; ranked: boolean; ended_at: string } | undefined;
     if (!m) continue;
     out.push({
       playerId: pid,
@@ -596,21 +774,39 @@ export async function fetchRecentOpponents(myPlayerId: string, limit = 8): Promi
 }
 
 /** Head-to-head history rows between me and them (up to `limit`). */
-export async function fetchH2HHistory(mePlayerId: string, themPlayerId: string, limit = 5): Promise<RecentMatchRow[]> {
+export async function fetchH2HHistory(
+  mePlayerId: string,
+  themPlayerId: string,
+  limit = 5,
+): Promise<RecentMatchRow[]> {
   const { data: mine } = await supabase
-    .from("match_players").select("match_id, result").eq("player_id", mePlayerId);
+    .from("match_players")
+    .select("match_id, result")
+    .eq("player_id", mePlayerId);
   const { data: theirs } = await supabase
-    .from("match_players").select("match_id, result, name").eq("player_id", themPlayerId);
-  const mineById = new Map((mine ?? []).map((r) => [r.match_id, r.result as RecentMatchRow["result"]]));
+    .from("match_players")
+    .select("match_id, result, name")
+    .eq("player_id", themPlayerId);
+  const mineById = new Map(
+    (mine ?? []).map((r) => [r.match_id, r.result as RecentMatchRow["result"]]),
+  );
   const commonIds = (theirs ?? []).filter((r) => mineById.has(r.match_id)).map((r) => r.match_id);
   if (!commonIds.length) return [];
   const { data: matches } = await supabase
-    .from("matches").select("id, mode, ranked, ended_at")
-    .in("id", commonIds).order("ended_at", { ascending: false }).limit(limit);
+    .from("matches")
+    .select("id, mode, ranked, ended_at")
+    .in("id", commonIds)
+    .order("ended_at", { ascending: false })
+    .limit(limit);
   const nameByMatch = new Map((theirs ?? []).map((r) => [r.match_id, r.name]));
-  return (matches ?? []).map((m: { id: string; mode: number; ranked: boolean; ended_at: string }) => ({
-    matchId: m.id, mode: m.mode as 2 | 4, ranked: !!m.ranked,
-    endedAt: m.ended_at, result: mineById.get(m.id) ?? "loss",
-    opponentName: nameByMatch.get(m.id) ?? "opponent",
-  }));
+  return (matches ?? []).map(
+    (m: { id: string; mode: number; ranked: boolean; ended_at: string }) => ({
+      matchId: m.id,
+      mode: m.mode as 2 | 4,
+      ranked: !!m.ranked,
+      endedAt: m.ended_at,
+      result: mineById.get(m.id) ?? "loss",
+      opponentName: nameByMatch.get(m.id) ?? "opponent",
+    }),
+  );
 }
