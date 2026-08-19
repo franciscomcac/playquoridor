@@ -8,6 +8,7 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import { Analytics } from "@vercel/analytics/react";
 
 import appCss from "@/styles.css?url";
 import { reportLovableError } from "@/lib/lovable-error-reporting";
@@ -87,11 +88,31 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "Quoridor Online — Play now, free" },
       { property: "og:title", content: "Quoridor Online — Play now, free" },
       { name: "twitter:title", content: "Quoridor Online — Play now, free" },
-      { name: "description", content: "Play Quoridor free in your browser. Quick match, private rooms, 4-player free-for-alls, bot practice. No download, no signup." },
-      { property: "og:description", content: "Play Quoridor free in your browser. Quick match, private rooms, 4-player free-for-alls, bot practice. No download, no signup." },
-      { name: "twitter:description", content: "Play Quoridor free in your browser. Quick match, private rooms, 4-player free-for-alls, bot practice. No download, no signup." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/G0936umxfkP8XUxHjCHkuY6oOfS2/social-images/social-1783523351464-Screenshot_2026-07-08_152511.webp" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/G0936umxfkP8XUxHjCHkuY6oOfS2/social-images/social-1783523351464-Screenshot_2026-07-08_152511.webp" },
+      {
+        name: "description",
+        content:
+          "Play Quoridor free in your browser. Quick match, private rooms, 4-player free-for-alls, bot practice. No download, no signup.",
+      },
+      {
+        property: "og:description",
+        content:
+          "Play Quoridor free in your browser. Quick match, private rooms, 4-player free-for-alls, bot practice. No download, no signup.",
+      },
+      {
+        name: "twitter:description",
+        content:
+          "Play Quoridor free in your browser. Quick match, private rooms, 4-player free-for-alls, bot practice. No download, no signup.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://storage.googleapis.com/gpt-engineer-file-uploads/G0936umxfkP8XUxHjCHkuY6oOfS2/social-images/social-1783523351464-Screenshot_2026-07-08_152511.webp",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://storage.googleapis.com/gpt-engineer-file-uploads/G0936umxfkP8XUxHjCHkuY6oOfS2/social-images/social-1783523351464-Screenshot_2026-07-08_152511.webp",
+      },
     ],
     links: [
       {
@@ -134,6 +155,7 @@ function RootShell({ children }: { children: ReactNode }) {
       </head>
       <body>
         {children}
+        <Analytics />
         <Scripts />
       </body>
     </html>
@@ -147,13 +169,17 @@ function RootComponent() {
     // Ensure a Supabase session exists (anonymous by default) so every write
     // is authenticated under the new RLS. Link the auth uid to the local
     // player row once we have one.
-    void ensureAuthSession().then(() => { void linkAuthToPlayer(); });
+    void ensureAuthSession().then(() => {
+      void linkAuthToPlayer();
+    });
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_IN" || event === "USER_UPDATED") {
         void linkAuthToPlayer();
       }
     });
-    return () => { sub.subscription.unsubscribe(); };
+    return () => {
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   // Global click SFX on any <button> (unless it opts out via data-no-sound).
