@@ -21,14 +21,17 @@ const Input = z.object({
 export const explainMove = createServerFn({ method: "POST" })
   .inputValidator((raw: unknown) => Input.parse(raw))
   .handler(async ({ data }) => {
-    const key = process.env.LOVABLE_API_KEY;
-    if (!key) throw new Error("Missing LOVABLE_API_KEY");
+    const key = process.env.AI_API_KEY || process.env.OPENAI_API_KEY;
+    if (!key) {
+      return { text: `Tactical move evaluated as ${data.verdict}. Distance difference: ${data.distMeAfter - data.distMe} steps.` };
+    }
+    const baseURL = process.env.AI_BASE_URL || "https://api.openai.com/v1";
     const provider = createOpenAICompatible({
-      name: "lovable",
-      baseURL: "https://ai.gateway.lovable.dev/v1",
-      headers: { "Lovable-API-Key": key },
+      name: "ai-provider",
+      baseURL,
+      headers: { Authorization: `Bearer ${key}` },
     });
-    const model = provider("google/gemini-3-flash-preview");
+    const model = provider(process.env.AI_MODEL || "gpt-4o-mini");
     const { text } = await generateText({
       model,
       system:

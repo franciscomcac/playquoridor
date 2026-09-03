@@ -48,9 +48,9 @@ function PrivacyPage() {
         <H2>Who we share it with</H2>
         <p>We don't sell your data. We use a small number of processors to operate the site:</p>
         <ul className="list-disc space-y-1 pl-5">
-          <li><strong>Lovable Cloud</strong> — hosting, database, authentication, storage.</li>
-          <li><strong>Lovable AI Gateway</strong> — automated content-moderation classification for text and images.</li>
-          <li><strong>Google</strong> — only if you sign in with Google.</li>
+          <li><strong>Cloud & Database Hosting</strong> — secure PostgreSQL database, real-time sync, authentication, and static asset storage.</li>
+          <li><strong>Automated Moderation</strong> — automated safety classification for community text and user avatars.</li>
+          <li><strong>Google OAuth</strong> — optional third-party authentication if you sign in with Google.</li>
         </ul>
 
         <H2>Retention</H2>

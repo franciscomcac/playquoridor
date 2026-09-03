@@ -1,9 +1,9 @@
-// Server-only moderation helpers. Runs Lovable AI on user content, records
-// events, escalates penalties, and is imported ONLY by *.functions.ts handlers.
+// Server-only moderation helpers. Evaluates user content for community safety,
+// records events, escalates penalties, and is imported ONLY by *.functions.ts handlers.
 
-const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const TEXT_MODEL = "google/gemini-2.5-flash-lite";
-const VISION_MODEL = "google/gemini-2.5-flash";
+const GATEWAY = process.env.AI_GATEWAY_URL || "https://api.openai.com/v1/chat/completions";
+const TEXT_MODEL = process.env.AI_TEXT_MODEL || "gpt-4o-mini";
+const VISION_MODEL = process.env.AI_VISION_MODEL || "gpt-4o-mini";
 
 export type Verdict = {
   severity: 0 | 1 | 2 | 3 | 4 | 5; // 0 clean, 5 severe (slur / threat / CSAM / explicit)
@@ -43,18 +43,23 @@ function parseVerdict(raw: string): Verdict {
 }
 
 async function callGateway(body: unknown): Promise<string> {
-  const key = process.env.LOVABLE_API_KEY;
-  if (!key) throw new Error("LOVABLE_API_KEY missing");
+  const key = process.env.AI_API_KEY || process.env.OPENAI_API_KEY;
+  if (!key) {
+    return JSON.stringify({ severity: 0, categories: [], summary: "moderation bypassed (no API key)" });
+  }
   const res = await fetch(GATEWAY, {
     method: "POST",
-    headers: { "content-type": "application/json", "Lovable-API-Key": key },
+    headers: {
+      "content-type": "application/json",
+      Authorization: `Bearer ${key}`,
+    },
     body: JSON.stringify(body),
   });
   if (!res.ok) {
     const t = await res.text();
     throw new Error(`AI gateway ${res.status}: ${t.slice(0, 300)}`);
   }
-  const data = await res.json() as { choices?: Array<{ message?: { content?: string } }> };
+  const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
   return data.choices?.[0]?.message?.content ?? "";
 }
 

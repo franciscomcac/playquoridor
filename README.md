@@ -1,26 +1,86 @@
-# playQuoridor.online
+# PlayQuoridor ??
 
-Make a website that allows me to play quoridor onlinew with my friends, it should have rooms matchmaking, a full functional game, allow me to create room and join rooms with code, and, allow me to select how many walls I want in the game, the website should be simple but aestethic. NO BUGS
+> Real-time multiplayer web adaptation of the classic abstract strategy game Quoridor, featuring low-latency WebRTC P2P gameplay, Supabase matchmaking lobbies, tactical move evaluation, and TanStack Start SSR architecture.
 
-This project was built with [Lovable](https://lovable.dev).
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue.svg)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-19.2-61dafb.svg)](https://react.dev/)
+[![TanStack Start](https://img.shields.io/badge/TanStack-Start%20SSR-FF4154.svg)](https://tanstack.com/start)
+[![WebRTC](https://img.shields.io/badge/WebRTC-PeerJS%20P2P-333333.svg)](https://peerjs.com/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.2-38B2AC.svg)](https://tailwindcss.com/)
 
-**Live app**: https://playquoridor.lovable.app
+---
 
-## Build with Lovable
+## ?? Features
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/a392012d-c840-4a22-8504-eababc701d1f).
+- **P2P Multiplayer Game Engine:** Direct browser-to-browser WebRTC data channel synchronization via PeerJS for instant move dispatch without server latency.
+- **Matchmaking & Lobbies:** Instant matchmaking, private room creation with 6-character room codes, and spectator mode powered by Supabase Realtime channels.
+- **Custom Rule Configurations:** Customizable wall limits (1–10 walls), turn countdown timers, 2-player and 4-player modes.
+- **Graph Pathfinding & Move Validation:** BFS/A* validation prevents illegal walls that fully trap any player from reaching their goal edge.
+- **Tactical Analysis Engine:** Post-move BFS path-delta computation and automated coaching summaries.
+- **Bot Engine:** Dynamic difficulty bot supporting single-player practice.
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+---
 
-## Development
+## ??? Architecture
 
-Prefer working locally? You need Node.js and npm â€” [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
-
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
+```mermaid
+graph TD
+    ClientA[Player 1 / Host] <-->|WebRTC DataChannel / PeerJS| ClientB[Player 2 / Peer]
+    ClientA -->|Lobby & Room State| SupaRealtime[Supabase Realtime]
+    ClientB -->|Lobby & Room State| SupaRealtime
+    ClientA -->|Auth & Stats Persistence| SupaDB[(PostgreSQL / Supabase)]
+    ClientB -->|Auth & Stats Persistence| SupaDB
+    ClientA -->|Server Functions / SSR| TanStackServer[TanStack Start Server]
 ```
+
+---
+
+## ?? Tech Stack
+
+- **Framework:** TanStack Start (SSR), TanStack Router, React 19, TypeScript
+- **Networking:** PeerJS (WebRTC), Supabase Realtime
+- **Database & Auth:** Supabase (PostgreSQL, Supabase Auth, Row Level Security)
+- **UI & Animation:** Tailwind CSS v4, Radix UI Primitives, Framer Motion, Lucide Icons
+- **State & Data Fetching:** TanStack React Query v5, Zod schemas
+
+---
+
+## ?? Getting Started
+
+### Prerequisites
+- Node.js 20+
+- npm or bun
+
+### Setup
+
+1. Clone repository:
+   ```bash
+   git clone https://github.com/franciscomcac/playquoridor.git
+   cd playquoridor
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Configure environment:
+   ```bash
+   cp .env.example .env
+   ```
+   Fill in your Supabase project credentials in `.env`.
+
+4. Start development server:
+   ```bash
+   npm run dev
+   ```
+
+5. Build for production:
+   ```bash
+   npm run build
+   ```
+
+---
+
+## ?? License
+This project is licensed under the MIT License - see the LICENSE file for details.
