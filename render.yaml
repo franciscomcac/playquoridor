@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: coil-server
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: BOTS
+        value: "30"

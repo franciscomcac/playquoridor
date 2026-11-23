@@ -1,0 +1,953 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>coil.io — snakes with proximity voice</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ccircle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%237cf3c5%22/%3E%3C/svg%3E">
+<style>
+  :root { --bg:#070a12; --ink:#e8ecff; --mut:#8a93b8; --acc:#7cf3c5; --acc2:#5aa9ff; --bad:#ff5d73; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; overflow:hidden; background:var(--bg); color:var(--ink);
+    font-family: ui-rounded, "SF Pro Rounded", "Nunito", system-ui, -apple-system, Segoe UI, sans-serif; user-select:none; }
+  canvas#c { position:fixed; inset:0; display:block; cursor:crosshair; touch-action:none; }
+  .hidden { display:none !important; }
+
+  #menu { position:fixed; inset:0; z-index:5; background:rgba(20,24,33,.94); }
+  #menu .center { position:absolute; left:50%; top:9vh; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; }
+  .logo { margin:0; font-size:clamp(70px,10vw,128px); font-weight:900; letter-spacing:-3px; line-height:1.05;
+    background:linear-gradient(180deg,#b8f3ff 0%,#4cc9f0 45%,#3a7bd5 100%); -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 6px 0 rgba(0,0,0,.35)) drop-shadow(0 10px 24px rgba(76,201,240,.2)); }
+  .logo span { background:linear-gradient(180deg,#ffe29a,#ffb347 55%,#f07b2b); -webkit-background-clip:text; background-clip:text; }
+  #deathMsg { min-height:24px; margin:26px 0 22px; font-size:17px; color:#9aa3b8; text-align:center; font-weight:600; }
+  #deathMsg b { color:#fff; }
+  #deathMsg small { display:block; margin-top:4px; font-size:13px; color:#6f7891; font-weight:500; }
+  #nick { width:250px; padding:12px 18px; font-size:17px; border-radius:999px; border:2px solid #0c0f16; outline:none;
+    background:linear-gradient(180deg,#26304a,#1d2539); color:#e8efff; font-family:inherit; font-weight:600;
+    box-shadow:0 6px 18px rgba(0,0,0,.45), inset 0 2px 4px rgba(0,0,0,.35); }
+  #nick::placeholder { color:#7f8db0; }
+  #nick:focus { border-color:#4cc9f0; }
+  #play { margin-top:20px; padding:11px 26px; font-size:20px; font-weight:800; border:0; border-radius:999px; cursor:pointer; color:#fff;
+    background:linear-gradient(180deg,#ffbf5e,#f07b2b); box-shadow:0 5px 0 #a8501a, 0 10px 22px rgba(0,0,0,.4); font-family:inherit;
+    text-shadow:0 1px 2px rgba(0,0,0,.35); transition:transform .08s, filter .15s; }
+  #play:hover { filter:brightness(1.1); }
+  #play:active { transform:translateY(3px); box-shadow:0 2px 0 #a8501a; }
+  #play:disabled { filter:grayscale(1) brightness(.6); cursor:wait; }
+  #status { color:#6f7891; font-size:12px; margin:14px 0 0; min-height:16px; }
+
+  .corner { position:absolute; display:flex; flex-direction:column; align-items:center; gap:0; background:none; border:0; cursor:pointer;
+    font-family:inherit; padding:6px; transition:transform .12s; }
+  .corner:hover { transform:scale(1.07); }
+  .corner .lbl { font-weight:800; font-size:15px; color:#4cc9f0; text-shadow:0 2px 0 rgba(0,0,0,.5); white-space:nowrap; }
+  .corner .cap { font-weight:800; font-size:12px; color:#ffb347; text-shadow:0 2px 0 rgba(0,0,0,.5); }
+  .corner.tr { top:10px; right:14px; } .corner.tr .lbl { color:#4cc9f0; font-size:14px; }
+  .corner.bl { bottom:12px; left:14px; }
+  .corner.br { bottom:12px; right:14px; }
+  #gfxIcon { width:80px; height:45px; } #skinIcon { width:80px; height:55px; } #voiceIcon { width:55px; height:55px; }
+  footer { position:absolute; bottom:12px; left:50%; transform:translateX(-50%); font-size:12px; color:#5d6b8c; }
+  footer a { color:#7f8db0; text-decoration:none; } footer a:hover { text-decoration:underline; }
+  #howBox { position:absolute; bottom:40px; left:50%; transform:translateX(-50%); width:min(520px,90vw); padding:14px 18px; border-radius:14px;
+    background:#1d2230; color:#b9c1d6; font-size:14px; line-height:1.55; box-shadow:0 10px 30px rgba(0,0,0,.5); }
+  #howBox b { color:#7cf3c5; }
+
+  #skinModal { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px;
+    background:rgba(14,17,24,.97); z-index:2; }
+  .skinRow { display:flex; align-items:center; gap:14px; }
+  #preview { width:560px; height:140px; max-width:70vw; }
+  .arrow { width:52px; height:52px; border-radius:50%; border:0; background:#232a3b; color:#cfd6f5; font-size:32px; line-height:1; cursor:pointer; font-family:inherit; }
+  .arrow:hover { background:#2f3850; }
+  .skinName { color:#9aa3b8; font-size:13px; letter-spacing:2px; text-transform:uppercase; font-weight:700; }
+  .hues { display:flex; gap:10px; }
+  .hue { width:30px; height:30px; border-radius:50%; cursor:pointer; border:3px solid transparent; transition:transform .1s; }
+  .hue.sel { border-color:#fff; transform:scale(1.15); }
+  #skinDone { padding:10px 34px; font-size:18px; font-weight:800; border:0; border-radius:999px; cursor:pointer; color:#fff; font-family:inherit;
+    background:linear-gradient(180deg,#ffbf5e,#f07b2b); box-shadow:0 4px 0 #a8501a; }
+  #hud { position:fixed; inset:0; pointer-events:none; z-index:3; }
+  #lb { position:absolute; top:14px; right:14px; width:220px; padding:10px 14px; border-radius:12px; background:rgba(10,14,28,.55);
+    backdrop-filter:blur(6px); font-size:13px; }
+  #lb h3 { margin:0 0 6px; font-size:14px; color:var(--acc); letter-spacing:.5px; }
+  #lb ol { margin:0; padding-left:22px; }
+  #lb li { display:flex; justify-content:space-between; gap:8px; padding:1px 0; color:#cfd6f5; }
+  #lb li.me { color:#ffd27c; font-weight:800; }
+  #lb li span:first-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:140px; }
+  #score { position:absolute; left:16px; bottom:16px; font-size:15px; color:#cfd6f5; text-shadow:0 2px 6px #000; }
+  #score b { font-size:22px; color:#fff; }
+  #mm { position:absolute; right:16px; bottom:16px; width:150px; height:150px; opacity:.9; }
+  #voiceBar { position:absolute; left:50%; bottom:16px; transform:translateX(-50%); display:flex; align-items:center; gap:10px;
+    pointer-events:auto; padding:8px 12px; border-radius:999px; background:rgba(10,14,28,.6); backdrop-filter:blur(6px); font-size:13px; }
+  #micBtn { border:0; border-radius:999px; padding:8px 14px; font-weight:800; font-family:inherit; cursor:pointer; font-size:13px;
+    background:var(--acc); color:#04120c; }
+  #micBtn.off { background:var(--bad); color:#fff; }
+  #micBtn.ptt { background:#2a3354; color:#cfd6f5; }
+  #micLvl { width:60px; height:6px; border-radius:3px; background:#1c2340; overflow:hidden; }
+  #micLvl i { display:block; height:100%; width:0; background:var(--acc); transition:width .06s; }
+  #voiceInfo { color:var(--mut); }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="menu">
+  <div class="center">
+    <h1 class="logo">coil<span>.io</span></h1>
+    <p id="deathMsg"></p>
+    <input id="nick" maxlength="16" placeholder="Nickname" autocomplete="off" spellcheck="false">
+    <button id="play" disabled>Connecting…</button>
+    <p id="status"></p>
+  </div>
+
+  <button class="corner tr" id="gfxBtn"><span class="cap">Graphics:</span><canvas id="gfxIcon" width="160" height="90"></canvas><span class="lbl" id="gfxLbl">High quality</span></button>
+  <button class="corner bl" id="skinBtn"><canvas id="skinIcon" width="160" height="110"></canvas><span class="lbl">Change Skin</span></button>
+  <button class="corner br" id="voiceBtn"><canvas id="voiceIcon" width="110" height="110"></canvas><span class="lbl" id="voiceLbl">Voice chat: On</span></button>
+  <input type="checkbox" id="voiceOpt" checked hidden>
+
+  <footer><a href="#" id="howBtn">how to play</a> · <a href="#" id="ctlBtn">controls</a></footer>
+  <div id="howBox" class="hidden">
+    <b>Eat</b> the glowing orbs to grow. <b>Don't hit</b> other snakes with your head, but make them hit you.
+    <b>Boost</b>: hold click or Shift (costs length). <b>Talk</b>: hold Space to speak to anyone nearby. Press M for open mic.
+  </div>
+
+  <div id="skinModal" class="hidden">
+    <div class="skinRow"><button id="skinPrev" class="arrow">‹</button><canvas id="preview" width="560" height="140"></canvas><button id="skinNext" class="arrow">›</button></div>
+    <div class="skinName" id="skinName"></div>
+    <div class="hues" id="hues"></div>
+    <button id="skinDone">Done</button>
+  </div>
+</div>
+
+<div id="hud" class="hidden">
+  <div id="lb"><h3>Leaderboard</h3><ol id="lbList"></ol></div>
+  <div id="score"></div>
+  <canvas id="mm" width="300" height="300"></canvas>
+  <div id="voiceBar" class="hidden">
+    <button id="micBtn">🎙 Mic on</button>
+    <div id="micLvl"><i></i></div>
+    <span id="voiceInfo">no one nearby</span>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+'use strict';
+// =====================================================================================
+// constants (must match server)
+// =====================================================================================
+const VOICE_RANGE = 1100;       // world units: start talking
+const VOICE_DROP = 1350;        // world units: hang up (hysteresis)
+const VOICE_FULL = 220;         // full volume inside this distance
+const ICE = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
+const spacingFor = r => r * 0.5;
+const HUES = [150, 200, 265, 320, 0, 28, 50, 95];
+
+// =====================================================================================
+// DOM
+// =====================================================================================
+const $ = id => document.getElementById(id);
+const cv = $('c'), ctx = cv.getContext('2d');
+const mmCv = $('mm'), mmx = mmCv.getContext('2d');
+const menu = $('menu'), hud = $('hud'), playBtn = $('play'), nick = $('nick');
+let W = 0, H = 0, DPR = 1;
+let HQ = true; try { HQ = localStorage.getItem('coil.hq') !== '0'; } catch {}
+function resize() {
+  DPR = HQ ? Math.min(2, window.devicePixelRatio || 1) : 1;
+  W = innerWidth; H = innerHeight;
+  cv.width = W * DPR; cv.height = H * DPR;
+  cv.style.width = W + 'px'; cv.style.height = H + 'px';
+}
+addEventListener('resize', resize); resize();
+
+let myHue = HUES[Math.floor(Math.random() * HUES.length)];
+try { nick.value = localStorage.getItem('coil.nick') || ''; const h = localStorage.getItem('coil.hue'); if (h !== null) myHue = +h; } catch {}
+for (const h of HUES) {
+  const d = document.createElement('div');
+  d.className = 'hue' + (h === myHue ? ' sel' : '');
+  d.style.background = `radial-gradient(circle at 35% 35%, hsl(${h},90%,72%), hsl(${h},85%,45%))`;
+  d.onclick = () => { myHue = h; document.querySelectorAll('.hue').forEach(e => e.classList.remove('sel')); d.classList.add('sel'); };
+  $('hues').appendChild(d);
+}
+
+// =====================================================================================
+// state
+// =====================================================================================
+let myPlayed = false;
+let ws = null, myCid = 0, myId = 0, worldR = 4000, tickMs = 1000 / 30;
+const snakes = new Map();      // id -> snake
+const food = new Map();        // id -> pellet
+let lastSnap = performance.now(), snapGap = tickMs;
+let camSrv = { x: 0, y: 0 }, cam = { x: 0, y: 0 }, scale = 0.8;
+let lb = [], rank = 0, total = 0, mm = [];
+let mouseA = 0, boosting = false, lastSent = { a: 99, b: false, t: 0 };
+
+const lerp = (a, b, t) => a + (b - a) * t;
+const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+
+function chainBody(segs, hx, hy, n, spacing) {
+  segs[0].x = hx; segs[0].y = hy;
+  while (segs.length < n) { const t = segs[segs.length - 1]; segs.push({ x: t.x, y: t.y }); }
+  while (segs.length > n && segs.length > 3) segs.pop();
+  for (let i = 1; i < segs.length; i++) {
+    const a = segs[i - 1], b = segs[i];
+    const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy);
+    if (d > spacing) { const k = spacing / d; b.x = a.x + dx * k; b.y = a.y + dy * k; }
+  }
+}
+
+// =====================================================================================
+// network
+// =====================================================================================
+// Game server address. Priority: ?server=wss://host  >  window.COIL_SERVER (config.js)  >  same host as the page
+function serverUrl() {
+  let u = new URLSearchParams(location.search).get('server') || window.COIL_SERVER || '';
+  if (!u) return `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`;
+  if (!/^wss?:\/\//.test(u)) u = (location.protocol === 'https:' ? 'wss://' : 'ws://') + u.replace(/^https?:\/\//, '');
+  return u;
+}
+function connect() {
+  ws = new WebSocket(serverUrl());
+  ws.onopen = () => { $('status').textContent = ''; playBtn.disabled = false; playBtn.textContent = myPlayed ? 'Play Again' : 'Play'; };
+  ws.onmessage = e => { let m; try { m = JSON.parse(e.data); } catch { return; } onMsg(m); };
+  ws.onclose = () => {
+    playBtn.disabled = true; playBtn.textContent = 'Connecting…';
+    $('status').textContent = 'Disconnected — reconnecting…';
+    voice.closeAll(); myId = 0; snakes.clear(); food.clear(); showMenu('');
+    setTimeout(connect, 1500);
+  };
+}
+function sendMsg(o) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); }
+
+function onMsg(m) {
+  switch (m.t) {
+    case 'hello':
+      myCid = m.cid; worldR = m.worldR; tickMs = 1000 / m.tickRate;
+      if (voice.enabled) sendMsg({ t: 'voice', on: true });
+      break;
+    case 'spawn':
+      myId = m.id; menu.classList.add('hidden'); hud.classList.remove('hidden');
+      break;
+    case 'dead':
+      myId = 0; voice.closeAll();
+      showMenu(`Your final length was <b>${m.score}</b>!<small>${m.by ? 'eaten by ' + esc(m.by) : 'you hit the edge'}</small>`);
+      break;
+    case 'st': applyState(m); break;
+    case 'sig': voice.onSignal(m.from, m.d); break;
+  }
+}
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function showMenu(msg) {
+  $('deathMsg').innerHTML = msg;
+  menu.classList.remove('hidden'); hud.classList.add('hidden');
+  setTimeout(() => nick.focus(), 50);
+}
+
+function applyState(m) {
+  const now = performance.now();
+  snapGap = lerp(snapGap, clamp(now - lastSnap, 10, 120), 0.2);
+  lastSnap = now;
+  camSrv.x = m.cx; camSrv.y = m.cy;
+  const present = new Set();
+  for (const e of m.s) {
+    let s = snakes.get(e.i);
+    if (!s) {
+      if (!e.s) continue;               // wait for a keyframe
+      s = { id: e.i, segs: [], prev: [], r: e.r, prevR: e.r, name: '', hue: 0, cid: 0 };
+      snakes.set(e.i, s);
+    }
+    present.add(e.i);
+    // keep previous positions for interpolation
+    const prev = s.prev; prev.length = s.segs.length;
+    for (let i = 0; i < s.segs.length; i++) { const p = s.segs[i]; prev[i] = prev[i] ? (prev[i].x = p.x, prev[i].y = p.y, prev[i]) : { x: p.x, y: p.y }; }
+    s.prevR = s.r;
+    s.r = e.r; s.a = e.a; s.b = e.b; s.v = e.v;
+    if (e.nm !== undefined) { s.name = e.nm; s.hue = e.h; s.cid = e.c; s.skin = e.k || 0; }
+    if (e.s) {
+      const n = e.s.length / 2; s.segs.length = n;
+      for (let i = 0; i < n; i++) { const p = s.segs[i]; if (p) { p.x = e.s[i * 2]; p.y = e.s[i * 2 + 1]; } else s.segs[i] = { x: e.s[i * 2], y: e.s[i * 2 + 1] }; }
+    } else {
+      chainBody(s.segs, e.x, e.y, e.n, spacingFor(e.r));
+    }
+    if (!prev.length) for (const p of s.segs) prev.push({ x: p.x, y: p.y });
+  }
+  for (const id of snakes.keys()) if (!present.has(id)) snakes.delete(id);
+
+  if (m.fa) for (let i = 0; i < m.fa.length; i += 5)
+    food.set(m.fa[i], { x: m.fa[i + 1], y: m.fa[i + 2], v: m.fa[i + 3], h: m.fa[i + 4], born: now, ph: Math.random() * 6.28 });
+  if (m.fr) for (const id of m.fr) {
+    const f = food.get(id); if (!f || f.eat) continue;
+    // fly toward the nearest head (if any) — looks like it got slurped
+    let best = null, bd = 140 * 140;
+    for (const s of snakes.values()) { const h = s.segs[0]; const d = (h.x - f.x) ** 2 + (h.y - f.y) ** 2; if (d < bd) { bd = d; best = s; } }
+    if (best) f.eat = { t: now, sid: best.id, x0: f.x, y0: f.y }; else food.delete(id);
+  }
+  if (m.lb) { lb = m.lb; mm = m.mm; total = m.tot; rank = m.rk || 0; renderLb(); }
+}
+function renderLb() {
+  const ol = $('lbList'); ol.innerHTML = '';
+  for (const [n, sc, cid] of lb) {
+    const li = document.createElement('li');
+    if (cid && cid === myCid) li.className = 'me';
+    li.innerHTML = `<span>${esc(n)}</span><span>${sc}</span>`;
+    ol.appendChild(li);
+  }
+}
+
+// =====================================================================================
+// input
+// =====================================================================================
+let mouseX = 0, mouseY = 0;
+addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
+cv.addEventListener('mousemove', e => { mouseA = Math.atan2(e.clientY - H / 2, e.clientX - W / 2); });
+cv.addEventListener('mousedown', () => boosting = true);
+addEventListener('mouseup', () => boosting = false);
+addEventListener('keydown', e => {
+  if (e.target === nick) { if (e.key === 'Enter') play(); return; }
+  if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) voice.setTalking(true); }
+  if (e.key === 'Shift') boosting = true;
+  if (e.key === 'm' || e.key === 'M') voice.toggleMode();
+});
+addEventListener('keyup', e => {
+  if (e.code === 'Space') voice.setTalking(false);
+  if (e.key === 'Shift') boosting = false;
+});
+addEventListener('blur', () => { voice.setTalking(false); boosting = false; });
+function touchSteer(e) {
+  const t = e.touches[0]; if (!t) return;
+  mouseA = Math.atan2(t.clientY - H / 2, t.clientX - W / 2);
+  boosting = e.touches.length > 1;
+  e.preventDefault();
+}
+cv.addEventListener('touchstart', touchSteer, { passive: false });
+cv.addEventListener('touchmove', touchSteer, { passive: false });
+cv.addEventListener('touchend', e => { boosting = e.touches.length > 1; });
+setInterval(() => {
+  if (!myId) return;
+  const now = performance.now();
+  if (Math.abs(mouseA - lastSent.a) > 0.01 || boosting !== lastSent.b || now - lastSent.t > 250) {
+    sendMsg({ t: 'in', a: Math.round(mouseA * 1000) / 1000, b: boosting });
+    lastSent = { a: mouseA, b: boosting, t: now };
+  }
+}, 33);
+
+async function play() {
+  if (playBtn.disabled) return;
+  try { localStorage.setItem('coil.nick', nick.value); localStorage.setItem('coil.hue', myHue); localStorage.setItem('coil.skin', mySkin); } catch {}
+  if ($('voiceOpt').checked && !voice.enabled) await voice.enable();
+  if (!$('voiceOpt').checked && voice.enabled) voice.disable();
+  if (voice.ctx && voice.ctx.state === 'suspended') voice.ctx.resume();
+  sendMsg({ t: 'play', name: nick.value, hue: myHue, skin: mySkin });
+  myPlayed = true; playBtn.textContent = 'Play Again';
+}
+playBtn.onclick = play;
+
+// =====================================================================================
+// proximity voice chat (WebRTC mesh, only with players in range)
+// =====================================================================================
+const voice = {
+  enabled: false, muted: true, ptt: true, talking: false, stream: null, ctx: null, localAn: null, localLevel: 0,
+  peers: new Map(),          // cid -> peer
+  cooldown: new Map(),       // cid -> time we may retry
+
+  async enable() {
+    try {
+      this.ctx = this.ctx || new (window.AudioContext || window.webkitAudioContext)();
+      try {
+        this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+        const src = this.ctx.createMediaStreamSource(this.stream);
+        this.localAn = this.ctx.createAnalyser(); this.localAn.fftSize = 512;
+        src.connect(this.localAn);
+        $('status').textContent = '';
+      } catch (err) {
+        this.stream = null;
+        $('status').textContent = 'Mic unavailable — you can still hear nearby players.';
+      }
+      this.enabled = true;
+      try { this.ptt = localStorage.getItem('coil.openmic') !== '1'; } catch {}
+      this.applyMic();
+      sendMsg({ t: 'voice', on: true });
+      $('voiceBar').classList.remove('hidden');
+      this.updateUi();
+    } catch (err) { console.warn('voice enable failed', err); }
+  },
+  disable() {
+    this.closeAll();
+    if (this.stream) this.stream.getTracks().forEach(t => t.stop());
+    this.stream = null; this.localAn = null; this.enabled = false;
+    sendMsg({ t: 'voice', on: false });
+    $('voiceBar').classList.add('hidden');
+  },
+  // push-to-talk (default, hold Space) or open mic (toggle with M)
+  applyMic() {
+    this.muted = this.ptt ? !this.talking : false;
+    if (this.stream) this.stream.getAudioTracks().forEach(t => t.enabled = !this.muted);
+    this.updateUi();
+  },
+  setTalking(on) {
+    if (this.talking === on) return;
+    this.talking = on;
+    if (this.enabled) this.applyMic();
+  },
+  toggleMode() {
+    if (!this.enabled || !this.stream) return;
+    this.ptt = !this.ptt;
+    try { localStorage.setItem('coil.openmic', this.ptt ? '0' : '1'); } catch {}
+    this.applyMic();
+  },
+  updateUi() {
+    const b = $('micBtn');
+    if (!this.stream) { b.textContent = '🎧 Listen only'; b.classList.add('off'); return; }
+    if (this.ptt) b.textContent = this.talking ? '🎙 Talking…' : '⎵ Hold SPACE to talk';
+    else b.textContent = '🎙 Open mic (M)';
+    b.classList.toggle('off', this.muted);
+    b.classList.toggle('ptt', this.ptt && !this.talking);
+  },
+  sig(to, d) { sendMsg({ t: 'sig', to, d }); },
+
+  createPeer(cid, initiator) {
+    const pc = new RTCPeerConnection({ iceServers: ICE });
+    const peer = { cid, pc, chain: Promise.resolve(), gain: null, pan: null, an: null, el: null, level: 0, buf: null };
+    this.peers.set(cid, peer);
+    if (this.stream) this.stream.getTracks().forEach(t => pc.addTrack(t, this.stream));
+    else pc.addTransceiver('audio', { direction: 'recvonly' });
+    pc.onicecandidate = e => { if (e.candidate) this.sig(cid, { k: 'ice', c: e.candidate }); };
+    pc.ontrack = e => this.attach(peer, e.streams[0] || new MediaStream([e.track]));
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === 'failed' || pc.connectionState === 'closed') this.close(cid, false);
+    };
+    if (initiator) {
+      peer.chain = peer.chain.then(async () => {
+        await pc.setLocalDescription(await pc.createOffer());
+        this.sig(cid, { k: 'offer', sdp: pc.localDescription });
+      }).catch(err => console.warn('offer', err));
+    }
+    return peer;
+  },
+  attach(peer, stream) {
+    if (peer.gain) return;
+    // Chrome only pumps remote WebRTC audio into WebAudio if a media element consumes it
+    const el = new Audio(); el.muted = true; el.srcObject = stream; el.play().catch(() => {});
+    const src = this.ctx.createMediaStreamSource(stream);
+    const gain = this.ctx.createGain(); gain.gain.value = 0;
+    const pan = this.ctx.createStereoPanner ? this.ctx.createStereoPanner() : null;
+    const an = this.ctx.createAnalyser(); an.fftSize = 512;
+    src.connect(an); src.connect(gain);
+    if (pan) { gain.connect(pan); pan.connect(this.ctx.destination); } else gain.connect(this.ctx.destination);
+    Object.assign(peer, { el, src, gain, pan, an, buf: new Uint8Array(an.fftSize) });
+  },
+  onSignal(from, d) {
+    if (!this.enabled || !d) return;
+    let peer = this.peers.get(from);
+    if (d.k === 'bye') { if (peer) this.close(from, false); return; }
+    if (d.k === 'offer') { if (peer) this.close(from, false); peer = this.createPeer(from, false); }
+    if (!peer) return;
+    const pc = peer.pc;
+    peer.chain = peer.chain.then(async () => {
+      if (d.k === 'offer') {
+        await pc.setRemoteDescription(d.sdp);
+        await pc.setLocalDescription(await pc.createAnswer());
+        this.sig(from, { k: 'answer', sdp: pc.localDescription });
+      } else if (d.k === 'answer') {
+        if (pc.signalingState === 'have-local-offer') await pc.setRemoteDescription(d.sdp);
+      } else if (d.k === 'ice') {
+        try { await pc.addIceCandidate(d.c); } catch {}
+      }
+    }).catch(err => console.warn('signal', err));
+  },
+  close(cid, notify) {
+    const p = this.peers.get(cid); if (!p) return;
+    this.peers.delete(cid);
+    this.cooldown.set(cid, performance.now() + 2500);
+    try { p.pc.close(); } catch {}
+    try { p.src && p.src.disconnect(); p.gain && p.gain.disconnect(); p.pan && p.pan.disconnect(); } catch {}
+    if (p.el) { p.el.srcObject = null; }
+    if (notify) this.sig(cid, { k: 'bye' });
+  },
+  closeAll() { for (const cid of [...this.peers.keys()]) this.close(cid, true); },
+
+  // called ~4x/sec: open/close connections by distance
+  manage() {
+    if (!this.enabled) return;
+    const me = snakes.get(myId);
+    if (!me) { if (this.peers.size) this.closeAll(); return; }
+    const byCid = new Map();
+    for (const s of snakes.values()) if (s.cid && s.cid !== myCid && s.v) byCid.set(s.cid, s);
+    const h = me.segs[0], now = performance.now();
+    for (const [cid, s] of byCid) {
+      if (this.peers.has(cid) || myCid > cid) continue;          // lower cid starts the call
+      if ((this.cooldown.get(cid) || 0) > now) continue;
+      const d = Math.hypot(s.segs[0].x - h.x, s.segs[0].y - h.y);
+      if (d < VOICE_RANGE) this.createPeer(cid, true);
+    }
+    for (const cid of [...this.peers.keys()]) {
+      const s = byCid.get(cid);
+      if (!s || Math.hypot(s.segs[0].x - h.x, s.segs[0].y - h.y) > VOICE_DROP) this.close(cid, true);
+    }
+  },
+  // called every frame: spatialise audio + speaking levels
+  spatialise(hx, hy) {
+    const byCid = new Map();
+    for (const s of snakes.values()) if (s.cid) byCid.set(s.cid, s);
+    let live = 0;
+    for (const p of this.peers.values()) {
+      if (!p.gain) continue;
+      const s = byCid.get(p.cid);
+      let vol = 0, pan = 0;
+      if (s) {
+        const dx = s.segs[0].x - hx, dy = s.segs[0].y - hy, d = Math.hypot(dx, dy);
+        const t = clamp((d - VOICE_FULL) / (VOICE_RANGE - VOICE_FULL), 0, 1);
+        vol = Math.pow(1 - t, 1.6);
+        pan = clamp(dx / 700, -0.85, 0.85);
+      }
+      p.gain.gain.setTargetAtTime(vol, this.ctx.currentTime, 0.08);
+      if (p.pan) p.pan.pan.setTargetAtTime(pan, this.ctx.currentTime, 0.08);
+      p.level = rms(p.an, p.buf) * (vol > 0.02 ? 1 : 0);
+      if (p.pc.connectionState === 'connected') live++;
+    }
+    if (this.localAn) {
+      this.localBuf = this.localBuf || new Uint8Array(this.localAn.fftSize);
+      this.localLevel = this.muted ? 0 : rms(this.localAn, this.localBuf);
+      $('micLvl').firstChild.style.width = Math.min(100, this.localLevel * 900) + '%';
+    }
+    $('voiceInfo').textContent = live ? `${live} nearby can hear you` : 'no one nearby';
+  },
+  levelFor(cid) {
+    if (cid === myCid) return this.localLevel;
+    const p = this.peers.get(cid); return p ? p.level : 0;
+  }
+};
+function rms(an, buf) {
+  an.getByteTimeDomainData(buf);
+  let s = 0; for (let i = 0; i < buf.length; i++) { const v = (buf[i] - 128) / 128; s += v * v; }
+  return Math.sqrt(s / buf.length);
+}
+setInterval(() => voice.manage(), 250);
+$('micBtn').onclick = e => { voice.toggleMode(); e.currentTarget.blur(); };
+
+// =====================================================================================
+// rendering — lighting comes from the top-left everywhere
+// =====================================================================================
+const LIGHT = { x: -0.42, y: -0.58 };
+const SKINS = ['Classic', 'Stripes', 'Duo', 'Spectrum', 'Neon', 'Candy'];
+const wrapH = h => ((Math.round(h / 4) * 4) % 360 + 360) % 360;
+// colour of segment i for a skin: [hue, sat, light, glow?]
+function segColor(skin, h, i) {
+  switch (skin) {
+    case 1: return [h, 85, Math.floor(i / 3) % 2 ? 56 : 30, 0];
+    case 2: return [Math.floor(i / 4) % 2 ? h : h + 150, 85, 50, 0];
+    case 3: return [h + i * 7, 90, 52, 0];
+    case 4: return i % 7 === 0 ? [h, 100, 62, 1] : [h, 45, 17, 0];
+    case 5: return Math.floor(i / 2) % 2 ? [h, 25, 92, 0] : [h, 90, 55, 0];
+    default: return [h, 85, 50, 0];
+  }
+}
+
+const sprites = new Map();
+function ballSprite(h, s, l) {
+  h = wrapH(h);
+  const k = `b${h}|${s}|${l}`; let c = sprites.get(k); if (c) return c;
+  const S = 192, R = 94, C = 96;
+  c = document.createElement('canvas'); c.width = c.height = S;
+  const g = c.getContext('2d');
+  const grd = g.createRadialGradient(C + LIGHT.x * R * 0.55, C + LIGHT.y * R * 0.55, R * 0.04, C, C, R);
+  grd.addColorStop(0, `hsl(${h},${s}%,${Math.min(92, l + 20)}%)`);
+  grd.addColorStop(0.5, `hsl(${h},${s}%,${l}%)`);
+  grd.addColorStop(0.88, `hsl(${h},${s}%,${Math.max(5, l - 12)}%)`);
+  grd.addColorStop(1, `hsl(${h},${s}%,${Math.max(3, l - 20)}%)`);
+  g.fillStyle = grd; g.beginPath(); g.arc(C, C, R, 0, Math.PI * 2); g.fill();
+  // bounce light on the shadow side so segments read as round
+  const rim = g.createRadialGradient(C - LIGHT.x * R * 0.95, C - LIGHT.y * R * 0.95, 0, C - LIGHT.x * R * 0.7, C - LIGHT.y * R * 0.7, R * 0.75);
+  rim.addColorStop(0, `hsla(${h},100%,72%,.16)`); rim.addColorStop(1, `hsla(${h},100%,70%,0)`);
+  g.globalCompositeOperation = 'lighter';
+  g.fillStyle = rim; g.beginPath(); g.arc(C, C, R, 0, Math.PI * 2); g.fill();
+  sprites.set(k, c); return c;
+}
+// one body segment: domed disc, lit from the top-left, with a defined darker rim so
+// each overlapping piece reads clearly against the one beneath it
+function scaleSprite(h, s, l) {
+  h = wrapH(h);
+  const k = `s${h}|${s}|${l}`; let c = sprites.get(k); if (c) return c;
+  const S = 160, R = 78, C = 80;
+  c = document.createElement('canvas'); c.width = c.height = S;
+  const g = c.getContext('2d');
+  const grd = g.createRadialGradient(C + LIGHT.x * R * 0.42, C + LIGHT.y * R * 0.42, R * 0.03, C, C, R);
+  grd.addColorStop(0, `hsl(${h},${s}%,${Math.min(93, l + 26)}%)`);
+  grd.addColorStop(0.35, `hsl(${h},${s}%,${Math.min(90, l + 8)}%)`);
+  grd.addColorStop(0.72, `hsl(${h},${s}%,${l}%)`);
+  grd.addColorStop(0.92, `hsl(${h},${s}%,${Math.max(4, l - 14)}%)`);
+  grd.addColorStop(1, `hsl(${h},${s}%,${Math.max(2, l - 30)}%)`);
+  g.fillStyle = grd; g.beginPath(); g.arc(C, C, R, 0, Math.PI * 2); g.fill();
+  // soft bounce light on the shadow side
+  const rim = g.createRadialGradient(C - LIGHT.x * R * 0.85, C - LIGHT.y * R * 0.85, 0, C - LIGHT.x * R * 0.6, C - LIGHT.y * R * 0.6, R * 0.6);
+  rim.addColorStop(0, `hsla(${h},100%,70%,.18)`); rim.addColorStop(1, `hsla(${h},100%,70%,0)`);
+  g.globalCompositeOperation = 'lighter';
+  g.fillStyle = rim; g.beginPath(); g.arc(C, C, R, 0, Math.PI * 2); g.fill();
+  sprites.set(k, c); return c;
+}
+function radialSprite(key, size, stops) {
+  let c = sprites.get(key); if (c) return c;
+  c = document.createElement('canvas'); c.width = c.height = size;
+  const g = c.getContext('2d'), m = size / 2;
+  const grd = g.createRadialGradient(m, m, 0, m, m, m);
+  for (const [o, col] of stops) grd.addColorStop(o, col);
+  g.fillStyle = grd; g.fillRect(0, 0, size, size);
+  sprites.set(key, c); return c;
+}
+const haloSprite = h => radialSprite('h' + h, 128, [[0, `hsla(${h},100%,70%,.75)`], [0.12, `hsla(${h},100%,62%,.42)`], [0.4, `hsla(${h},100%,55%,.12)`], [1, `hsla(${h},100%,50%,0)`]]);
+const coreSprite = h => radialSprite('c' + h, 64, [[0, '#fff'], [0.3, `hsla(${h},100%,86%,1)`], [0.55, `hsla(${h},100%,64%,.9)`], [0.75, `hsla(${h},100%,58%,.22)`], [1, `hsla(${h},100%,50%,0)`]]);
+const auraSprite = h => radialSprite('a' + h, 96, [[0, `hsla(${h},100%,70%,.85)`], [0.35, `hsla(${h},100%,60%,.35)`], [1, `hsla(${h},100%,55%,0)`]]);
+const segShadow = radialSprite('segshadow', 64, [[0, 'rgba(0,0,0,.55)'], [0.78, 'rgba(0,0,0,.45)'], [1, 'rgba(0,0,0,0)']]);
+const shadowSprite = radialSprite('shadow', 64, [[0, 'rgba(0,0,0,.5)'], [0.6, 'rgba(0,0,0,.32)'], [1, 'rgba(0,0,0,0)']]);
+const outlineSprite = radialSprite('outline', 64, [[0, 'rgba(0,0,0,.75)'], [0.9, 'rgba(0,0,0,.6)'], [1, 'rgba(0,0,0,0)']]);
+const talkSprite = radialSprite('talk', 96, [[0, 'rgba(124,243,197,0)'], [0.55, 'rgba(124,243,197,.0)'], [0.72, 'rgba(124,243,197,.55)'], [1, 'rgba(124,243,197,0)']]);
+
+// bevelled hex floor
+const hexPattern = (() => {
+  const R = 64, w = 3 * R, h = Math.sqrt(3) * R;
+  const c = document.createElement('canvas'); c.width = Math.round(w); c.height = Math.round(h);
+  const g = c.getContext('2d');
+  g.fillStyle = '#10141f'; g.fillRect(0, 0, c.width, c.height);
+  const hexPath = (x, y, rr) => { g.beginPath(); for (let i = 0; i < 6; i++) { const a = Math.PI / 3 * i; g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } g.closePath(); };
+  const centers = [];
+  for (let col = -1; col <= 3; col++) for (let row = -1; row <= 2; row++) centers.push([col * 1.5 * R, row * h + (col & 1 ? h / 2 : 0)]);
+  for (const [x, y] of centers) { // drop shadows
+    hexPath(x, y + 2.5, R - 6); g.fillStyle = 'rgba(0,0,0,.28)'; g.fill();
+  }
+  for (const [x, y] of centers) {
+    hexPath(x, y, R - 6);
+    const grd = g.createRadialGradient(x - R * 0.25, y - R * 0.35, R * 0.1, x, y, R);
+    grd.addColorStop(0, '#222a3d'); grd.addColorStop(1, '#181e2d');
+    g.fillStyle = grd; g.fill();
+    // lit top edges
+    g.beginPath();
+    for (const i of [3, 4, 5, 0]) { const a = Math.PI / 3 * i; g.lineTo(x + Math.cos(a) * (R - 7), y + Math.sin(a) * (R - 7)); }
+    g.strokeStyle = 'rgba(170,195,255,.05)'; g.lineWidth = 2; g.stroke();
+  }
+  return ctx.createPattern(c, 'repeat');
+})();
+let vignette = null, vigKey = '';
+function getVignette() {
+  const k = W + 'x' + H; if (k === vigKey) return vignette;
+  vigKey = k;
+  vignette = document.createElement('canvas'); vignette.width = W; vignette.height = H;
+  const g = vignette.getContext('2d');
+  const grd = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.hypot(W, H) * 0.62);
+  grd.addColorStop(0, 'rgba(0,0,0,0)'); grd.addColorStop(1, 'rgba(0,0,0,.4)');
+  g.fillStyle = grd; g.fillRect(0, 0, W, H);
+  return vignette;
+}
+
+let lastFrame = performance.now();
+function frame(now) {
+  requestAnimationFrame(frame);
+  lastFrame = now;
+  const alpha = clamp((now - lastSnap) / snapGap, 0, 1);
+  const me = snakes.get(myId);
+
+  let tx = camSrv.x, ty = camSrv.y;
+  if (me) { const p = me.segs[0], q = me.prev[0] || p; tx = lerp(q.x, p.x, alpha); ty = lerp(q.y, p.y, alpha); cam.x = tx; cam.y = ty; }
+  else { cam.x = lerp(cam.x, tx, 0.08); cam.y = lerp(cam.y, ty, 0.08); }
+  const viewR = 720 * (me ? 1 + (me.r - 10) / 32 : 1.25);
+  scale = lerp(scale, Math.hypot(W, H) / 2 / viewR, 0.04);
+
+  // floor
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = '#05070c'; ctx.fillRect(0, 0, W, H);
+  ctx.setTransform(DPR * scale, 0, 0, DPR * scale, DPR * (W / 2 - cam.x * scale), DPR * (H / 2 - cam.y * scale));
+  const hw = W / 2 / scale + 60, hh = H / 2 / scale + 60;
+  ctx.fillStyle = hexPattern; ctx.fillRect(cam.x - hw, cam.y - hh, hw * 2, hh * 2);
+
+  // orbs: light pooling on the floor, then hot cores
+  const t = now / 1000;
+  const vis = [];
+  for (const [id, f] of food) {
+    let x = f.x + Math.sin(t * 1.3 + f.ph) * 2, y = f.y + Math.cos(t * 1.1 + f.ph) * 2, k = clamp((now - f.born) / 350, 0, 1);
+    if (f.eat) {
+      const e = (now - f.eat.t) / 170, s = snakes.get(f.eat.sid);
+      if (e >= 1 || !s) { food.delete(id); continue; }
+      const h = s.rh || s.segs[0]; const ee = e * e;
+      x = lerp(f.eat.x0, h.x, ee); y = lerp(f.eat.y0, h.y, ee); k = 1 - e * 0.7;
+    }
+    if (Math.abs(x - cam.x) > hw || Math.abs(y - cam.y) > hh) continue;
+    const tw = 0.75 + 0.25 * Math.sin(t * 4 + f.ph * 3);
+    vis.push(x, y, (2.6 + f.v * 1.15) * k, f.h, tw);
+  }
+  ctx.globalCompositeOperation = 'lighter';
+  if (HQ) for (let i = 0; i < vis.length; i += 5) {
+    const r = vis[i + 2] * 13; ctx.globalAlpha = 0.7 * vis[i + 4];
+    ctx.drawImage(haloSprite(wrapH(vis[i + 3])), vis[i] - r, vis[i + 1] - r, r * 2, r * 2);
+  }
+  for (let i = 0; i < vis.length; i += 5) {
+    const r = vis[i + 2] * (1.9 + 0.3 * vis[i + 4]); ctx.globalAlpha = 1;
+    ctx.drawImage(coreSprite(wrapH(vis[i + 3])), vis[i] - r, vis[i + 1] - r, r * 2, r * 2);
+  }
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+
+  // snakes (biggest first, me on top)
+  const order = [...snakes.values()].sort((a, b) => (a.id === myId) - (b.id === myId) || b.segs.length - a.segs.length);
+  for (const s of order) drawSnake(s, alpha, now, s.id === myId, hw, hh);
+
+  // world edge
+  ctx.beginPath(); ctx.rect(cam.x - hw, cam.y - hh, hw * 2, hh * 2); ctx.arc(0, 0, worldR, 0, Math.PI * 2, true);
+  ctx.fillStyle = 'rgba(60,4,18,.72)'; ctx.fill();
+  ctx.beginPath(); ctx.arc(0, 0, worldR, 0, Math.PI * 2);
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.strokeStyle = 'rgba(255,40,80,.25)'; ctx.lineWidth = 40; ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,90,120,.8)'; ctx.lineWidth = 6; ctx.stroke();
+  ctx.globalCompositeOperation = 'source-over';
+
+  // screen space: vignette + labels
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.drawImage(getVignette(), 0, 0, W, H);
+  ctx.textAlign = 'center';
+  for (const s of order) {
+    if (s.id === myId || !s.name || !s.rh) continue;
+    const h = s.rh;
+    const sx = (h.x - cam.x) * scale + W / 2, sy = (h.y - cam.y) * scale + H / 2 + (s.r * 1.6) * scale + 16;
+    if (sx < -100 || sx > W + 100 || sy < -50 || sy > H + 50) continue;
+    ctx.font = '700 13px ui-rounded, system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillText(s.name, sx + 1, sy + 1.5);
+    ctx.fillStyle = `hsla(${s.hue},60%,85%,.92)`; ctx.fillText(s.name, sx, sy);
+    if (s.v) { ctx.font = '11px system-ui'; ctx.fillText(voice.levelFor(s.cid) > 0.02 ? '🔊' : '🎙', sx, sy + 15); }
+  }
+
+  if (voice.enabled && voice.ctx) voice.spatialise(cam.x, cam.y);
+  if (me) $('score').innerHTML = `Your length: <b>${Math.max(0, Math.floor(lbScore()))}</b>&nbsp; · &nbsp;Rank ${rank || '–'} of ${total}`;
+  drawMinimap(me);
+}
+function lbScore() {
+  for (const [, sc, cid] of lb) if (cid === myCid) return sc;
+  const me = snakes.get(myId); return me ? (me.segs.length - 10) * 4 : 0;
+}
+
+// draws a body given points (head first). Shared by the game and the menu preview.
+function resample(pts, n, step) {
+  // returns flat [x, y, srcIndex, ...] with points every `step` world units
+  const out = [pts[0].x, pts[0].y, 0];
+  for (let i = 1; i < n; i++) {
+    const a = pts[i - 1], b = pts[i], d = Math.hypot(b.x - a.x, b.y - a.y);
+    const k = Math.max(1, Math.ceil(d / step));
+    for (let j = 1; j <= k; j++) { const t = j / k; out.push(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, i - 1 + t); }
+  }
+  return out;
+}
+function paintBody(g, pts, n, r, hue, skin, boost, now, look, id, hw, hh, cx, cy) {
+  const inView = p => Math.abs(p.x - cx) < hw && Math.abs(p.y - cy) < hh;
+  const tailStart = Math.max(4, n - 10);
+  const taper = i => i <= tailStart ? 1 : 1 - (i - tailStart) / (n - tailStart) * 0.45;
+
+  // 1. soft contact shadow on the floor (smooth strokes, offset away from the light)
+  if (HQ || g !== ctx) {
+    const sp = new Path2D(); sp.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < n; i++) sp.lineTo(pts[i].x, pts[i].y);
+    g.save(); g.translate(-LIGHT.x * r * 0.5, -LIGHT.y * r * 0.5);
+    g.lineCap = g.lineJoin = 'round';
+    g.strokeStyle = 'rgba(0,0,0,.16)'; g.lineWidth = r * 2.9; g.stroke(sp);
+    g.strokeStyle = 'rgba(0,0,0,.22)'; g.lineWidth = r * 2.3; g.stroke(sp);
+    g.restore();
+  }
+  // 2. boost aura
+  if (boost) {
+    g.globalCompositeOperation = 'lighter';
+    const pulse = 0.8 + 0.2 * Math.sin(now / 55);
+    for (let i = n - 1; i >= 0; i -= 2) {
+      const p = pts[i]; if (!inView(p)) continue;
+      const c = segColor(skin, hue, i), rr = r * 2.6 * taper(i) * pulse;
+      g.globalAlpha = 0.5; g.drawImage(auraSprite(wrapH(c[0])), p.x - rr, p.y - rr, rr * 2, rr * 2);
+    }
+    g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+  }
+  // 3-5. body = overlapping segments. Each segment is its own lit disc, drawn tail -> head
+  // so every piece sits on top of the one behind it, and casts a soft shadow onto it.
+  const runs = [];
+  for (let i = 0; i < n; i++) {
+    const c = segColor(skin, hue, skin === 3 ? i - (i % 3) : i);
+    const last = runs[runs.length - 1];
+    if (last && last.h === c[0] && last.s === c[1] && last.l === c[2]) last.to = i;
+    else runs.push({ from: i, to: i, h: c[0], s: c[1], l: c[2], glow: c[3] });
+  }
+  const bl = boost ? 7 : 0;
+  for (let i = n - 1; i >= 0; i--) {
+    const p = pts[i]; if (!inView(p)) continue;
+    const c = segColor(skin, hue, skin === 3 ? i - (i % 3) : i);
+    const rr = r * taper(i) * (i === 0 ? 1.04 : 1);
+    // direction toward the previous (tail-side) segment
+    const q = pts[Math.min(n - 1, i + 1)];
+    let bx = q.x - p.x, by = q.y - p.y; const bd = Math.hypot(bx, by) || 1; bx /= bd; by /= bd;
+    if (i < n - 1 && (HQ || g !== ctx)) {
+      // contact shadow cast backwards onto the segment underneath
+      const sr = rr * 1.06;
+      g.globalAlpha = 0.5;
+      g.drawImage(segShadow, p.x + bx * rr * 0.22 - sr, p.y + by * rr * 0.22 - sr, sr * 2, sr * 2);
+      g.globalAlpha = 1;
+    }
+    g.drawImage(scaleSprite(c[0], c[1], clamp(c[2] + bl, 3, 90)), p.x - rr, p.y - rr, rr * 2, rr * 2);
+  }
+  // glowing rings (Neon skin)
+  if (skin === 4) {
+    g.globalCompositeOperation = 'lighter';
+    for (const run of runs) if (run.glow) { const p = pts[run.from]; if (!inView(p)) continue; const rr = r * 2.2; g.globalAlpha = 0.55; g.drawImage(auraSprite(wrapH(run.h)), p.x - rr, p.y - rr, rr * 2, rr * 2); }
+    g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+  }
+  // 6. head
+  const h0 = pts[0], h1 = pts[1] || { x: h0.x - 1, y: h0.y };
+  const a = Math.atan2(h0.y - h1.y, h0.x - h1.x);
+  const fx = Math.cos(a), fy = Math.sin(a), px = -fy, py = fx;
+  const hr = r * 1.1;
+  const hc = segColor(skin, hue, 0);
+  const hx = h0.x + fx * r * 0.12, hy = h0.y + fy * r * 0.12;
+
+  // tongue flick (every ~3.5s, per-snake phase)
+  const ph = ((now / 1000 + id * 0.613) % 3.5);
+  if (ph < 0.32) {
+    const ext = Math.sin(ph / 0.32 * Math.PI) * r * 1.0;
+    const bx = hx + fx * r * 0.8, by = hy + fy * r * 0.8, tx = bx + fx * ext, ty = by + fy * ext;
+    g.lineCap = 'round'; g.strokeStyle = '#ff3d6e'; g.lineWidth = Math.max(1.5, r * 0.13);
+    g.beginPath(); g.moveTo(bx, by); g.lineTo(tx, ty);
+    g.lineTo(tx + fx * r * 0.28 + px * r * 0.2, ty + fy * r * 0.28 + py * r * 0.2);
+    g.moveTo(tx, ty); g.lineTo(tx + fx * r * 0.28 - px * r * 0.2, ty + fy * r * 0.28 - py * r * 0.2); g.stroke();
+  }
+  // eyes: big glossy whites, crisp rim, round tracking pupils
+  for (const sd of [-1, 1]) {
+    const er = r * 0.5;
+    const ex = hx + fx * r * 0.02 + px * r * 0.46 * sd + Math.cos(look) * r * 0.06, ey = hy + fy * r * 0.02 + py * r * 0.46 * sd + Math.sin(look) * r * 0.06;
+    // socket shadow
+    g.beginPath(); g.arc(ex - LIGHT.x * er * 0.18, ey - LIGHT.y * er * 0.18, er * 1.1, 0, 7);
+    g.fillStyle = 'rgba(0,0,0,.28)'; g.fill();
+    // white
+    const sg = g.createRadialGradient(ex + LIGHT.x * er * 0.35, ey + LIGHT.y * er * 0.35, er * 0.05, ex, ey, er);
+    sg.addColorStop(0, '#ffffff'); sg.addColorStop(0.75, '#f3f5fb'); sg.addColorStop(1, '#c9cfdd');
+    g.beginPath(); g.arc(ex, ey, er, 0, 7); g.fillStyle = sg; g.fill();
+    g.lineWidth = Math.max(1, er * 0.09); g.strokeStyle = 'rgba(10,12,20,.55)'; g.stroke();
+    // pupil
+    const lx = ex + Math.cos(look) * er * 0.44, ly = ey + Math.sin(look) * er * 0.44;
+    g.beginPath(); g.arc(lx, ly, er * 0.54, 0, 7); g.fillStyle = '#07080d'; g.fill();
+    g.beginPath(); g.arc(lx, ly, er * 0.54, 0, 7);
+    g.lineWidth = er * 0.1; g.strokeStyle = `hsla(${wrapH(hue)},70%,${skin === 4 ? 60 : 35}%,.9)`; g.stroke();
+    // catch-lights
+    g.fillStyle = '#fff';
+    g.beginPath(); g.arc(lx + LIGHT.x * er * 0.26, ly + LIGHT.y * er * 0.26, er * 0.17, 0, 7); g.fill();
+    g.globalAlpha = 0.7; g.beginPath(); g.arc(lx - LIGHT.x * er * 0.22, ly - LIGHT.y * er * 0.22, er * 0.07, 0, 7); g.fill(); g.globalAlpha = 1;
+  }
+  return { x: hx, y: hy, r: hr };
+}
+
+function drawSnake(s, alpha, now, isMe, hw, hh) {
+  const n = s.segs.length; if (!n) return;
+  const r = lerp(s.prevR, s.r, alpha);
+  const pts = s.rp || (s.rp = []); pts.length = n;
+  for (let i = 0; i < n; i++) {
+    const a = s.segs[i], b = s.prev[i] || a;
+    const p = pts[i] || (pts[i] = { x: 0, y: 0 });
+    p.x = lerp(b.x, a.x, alpha); p.y = lerp(b.y, a.y, alpha);
+  }
+  s.rh = pts[0];
+  const heading = n > 1 ? Math.atan2(pts[0].y - pts[1].y, pts[0].x - pts[1].x) : s.a || 0;
+  const want = isMe ? mouseA : heading;
+  if (s.look === undefined) s.look = want;
+  s.look += Math.atan2(Math.sin(want - s.look), Math.cos(want - s.look)) * 0.35;
+  const look = s.look;
+  const head = paintBody(ctx, pts, n, r, s.hue, s.skin || 0, s.b, now, look, s.id, hw + r * 3, hh + r * 3, cam.x, cam.y);
+  const lvl = s.v || isMe ? voice.levelFor(isMe ? myCid : s.cid) : 0;
+  if (lvl > 0.02) {
+    const rr = head.r * (2.1 + Math.min(1, lvl * 8) * 0.7);
+    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.5 + Math.min(0.5, lvl * 5);
+    ctx.drawImage(talkSprite, head.x - rr, head.y - rr, rr * 2, rr * 2);
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  }
+}
+
+// ---------- menu: skin picker + corner icons
+let mySkin = 0;
+try { const k = localStorage.getItem('coil.skin'); if (k !== null) mySkin = +k % SKINS.length; } catch {}
+const pv = $('preview'), pvx = pv.getContext('2d');
+const skinModal = $('skinModal');
+function lookAt(cvEl, x, y) {
+  const br = cvEl.getBoundingClientRect(), k = br.width / cvEl.width;
+  return Math.atan2(mouseY - (br.top + y * k), mouseX - (br.left + x * k));
+}
+// draws a snake along a parametric curve f(t) -> {x,y}, t = 0 (head) .. 1 (tail)
+function miniSnake(cvEl, hue, skin, r, n, f, now) {
+  const g = cvEl.getContext('2d');
+  g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingQuality = 'high'; g.clearRect(0, 0, cvEl.width, cvEl.height);
+  const pts = []; for (let i = 0; i < n; i++) pts.push(f(i / (n - 1), now));
+  paintBody(g, pts, n, r, hue, skin, false, now, lookAt(cvEl, pts[0].x, pts[0].y), 3, 9999, 9999, 0, 0);
+}
+function drawMic(cvEl, on, now) {
+  const g = cvEl.getContext('2d'), W2 = cvEl.width, c = W2 / 2;
+  g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W2, W2);
+  const glow = g.createRadialGradient(c, c, 4, c, c, c);
+  glow.addColorStop(0, on ? 'rgba(86,214,155,.55)' : 'rgba(255,93,115,.35)'); glow.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = glow; g.fillRect(0, 0, W2, W2);
+  const body = g.createLinearGradient(c - 18, 0, c + 18, 0);
+  body.addColorStop(0, on ? '#2f8f6b' : '#8a2d3d'); body.addColorStop(0.45, on ? '#9dffd9' : '#ff9aa8'); body.addColorStop(1, on ? '#1d5f46' : '#5a1a26');
+  g.fillStyle = body; g.beginPath(); g.roundRect(c - 17, 16, 34, 52, 17); g.fill();
+  g.strokeStyle = on ? '#56d69b' : '#ff5d73'; g.lineWidth = 6; g.lineCap = 'round';
+  g.beginPath(); g.arc(c, 50, 27, 0.1 * Math.PI, 0.9 * Math.PI); g.stroke();
+  g.beginPath(); g.moveTo(c, 77); g.lineTo(c, 92); g.moveTo(c - 15, 93); g.lineTo(c + 15, 93); g.stroke();
+  if (on) { // sound waves
+    g.lineWidth = 4; const ph = (now / 600) % 1;
+    for (const k of [0, 0.5]) { const t = (ph + k) % 1; g.globalAlpha = 1 - t; g.beginPath(); g.arc(c, 42, 36 + t * 14, -0.35 * Math.PI, 0.35 * Math.PI); g.stroke(); g.beginPath(); g.arc(c, 42, 36 + t * 14, 0.65 * Math.PI, 1.35 * Math.PI); g.stroke(); }
+    g.globalAlpha = 1;
+  } else { g.strokeStyle = '#ff5d73'; g.lineWidth = 7; g.beginPath(); g.moveTo(22, 22); g.lineTo(W2 - 22, W2 - 22); g.stroke(); }
+}
+function drawMenu(now) {
+  if (menu.classList.contains('hidden')) return;
+  // bottom-left: your current skin, curled up
+  miniSnake($('skinIcon'), myHue, mySkin, 12, 18, (t, tm) => ({
+    x: 112 - t * 70 + Math.sin(t * 5.2 + tm / 600) * 16, y: 24 + t * 66 }), now);
+  // top-right: quality toggle icon (S-shaped snake; dull when low)
+  miniSnake($('gfxIcon'), HQ ? 195 : 220, HQ ? 0 : 4, 11, 20, (t, tm) => ({
+    x: 140 - t * 110, y: 45 + Math.sin(t * 6.3 + tm / 450) * 20 * (1 - t * 0.3) }), now);
+  drawMic($('voiceIcon'), $('voiceOpt').checked, now);
+  // skin picker
+  if (!skinModal.classList.contains('hidden')) {
+    const Wp = pv.width, Hp = pv.height;
+    pvx.setTransform(1, 0, 0, 1, 0, 0); pvx.imageSmoothingQuality = 'high'; pvx.clearRect(0, 0, Wp, Hp);
+    const r = 26, n = 20, pts = [];
+    for (let i = 0; i < n; i++) pts.push({ x: Wp - 50 - i * r * 0.5 * 1.85, y: Hp / 2 + Math.sin(now / 420 - i * 0.28) * 20 });
+    paintBody(pvx, pts, n, r, myHue, mySkin, false, now, lookAt(pv, pts[0].x, pts[0].y), 7, 9999, 9999, 0, 0);
+    $('skinName').textContent = SKINS[mySkin];
+  }
+}
+$('skinPrev').onclick = () => { mySkin = (mySkin + SKINS.length - 1) % SKINS.length; };
+$('skinNext').onclick = () => { mySkin = (mySkin + 1) % SKINS.length; };
+$('skinBtn').onclick = () => skinModal.classList.remove('hidden');
+$('skinDone').onclick = () => { skinModal.classList.add('hidden'); try { localStorage.setItem('coil.skin', mySkin); localStorage.setItem('coil.hue', myHue); } catch {} nick.focus(); };
+function syncMenuLabels() {
+  $('gfxLbl').textContent = HQ ? 'High quality' : 'Low quality';
+  $('voiceLbl').textContent = 'Voice chat: ' + ($('voiceOpt').checked ? 'On' : 'Off');
+}
+$('gfxBtn').onclick = () => { HQ = !HQ; try { localStorage.setItem('coil.hq', HQ ? '1' : '0'); } catch {} resize(); syncMenuLabels(); };
+$('voiceBtn').onclick = () => { const v = $('voiceOpt'); v.checked = !v.checked; try { localStorage.setItem('coil.voice', v.checked ? '1' : '0'); } catch {} syncMenuLabels(); };
+try { if (localStorage.getItem('coil.voice') === '0') $('voiceOpt').checked = false; } catch {}
+$('howBtn').onclick = $('ctlBtn').onclick = e => { e.preventDefault(); $('howBox').classList.toggle('hidden'); };
+addEventListener('keydown', e => { if (e.key === 'Escape') skinModal.classList.add('hidden'); });
+syncMenuLabels();
+(function menuLoop(t) { requestAnimationFrame(menuLoop); drawMenu(t); })(0);
+
+function drawMinimap(me) {
+  const S = mmCv.width, c = S / 2, R = S / 2 - 6;
+  mmx.clearRect(0, 0, S, S);
+  mmx.beginPath(); mmx.arc(c, c, R, 0, Math.PI * 2);
+  mmx.fillStyle = 'rgba(10,14,28,.65)'; mmx.fill();
+  mmx.strokeStyle = 'rgba(255,70,100,.6)'; mmx.lineWidth = 3; mmx.stroke();
+  for (let i = 0; i < mm.length; i += 3) {
+    const x = c + mm[i] / 100 * R, y = c + mm[i + 1] / 100 * R;
+    mmx.fillStyle = mm[i + 2] ? 'rgba(124,200,255,.9)' : 'rgba(200,210,240,.35)';
+    mmx.beginPath(); mmx.arc(x, y, mm[i + 2] ? 4 : 2.5, 0, Math.PI * 2); mmx.fill();
+  }
+  const p = me ? me.segs[0] : cam;
+  mmx.fillStyle = '#ffd27c';
+  mmx.beginPath(); mmx.arc(c + p.x / worldR * R, c + p.y / worldR * R, 6, 0, Math.PI * 2); mmx.fill();
+  // voice range ring
+  if (voice.enabled && me) {
+    mmx.strokeStyle = 'rgba(124,243,197,.5)'; mmx.lineWidth = 1.5;
+    mmx.beginPath(); mmx.arc(c + p.x / worldR * R, c + p.y / worldR * R, VOICE_RANGE / worldR * R, 0, Math.PI * 2); mmx.stroke();
+  }
+}
+
+connect();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
