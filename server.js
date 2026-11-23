@@ -15,7 +15,7 @@ const { WebSocketServer } = require('ws');
 const PORT = +(process.env.PORT || 3000);
 const TICK_RATE = 30;
 const WORLD_R = 4000;
-const FOOD_TARGET = 8000;
+const FOOD_TARGET = 5000;
 const BOT_POP = +(process.env.BOTS ?? 50);      // bots fill the world up to this many snakes
 const BOT_MIN = +(process.env.BOTS_MIN ?? 8);     // ...but never fewer than this many bots
 const BASE_VIEW = 1500;          // world units visible (radius) at minimum size
@@ -115,7 +115,7 @@ function sweepFood() {
 function spawnRandomFood(n) {
   for (let i = 0; i < n; i++) {
     let p;
-    if (Math.random() < 0.55) { const a = Math.random() * Math.PI * 2, rr = WORLD_R * 0.5 * Math.sqrt(Math.random()); p = { x: Math.cos(a) * rr, y: Math.sin(a) * rr }; }
+    if (Math.random() < 0.35) { const a = Math.random() * Math.PI * 2, rr = WORLD_R * 0.6 * Math.sqrt(Math.random()); p = { x: Math.cos(a) * rr, y: Math.sin(a) * rr }; }
     else p = randInWorld(0.85);                     // never in the outer edge band
     const v = Math.random() < 0.08 ? 3 : Math.random() < 0.3 ? 2 : 1;
     // natural food also expires (1.5-3 min) and respawns elsewhere, so uneaten corners never pile up
@@ -586,7 +586,7 @@ function tick() {
   for (const [v, k] of deaths) if (!spared.has(v)) kill(v, k);
 
   // world upkeep
-  if (food.size < FOOD_TARGET) spawnRandomFood(Math.min(80, FOOD_TARGET - food.size));
+  if (food.size < FOOD_TARGET) spawnRandomFood(Math.min(50, FOOD_TARGET - food.size));
   for (let i = botRespawns.length - 1; i >= 0; i--) if (botRespawns[i] <= tickNo) { botRespawns.splice(i, 1); spawnBot(); }
   if (tickNo % TICK_RATE === 0) {
     manageBots(); sweepFood();
