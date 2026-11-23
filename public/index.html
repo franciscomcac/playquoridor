@@ -186,7 +186,12 @@ const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 
 function chainBody(segs, hx, hy, n, spacing) {
   segs[0].x = hx; segs[0].y = hy;
-  while (segs.length < n) { const t = segs[segs.length - 1]; segs.push({ x: t.x, y: t.y }); }
+  while (segs.length < n) {                  // grow out of the tail along its direction, never stacked on one spot
+    const t = segs[segs.length - 1], u = segs[segs.length - 2] || t;
+    let dx = t.x - u.x, dy = t.y - u.y; const d = Math.hypot(dx, dy) || 1;
+    if (d < 0.01) { dx = 1; dy = 0; } else { dx /= d; dy /= d; }
+    segs.push({ x: t.x + dx * spacing, y: t.y + dy * spacing });
+  }
   while (segs.length > n && segs.length > 3) segs.pop();
   for (let i = 1; i < segs.length; i++) {
     const a = segs[i - 1], b = segs[i];
@@ -785,8 +790,11 @@ function drawGhosts(now, hw, hh) {
     ctx.restore();
     // sparks rising off the body
     ctx.globalCompositeOperation = 'lighter';
+    let gx = 1e9, gy = 1e9;
     for (let j = 0; j < gh.pts.length; j += 3) {
       const p = gh.pts[j]; if (Math.abs(p.x - cam.x) > hw || Math.abs(p.y - cam.y) > hh) continue;
+      if ((p.x - gx) ** 2 + (p.y - gy) ** 2 < (gh.r * 0.9) ** 2) continue;
+      gx = p.x; gy = p.y;
       const c = segColor(gh.skin, gh.hue, j), rr = gh.r * (1.2 + 2.4 * e);
       ctx.globalAlpha = 0.55 * (1 - k);
       ctx.drawImage(auraSprite(wrapH(c[0])), p.x - rr, p.y - rr, rr * 2, rr * 2);
@@ -839,8 +847,11 @@ function paintBody(g, pts, n, r, hue, skin, boost, now, look, id, hw, hh, cx, cy
   // 2. boost aura
   if (boost) {
     g.globalCompositeOperation = 'lighter';
+    let lx = 1e9, ly = 1e9; const minGap = (r * 0.9) ** 2;
     for (let i = n - 1; i >= 0; i -= 2) {
       const p = pts[i]; if (!inView(p)) continue;
+      if ((p.x - lx) ** 2 + (p.y - ly) ** 2 < minGap) continue;          // never stack glows on one spot
+      lx = p.x; ly = p.y;
       const wave = 0.5 + 0.5 * Math.sin(now / 70 - i * 0.45);          // pulses run from head to tail
       const c = segColor(skin, hue, i), rr = r * (2.2 + 0.9 * wave) * taper(i);
       g.globalAlpha = 0.32 + 0.4 * wave; g.drawImage(auraSprite(wrapH(c[0])), p.x - rr, p.y - rr, rr * 2, rr * 2);

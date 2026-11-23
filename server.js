@@ -174,7 +174,12 @@ function computeBBox(s) {
 // same algorithm runs on the client to reconstruct bodies between keyframes
 function chainBody(segs, hx, hy, n, spacing) {
   segs[0].x = hx; segs[0].y = hy;
-  while (segs.length < n) { const t = segs[segs.length - 1]; segs.push({ x: t.x, y: t.y }); }
+  while (segs.length < n) {                  // grow out of the tail along its direction, never stacked on one spot
+    const t = segs[segs.length - 1], u = segs[segs.length - 2] || t;
+    let dx = t.x - u.x, dy = t.y - u.y; const d = Math.hypot(dx, dy) || 1;
+    if (d < 0.01) { dx = 1; dy = 0; } else { dx /= d; dy /= d; }
+    segs.push({ x: t.x + dx * spacing, y: t.y + dy * spacing });
+  }
   while (segs.length > n && segs.length > 3) segs.pop();
   for (let i = 1; i < segs.length; i++) {
     const a = segs[i - 1], b = segs[i];
