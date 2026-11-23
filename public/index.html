@@ -65,8 +65,7 @@
   #skinDone { padding:10px 34px; font-size:18px; font-weight:800; border:0; border-radius:999px; cursor:pointer; color:#fff; font-family:inherit;
     background:linear-gradient(180deg,#ffbf5e,#f07b2b); box-shadow:0 4px 0 #a8501a; }
   #hud { position:fixed; inset:0; pointer-events:none; z-index:3; }
-  #lb { position:absolute; top:14px; right:14px; width:220px; padding:10px 14px; border-radius:12px; background:rgba(10,14,28,.55);
-    backdrop-filter:blur(6px); font-size:13px; }
+  #lb { position:absolute; top:14px; right:14px; width:220px; padding:10px 14px; border-radius:12px; background:rgba(10,14,28,.78); font-size:13px; }
   #lb h3 { margin:0 0 6px; font-size:14px; color:var(--acc); letter-spacing:.5px; }
   #lb ol { margin:0; padding-left:22px; }
   #lb li { display:flex; justify-content:space-between; gap:8px; padding:1px 0; color:#cfd6f5; }
@@ -76,13 +75,13 @@
   #score b { font-size:22px; color:#fff; }
   #mm { position:absolute; right:16px; bottom:16px; width:150px; height:150px; opacity:.9; }
   #voiceBar { position:absolute; left:50%; bottom:16px; transform:translateX(-50%); display:flex; align-items:center; gap:10px;
-    pointer-events:auto; padding:8px 12px; border-radius:999px; background:rgba(10,14,28,.6); backdrop-filter:blur(6px); font-size:13px; }
+    pointer-events:auto; padding:8px 12px; border-radius:999px; background:rgba(10,14,28,.82); font-size:13px; }
   #micBtn { border:0; border-radius:999px; padding:8px 14px; font-weight:800; font-family:inherit; cursor:pointer; font-size:13px;
     background:var(--acc); color:#04120c; }
   #micBtn.off { background:var(--bad); color:#fff; }
   #micBtn.ptt { background:#2a3354; color:#cfd6f5; }
   #micLvl { width:60px; height:6px; border-radius:3px; background:#1c2340; overflow:hidden; }
-  #micLvl i { display:block; height:100%; width:0; background:var(--acc); transition:width .06s; }
+  #micLvl i { display:block; height:100%; width:0; background:var(--acc); }
   #voiceInfo { color:var(--mut); }
 </style>
 </head>
@@ -533,23 +532,31 @@ const voice = {
         vol = Math.pow(1 - t, 1.6);
         pan = clamp(dx / 700, -0.85, 0.85);
       }
-      p.gain.gain.setTargetAtTime(vol, this.ctx.currentTime, 0.08);
-      if (p.pan) p.pan.pan.setTargetAtTime(pan, this.ctx.currentTime, 0.08);
+      // touch the audio graph only when something changed, at most 10x per second
+      if (now >= (p.nextAudio || 0) && (Math.abs(vol - (p.lastVol ?? -1)) > 0.02 || Math.abs(pan - (p.lastPan ?? 9)) > 0.03)) {
+        const t0 = this.ctx.currentTime;
+        p.gain.gain.cancelScheduledValues(t0); p.gain.gain.setTargetAtTime(vol, t0, 0.08);
+        if (p.pan) { p.pan.pan.cancelScheduledValues(t0); p.pan.pan.setTargetAtTime(pan, t0, 0.08); }
+        p.lastVol = vol; p.lastPan = pan; p.nextAudio = now + 100;
+      }
       p.level = rms(p.an, p.buf) * (vol > 0.02 ? 1 : 0);
       if (p.pc.connectionState === 'connected') live++;
     }
     if (this.localAn) {
       this.localBuf = this.localBuf || new Uint8Array(this.localAn.fftSize);
       this.localLevel = this.muted ? 0 : rms(this.localAn, this.localBuf);
-      $('micLvl').firstChild.style.width = Math.min(100, this.localLevel * 900) + '%';
+      const w = Math.round(Math.min(100, this.localLevel * 900) / 5) * 5;          // 5% steps
+      if (w !== this.lastW && now >= (this.nextMeter || 0)) { micFill.style.width = w + '%'; this.lastW = w; this.nextMeter = now + 66; }
     }
-    $('voiceInfo').textContent = live ? `${live} nearby can hear you` : 'no one nearby';
+    const info = live ? `${live} nearby can hear you` : 'no one nearby';
+    if (info !== this.lastInfo) { voiceInfoEl.textContent = info; this.lastInfo = info; }
   },
   levelFor(cid) {
     if (cid === myCid) return this.localLevel;
     const p = this.peers.get(cid); return p ? p.level : 0;
   }
 };
+const micFill = document.querySelector('#micLvl i'), voiceInfoEl = document.getElementById('voiceInfo');
 function rms(an, buf) {
   an.getByteTimeDomainData(buf);
   let s = 0; for (let i = 0; i < buf.length; i++) { const v = (buf[i] - 128) / 128; s += v * v; }
@@ -671,7 +678,8 @@ function getVignette() {
   return vignette;
 }
 
-let lastFrame = performance.now(), boostZoom = 1;
+let lastFrame = performance.now(), boostZoom = 1, lastScoreHtml = '';
+const scoreEl = document.getElementById('score');
 let ghostLayer = null;
 function frame(now) {
   requestAnimationFrame(frame);
@@ -747,11 +755,11 @@ function frame(now) {
     ctx.font = '700 13px ui-rounded, system-ui, sans-serif';
     ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillText(s.name, sx + 1, sy + 1.5);
     ctx.fillStyle = `hsla(${s.hue},60%,85%,.92)`; ctx.fillText(s.name, sx, sy);
-    if (s.v) { ctx.font = '11px system-ui'; ctx.fillText(voice.levelFor(s.cid) > 0.02 ? '🔊' : '🎙', sx, sy + 15); }
+    if (s.v) drawVoiceIcon(sx, sy + 11, voice.levelFor(s.cid) > 0.02, s.hue);
   }
 
   if (voice.enabled && voice.ctx) voice.spatialise(cam.x, cam.y);
-  if (me) $('score').innerHTML = `Your length: <b>${Math.max(0, Math.floor(lbScore()))}</b>&nbsp; · &nbsp;Rank ${rank || '–'} of ${total}`;
+  if (me) { const sc = `Your length: <b>${Math.max(0, Math.floor(lbScore()))}</b>&nbsp; · &nbsp;Rank ${rank || '–'} of ${total}`; if (sc !== lastScoreHtml) { scoreEl.innerHTML = sc; lastScoreHtml = sc; } }
   drawMinimap(me);
 }
 // death animation: the body brightens, swells slightly and dissolves into light over ~0.9 s
@@ -784,6 +792,17 @@ function drawGhosts(now, hw, hh) {
       ctx.drawImage(auraSprite(wrapH(c[0])), p.x - rr, p.y - rr, rr * 2, rr * 2);
     }
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  }
+}
+// tiny vector mic / sound-wave icon under a voice player's name (emoji text is slow to draw)
+function drawVoiceIcon(x, y, talking, hue) {
+  ctx.fillStyle = talking ? '#7cf3c5' : `hsla(${hue},40%,80%,.7)`;
+  ctx.beginPath(); ctx.roundRect(x - 2.5, y - 5, 5, 8, 2.5); ctx.fill();
+  ctx.strokeStyle = ctx.fillStyle; ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.arc(x, y, 4.5, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+  if (talking) for (const k of [1, 2]) {
+    ctx.beginPath(); ctx.arc(x, y - 1, 4 + k * 3.5, -0.3 * Math.PI, 0.3 * Math.PI); ctx.stroke();
+    ctx.beginPath(); ctx.arc(x, y - 1, 4 + k * 3.5, 0.7 * Math.PI, 1.3 * Math.PI); ctx.stroke();
   }
 }
 function lbScore() {
