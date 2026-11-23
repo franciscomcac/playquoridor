@@ -565,7 +565,18 @@ function tick() {
     });
     if (killer) deaths.push([s, killer]);
   }
-  for (const [s, k] of deaths) kill(s, k);
+  // Two snakes that kill each other in the same tick (head-on): only one dies, the smaller one
+  // (a coin flip if they're the same size). The survivor gets the kill.
+  const killedBy = new Map(deaths.map(([v, k]) => [v, k]));
+  const spared = new Set();
+  for (const [v, k] of deaths) {
+    if (!k || spared.has(v) || spared.has(k)) continue;
+    if (killedBy.get(k) === v) {
+      const loser = v.score < k.score ? v : k.score < v.score ? k : (Math.random() < 0.5 ? v : k);
+      spared.add(loser === v ? k : v);
+    }
+  }
+  for (const [v, k] of deaths) if (!spared.has(v)) kill(v, k);
 
   // world upkeep
   if (food.size < FOOD_TARGET) spawnRandomFood(Math.min(25, FOOD_TARGET - food.size));
