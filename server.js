@@ -15,8 +15,8 @@ const { WebSocketServer } = require('ws');
 const PORT = +(process.env.PORT || 3000);
 const TICK_RATE = 30;
 const WORLD_R = 4000;
-const FOOD_TARGET = 2400;
-const BOT_POP = +(process.env.BOTS ?? 30);      // bots fill the world up to this many snakes
+const FOOD_TARGET = 5000;
+const BOT_POP = +(process.env.BOTS ?? 40);      // bots fill the world up to this many snakes
 const BOT_MIN = +(process.env.BOTS_MIN ?? 8);     // ...but never fewer than this many bots
 const BASE_VIEW = 1500;          // world units visible (radius) at minimum size
 const BASE_SPEED = 5.4;
@@ -219,10 +219,17 @@ function forSegsNear(x, y, rad, fn) {
   return false;
 }
 const deathsThisTick = [];
+const feasts = [];   // death piles bots race to: {x, y, v, until}
 function kill(s, killer) {
   if (!s.alive) return;
   s.alive = false;
   deathsThisTick.push(s.id);
+  // mark the pile: a point every ~quarter of the body (long snakes leave a long trail of food)
+  const nPts = Math.min(6, Math.max(1, Math.round(s.segs.length / 40)));
+  for (let k = 0; k < nPts; k++) {
+    const p = s.segs[Math.floor((k + 0.5) / nPts * s.segs.length)];
+    feasts.push({ x: p.x, y: p.y, v: s.score * 0.8 / nPts, until: tickNo + 20 * TICK_RATE });
+  }
   snakes.delete(s.id);
   // turn the body into food
   const total = Math.max(4, s.score * 0.8);
@@ -264,7 +271,7 @@ function spawnBot() {
   createSnake({
     name, hue: Math.floor(Math.random() * 360), skin: Math.floor(Math.random() * 6), isBot: true,
     score: botStartScore(), at: hiddenSpawn(),
-    bot: { persona: PERSONAS[Math.floor(Math.random() * PERSONAS.length)], skill: rand(0.55, 1.2) }
+    bot: { persona: PERSONAS[Math.floor(Math.random() * PERSONAS.length)], skill: rand(0.85, 1.2) }
   });
 }
 // Spawn point for a bot: off every real player's screen (their actual view radius, which grows
@@ -275,7 +282,10 @@ function viewRadiusOf(o) { return BASE_VIEW * (1 + (o.r - 10) / 40) + 250; }
 function hiddenSpawn() {
   let best = null, bestScore = -Infinity;
   for (let t = 0; t < 120; t++) {
-    const p = randInWorld(0.85);
+    // mostly near the middle: 3 in 4 tries pick a point within 45% of the radius
+    let p;
+    if (t % 4 !== 3) { const ang = Math.random() * Math.PI * 2, rr = WORLD_R * 0.45 * Math.sqrt(Math.random()); p = { x: Math.cos(ang) * rr, y: Math.sin(ang) * rr }; }
+    else p = randInWorld(0.85);
     let seen = Infinity;                                  // distance outside the nearest player's view (negative = visible)
     for (const pl of players.values()) {
       const me = pl.snake && pl.snake.alive ? pl.snake : null;
@@ -372,14 +382,29 @@ function botThink(s) {
     else if (b.persona === 'farmer' && s.score > 400 && Math.random() < 0.1) { const prey = pickPrey(s); if (prey && prey.score < s.score * 0.3) b.target = prey.id; }
   }
   const prey = b.target && snakes.get(b.target);
-  const threat = nearestThreat(s, b.persona === 'coward' ? 520 : b.persona === 'hunter' ? 200 : 340);
+  // food first: only a close or aimed threat breaks a bot off its meal
+  let threat = nearestThreat(s, b.persona === 'coward' ? 300 : b.persona === 'hunter' ? 150 : 200);
+  if (threat && !threat.aimed && threat.d > (b.persona === 'coward' ? 200 : 130)) threat = null;
+  // nearest worthwhile feast (death pile) within reach
+  let feast = null, feastScore = 0;
+  for (const F of feasts) {
+    const d = Math.hypot(F.x - h.x, F.y - h.y);
+    if (d > 1400) continue;
+    const sc = (F.v + 10) / (d + 150);
+    if (sc > feastScore) { feastScore = sc; feast = F; }
+  }
 
   if (threat) {
     // run: away from the threat's head, slightly sideways so we don't run in a straight line forever
     const th = threat.o.segs[0];
     desired = Math.atan2(h.y - th.y, h.x - th.x) + (b.id2 = b.id2 || (Math.random() < 0.5 ? 0.4 : -0.4));
-    wantBoost = (threat.aimed || threat.d < (b.persona === 'coward' ? 320 : 200)) && s.score > MIN_BOOST_SCORE + 2;
+    wantBoost = (threat.aimed || threat.d < 150) && s.score > MIN_BOOST_SCORE + 1;
     b.mode = 'flee';
+  } else if (feast && Math.hypot(feast.x - h.x, feast.y - h.y) > 110) {
+    // a snake just died: sprint to the pile
+    desired = Math.atan2(feast.y - h.y, feast.x - h.x);
+    wantBoost = s.score > MIN_BOOST_SCORE + 1;
+    b.mode = 'feast'; b.foodT = null;
   } else if (prey && prey.alive) {
     const ph = prey.segs[0], d = Math.hypot(ph.x - h.x, ph.y - h.y);
     if (s.score > prey.score * 3.5 && d < 420) {
@@ -401,9 +426,9 @@ function botThink(s) {
       b.think = 6 + Math.floor(Math.random() * 6);
       let best = null, bestScore = 0;
       const turnR = BASE_SPEED / (0.19 / (1 + (s.r - 10) / 25));   // tightest circle we can turn
-      forFoodNear(h.x, h.y, 520, f => {
+      forFoodNear(h.x, h.y, 850, f => {
         const d = Math.hypot(f.x - h.x, f.y - h.y);
-        if (d > 520 || (b.skip && b.skip.has(f.id))) return;
+        if (d > 850 || (b.skip && b.skip.has(f.id))) return;
         const off = Math.abs(angDiff(Math.atan2(f.y - h.y, f.x - h.x), s.angle));
         if (d < turnR * 2.2 && off > 0.7) return;                    // beside us, inside our turn: unreachable
         const sc = f.v / (d + 60) * (1.5 - off / Math.PI);           // prefer food ahead of us
@@ -416,9 +441,8 @@ function botThink(s) {
         // how much food is in that patch? (death piles and boost trails)
         let patch = 0; forFoodNear(best.x, best.y, 90, f => { if ((f.x - best.x) ** 2 + (f.y - best.y) ** 2 < 8100) patch += f.v; });
         const d = Math.hypot(best.x - h.x, best.y - h.y);
-        const calm = !nearestThreat(s, 450);
-        if (calm && patch >= 6 && d > 90 && s.score > MIN_BOOST_SCORE + 4 && Math.random() < 0.85)
-          b.boostT = Math.min(30, Math.ceil(d / BOOST_SPEED));      // just long enough to get there
+        if (patch >= 3 && d > 70 && s.score > MIN_BOOST_SCORE + 1)
+          b.boostT = Math.min(40, Math.ceil(d / BOOST_SPEED));      // sprint there, just long enough to arrive
       }
     }
     const f = b.foodT && food.get(b.foodT);
@@ -427,23 +451,44 @@ function botThink(s) {
   }
   botSteer(s, desired, wantBoost);
 }
+// Simulate our own movement for the next ~0.7 s while steering toward `heading`, at the given
+// speed and with our real turning limit, and report whether that path stays clear.
+function pathClear(s, heading, speed) {
+  const h = s.segs[0];
+  const turn = 0.19 / (1 + (s.r - 10) / 25);
+  let x = h.x, y = h.y, a = s.angle;
+  const steps = 20, pad = 10 + speed;              // a wider margin when moving fast
+  for (let i = 1; i <= steps; i++) {
+    a += clamp(angDiff(heading, a), -turn, turn);
+    x += Math.cos(a) * speed; y += Math.sin(a) * speed;
+    if (i % 2 === 0 && isDanger(s, x, y, pad)) return false;
+  }
+  return true;
+}
 function botSteer(s, desired, wantBoost) {
   const b = s.bot, h = s.segs[0];
   if (Math.hypot(h.x, h.y) > WORLD_R - 500) { desired = Math.atan2(-h.y, -h.x); wantBoost = false; }
 
-  // --- avoidance: closest safe heading to the one we want (skill = how far ahead we look)
-  const look1 = (s.r * 2 + 40) * b.skill, look2 = (s.r * 4 + 110) * b.skill;
-  const offsets = [0, 0.35, -0.35, 0.7, -0.7, 1.1, -1.1, 1.6, -1.6, 2.2, -2.2, Math.PI];
-  let chosen = null;
-  for (const o of offsets) {
-    const a = desired + o, ca = Math.cos(a), sa = Math.sin(a);
-    if (!isDanger(s, h.x + ca * look1, h.y + sa * look1, 14) && !isDanger(s, h.x + ca * look2, h.y + sa * look2, 8)) { chosen = a; break; }
+  // re-plan every 2nd tick (cheap enough for the free server), keep the last plan in between
+  b.plan = (b.plan || 0) - 1;
+  if (b.plan > 0 && b.lastDesired !== undefined && Math.abs(angDiff(desired, b.lastDesired)) < 0.3) {
+    s.target = b.chosen; if (b.boostT > 0) b.boostT--; s.boost = b.boostOk && (wantBoost || b.boostT > 0); return;
   }
-  if (chosen === null) { chosen = s.angle + Math.PI * 0.6; wantBoost = s.score > 25 && b.skill > 0.9; }
+  b.plan = 2; b.lastDesired = desired;
+
+  // closest heading to the one we want whose simulated path is clear
+  const offsets = [0, 0.3, -0.3, 0.65, -0.65, 1.0, -1.0, 1.4, -1.4, 1.9, -1.9, 2.5, -2.5, Math.PI];
+  let chosen = null;
+  for (const o of offsets) if (pathClear(s, desired + o, BASE_SPEED)) { chosen = desired + o; break; }
+  if (chosen === null) chosen = s.angle + Math.PI * 0.75;     // boxed in: turn hard, and never boost into it
+  const boostRequested = wantBoost || b.boostT > 0;
+  // only sprint if the path is also clear at sprint speed
+  b.boostOk = chosen !== null && boostRequested && pathClear(s, chosen, BOOST_SPEED);
+  b.chosen = chosen;
   s.target = chosen;
   if (Math.abs(angDiff(chosen, desired)) > 0.5) b.wander = chosen;
   if (b.boostT > 0) b.boostT--;
-  s.boost = wantBoost || b.boostT > 0;
+  s.boost = b.boostOk;
 }
 
 // ---------------------------------------------------------------- players
@@ -525,7 +570,15 @@ function tick() {
   // world upkeep
   if (food.size < FOOD_TARGET) spawnRandomFood(Math.min(25, FOOD_TARGET - food.size));
   for (let i = botRespawns.length - 1; i >= 0; i--) if (botRespawns[i] <= tickNo) { botRespawns.splice(i, 1); spawnBot(); }
-  if (tickNo % TICK_RATE === 0) { manageBots(); sweepFood(); }
+  if (tickNo % TICK_RATE === 0) {
+    manageBots(); sweepFood();
+    // drop feasts that are old or eaten
+    for (let i = feasts.length - 1; i >= 0; i--) {
+      const F = feasts[i]; let left = 0;
+      if (F.until > tickNo) forFoodNear(F.x, F.y, 120, f => { if ((f.x - F.x) ** 2 + (f.y - F.y) ** 2 < 14400) left += f.v; });
+      if (left < 3) feasts.splice(i, 1);
+    }
+  }
 
   broadcast();
 }

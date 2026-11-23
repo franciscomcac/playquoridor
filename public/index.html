@@ -172,6 +172,7 @@ for (const h of HUES) {
 // state
 // =====================================================================================
 let myPlayed = false;
+let deadId = 0;              // id of our snake that just died (gets the death animation)
 let ws = null, myCid = 0, myId = 0, worldR = 4000, tickMs = 1000 / 30;
 const snakes = new Map();      // id -> snake
 const ghosts = [];             // dying snakes, faded out client-side
@@ -230,7 +231,7 @@ function onMsg(m) {
     case 'dead': {
       const me = snakes.get(myId);
       if (me) voice.grace(me.rh || me.segs[0]);          // keep talking for 2 s where we died
-      myId = 0;
+      deadId = myId; myId = 0;
       const msg = `Your final length was <b>${m.score}</b>!<small>${m.by ? 'eaten by ' + esc(m.by) : 'you hit the edge'}</small>`;
       setTimeout(() => { if (!myId) showMenu(msg, true); }, 1100);   // let the death animation play first
       break;
@@ -277,6 +278,7 @@ function applyState(m) {
     if (!prev.length) for (const p of s.segs) prev.push({ x: p.x, y: p.y });
   }
   if (m.dd) for (const id of m.dd) {
+    if (id !== deadId) continue;                      // only our own death gets the animation
     const sn = snakes.get(id); if (!sn || !sn.segs.length) continue;
     const src = sn.rp && sn.rp.length === sn.segs.length ? sn.rp : sn.segs;
     ghosts.push({ pts: src.map(p => ({ x: p.x, y: p.y })), r: sn.r, hue: sn.hue, skin: sn.skin || 0, look: sn.look || 0, id, t0: now, me: id === myId });
