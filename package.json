@@ -1,5 +1,5 @@
 {
-  "name": "coil-io",
+  "name": "yapsnake",
   "version": "1.0.0",
   "description": "Multiplayer snake .io game with proximity voice chat",
   "main": "server.js",

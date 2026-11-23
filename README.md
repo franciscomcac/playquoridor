@@ -1,4 +1,4 @@
-# coil.io — snake .io game with proximity voice chat
+# yapsnake — multiplayer snake game with proximity voice chat
 
 ## Run locally
     npm install

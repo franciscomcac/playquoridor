@@ -1,6 +1,6 @@
 'use strict';
 /*
- * COIL.IO — authoritative game server
+ * YAPSNAKE — authoritative game server
  *  - serves /public over HTTP
  *  - runs the snake simulation at 30 Hz
  *  - streams culled state to each client over WebSocket
@@ -596,4 +596,4 @@ function broadcastInner() {
 spawnRandomFood(FOOD_TARGET);
 for (let i = 0; i < wantedBots(); i++) spawnBot();
 setInterval(tick, 1000 / TICK_RATE);
-server.listen(PORT, () => console.log(`coil.io running on http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`yapsnake running on http://localhost:${PORT}`));
