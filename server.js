@@ -139,8 +139,8 @@ function safeSpawn() {
   }
   return best;
 }
-function createSnake({ name, hue, skin = 0, isBot = false, player = null, score = START_SCORE, bot = null }) {
-  const p = safeSpawn();
+function createSnake({ name, hue, skin = 0, isBot = false, player = null, score = START_SCORE, bot = null, at = null }) {
+  const p = at || safeSpawn();
   const angle = Math.atan2(-p.y, -p.x) + rand(-1, 1);
   const s = {
     id: nextSnakeId++, name, hue, skin, isBot, player, alive: true,
@@ -250,23 +250,41 @@ const BOT_NAMES = ['xXViperXx', 'noodle', 'pedro', 'ana', 'lil coil', 'BRUH', 's
   'Kaio', 'marta', 'rafa', 'lucas', 'sofia', 'diogo', 'beatriz', 'tiago', 'mariana', 'goncalo',
   'Shadow', 'Neon', 'toxic', 'chill', 'sneaky', 'Cobra', 'python3', 'segfault', 'null', 'pizza',
   'danger noodle', 'hissy fit', 'Mr Long', 'slurp', 'Ribbon', 'zoom', 'loop', 'twisty', 'the coil', 'unknown'];
-const PERSONAS = ['farmer', 'farmer', 'farmer', 'hunter', 'hunter', 'coward'];
+const PERSONAS = ['farmer', 'farmer', 'farmer', 'farmer', 'coward', 'coward', 'hunter'];
 const botRespawns = [];
-function botStartScore() {
-  const r = Math.random();
-  if (r < 0.55) return Math.floor(rand(10, 45));
-  if (r < 0.88) return Math.floor(rand(60, 320));
-  return Math.floor(rand(450, 1400));
-}
+function botStartScore() { return Math.floor(rand(START_SCORE, START_SCORE + 12)); }   // newcomers, like a real player
 function spawnBot() {
   const used = new Set([...snakes.values()].map(o => o.name));
   let name = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)];
   for (let t = 0; t < 5 && used.has(name); t++) name = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)];
   createSnake({
     name, hue: Math.floor(Math.random() * 360), skin: Math.floor(Math.random() * 6), isBot: true,
-    score: botStartScore(),
+    score: botStartScore(), at: hiddenSpawn(),
     bot: { persona: PERSONAS[Math.floor(Math.random() * PERSONAS.length)], skill: rand(0.55, 1.2) }
   });
+}
+// Spawn point for a bot: off every real player's screen (their actual view radius, which grows
+// with their size; spectators count too), and at least 600 units from any other snake so it never
+// appears right next to someone. With many players the map can be fully watched; then we take the
+// least-visible spot we found.
+function viewRadiusOf(o) { return BASE_VIEW * (1 + (o.r - 10) / 40) + 250; }
+function hiddenSpawn() {
+  let best = null, bestScore = -Infinity;
+  for (let t = 0; t < 120; t++) {
+    const p = randInWorld(0.85);
+    let seen = Infinity;                                  // distance outside the nearest player's view (negative = visible)
+    for (const pl of players.values()) {
+      const me = pl.snake && pl.snake.alive ? pl.snake : null;
+      const vr = me ? viewRadiusOf(me) : BASE_VIEW * 1.1 + 250;
+      seen = Math.min(seen, Math.hypot(pl.cam.x - p.x, pl.cam.y - p.y) - vr);
+    }
+    let near = Infinity;                                  // distance to the closest snake segment
+    for (const o of snakes.values()) for (let i = 0; i < o.segs.length; i += 6) near = Math.min(near, Math.hypot(o.segs[i].x - p.x, o.segs[i].y - p.y));
+    if (seen > 0 && near > 600) return p;
+    const score = Math.min(seen, 0) * 3 + Math.min(near - 600, 0);
+    if (score > bestScore) { bestScore = score; best = p; }
+  }
+  return best;
 }
 function botCount() { let n = 0; for (const s of snakes.values()) if (s.isBot) n++; return n + botRespawns.length; }
 function wantedBots() { return Math.max(BOT_MIN, BOT_POP - players.size); }
@@ -296,13 +314,19 @@ function isDanger(s, x, y, pad) {
   });
 }
 function nearestThreat(s, range) {
-  const h = s.segs[0]; let best = null, bd = range;
+  const h = s.segs[0]; let best = null, bestDanger = 0;
   for (const o of snakes.values()) {
-    if (o === s || o.score < s.score * 0.8) continue;
-    const d = Math.hypot(o.segs[0].x - h.x, o.segs[0].y - h.y);
-    if (d < bd) { bd = d; best = o; }
+    if (o === s) continue;
+    const oh = o.segs[0], d = Math.hypot(oh.x - h.x, oh.y - h.y);
+    if (d > range + o.r * 4) continue;
+    const toMe = Math.atan2(h.y - oh.y, h.x - oh.x);
+    const aimed = Math.abs(angDiff(o.angle, toMe)) < 0.6;          // their head is pointed at us
+    const bigger = o.score > s.score * 0.8;
+    if (!bigger && !(aimed && d < 170 + s.r * 3)) continue;           // small snakes only matter if about to cut us
+    const danger = (bigger ? 1.5 : 1) * (aimed ? 1.6 : 1) * (o.boosting ? 1.3 : 1) / (d + 40);
+    if (danger > bestDanger) { bestDanger = danger; best = { o, d, aimed }; }
   }
-  return best ? { o: best, d: bd } : null;
+  return best;
 }
 function pickPrey(s) {
   const h = s.segs[0]; let best = null, bestScore = 0;
@@ -340,17 +364,17 @@ function botThink(s) {
   if (b.retarget <= 0) {
     b.retarget = 25 + Math.floor(Math.random() * 20);
     b.target = null;
-    if (b.persona === 'hunter' && s.score > 30) { const prey = pickPrey(s); if (prey) b.target = prey.id; }
-    else if (b.persona === 'farmer' && s.score > 200 && Math.random() < 0.25) { const prey = pickPrey(s); if (prey && prey.score < s.score * 0.4) b.target = prey.id; }
+    if (b.persona === 'hunter' && s.score > 80) { const prey = pickPrey(s); if (prey && prey.score < s.score * 0.65) b.target = prey.id; }
+    else if (b.persona === 'farmer' && s.score > 400 && Math.random() < 0.1) { const prey = pickPrey(s); if (prey && prey.score < s.score * 0.3) b.target = prey.id; }
   }
   const prey = b.target && snakes.get(b.target);
-  const threat = b.persona !== 'hunter' || !prey ? nearestThreat(s, b.persona === 'coward' ? 420 : 220) : null;
+  const threat = nearestThreat(s, b.persona === 'coward' ? 520 : b.persona === 'hunter' ? 200 : 340);
 
   if (threat) {
     // run: away from the threat's head, slightly sideways so we don't run in a straight line forever
     const th = threat.o.segs[0];
     desired = Math.atan2(h.y - th.y, h.x - th.x) + (b.id2 = b.id2 || (Math.random() < 0.5 ? 0.4 : -0.4));
-    wantBoost = threat.d < (b.persona === 'coward' ? 260 : 140) && s.score > 25;
+    wantBoost = (threat.aimed || threat.d < (b.persona === 'coward' ? 320 : 200)) && s.score > MIN_BOOST_SCORE + 2;
     b.mode = 'flee';
   } else if (prey && prey.alive) {
     const ph = prey.segs[0], d = Math.hypot(ph.x - h.x, ph.y - h.y);
@@ -384,7 +408,14 @@ function botThink(s) {
       if (best && best.id !== b.foodT) b.foodAge = 0;
       b.foodT = best ? best.id : null;
       if (!best) b.wander += rand(-0.8, 0.8);
-      if (best && best.v >= 4 && s.score > 40 && Math.random() < 0.5) b.boostT = 18;
+      if (best) {
+        // how much food is in that patch? (death piles and boost trails)
+        let patch = 0; forFoodNear(best.x, best.y, 90, f => { if ((f.x - best.x) ** 2 + (f.y - best.y) ** 2 < 8100) patch += f.v; });
+        const d = Math.hypot(best.x - h.x, best.y - h.y);
+        const calm = !nearestThreat(s, 450);
+        if (calm && patch >= 6 && d > 90 && s.score > MIN_BOOST_SCORE + 4 && Math.random() < 0.85)
+          b.boostT = Math.min(30, Math.ceil(d / BOOST_SPEED));      // just long enough to get there
+      }
     }
     const f = b.foodT && food.get(b.foodT);
     if (f) desired = Math.atan2(f.y - h.y, f.x - h.x); else b.foodT = null;
@@ -402,7 +433,7 @@ function botSteer(s, desired, wantBoost) {
   let chosen = null;
   for (const o of offsets) {
     const a = desired + o, ca = Math.cos(a), sa = Math.sin(a);
-    if (!isDanger(s, h.x + ca * look1, h.y + sa * look1, 8) && !isDanger(s, h.x + ca * look2, h.y + sa * look2, 4)) { chosen = a; break; }
+    if (!isDanger(s, h.x + ca * look1, h.y + sa * look1, 14) && !isDanger(s, h.x + ca * look2, h.y + sa * look2, 8)) { chosen = a; break; }
   }
   if (chosen === null) { chosen = s.angle + Math.PI * 0.6; wantBoost = s.score > 25 && b.skill > 0.9; }
   s.target = chosen;
