@@ -185,7 +185,9 @@ function step(s) {
   s.angle += clamp(angDiff(s.target, s.angle), -turn, turn);
   s.angle = Math.atan2(Math.sin(s.angle), Math.cos(s.angle));
   s.boosting = s.boost && s.score > MIN_BOOST_SCORE;
-  const sp = s.boosting ? BOOST_SPEED : BASE_SPEED;
+  // ease into / out of a boost (~150 ms) instead of snapping between speeds
+  s.spd = (s.spd || BASE_SPEED) + ((s.boosting ? BOOST_SPEED : BASE_SPEED) - (s.spd || BASE_SPEED)) * 0.32;
+  const sp = s.spd;
   if (s.boosting) {
     s.score -= BOOST_COST; s.boostAcc += BOOST_COST;
     if (s.boostAcc >= 1) {
@@ -216,9 +218,11 @@ function forSegsNear(x, y, rad, fn) {
   }
   return false;
 }
+const deathsThisTick = [];
 function kill(s, killer) {
   if (!s.alive) return;
   s.alive = false;
+  deathsThisTick.push(s.id);
   snakes.delete(s.id);
   // turn the body into food
   const total = Math.max(4, s.score * 0.8);
@@ -527,6 +531,9 @@ function tick() {
 }
 
 function broadcast() {
+  try { broadcastInner(); } finally { deathsThisTick.length = 0; }
+}
+function broadcastInner() {
   const sendLb = tickNo % 15 === 0;
   let lb = null, ranked = null, mm = null;
   if (sendLb) {
@@ -560,6 +567,7 @@ function broadcast() {
       }
       out.push(e);
     }
+    const dd = deathsThisTick.filter(id => p.known.has(id));
     p.known = seen;
 
     // food diff
@@ -573,6 +581,7 @@ function broadcast() {
     p.foodKnown = vis;
 
     const msg = { t: 'st', s: out, cx: r1(cx), cy: r1(cy) };
+    if (dd.length) msg.dd = dd;
     if (fa.length) msg.fa = fa;
     if (fr.length) msg.fr = fr;
     if (sendLb) {

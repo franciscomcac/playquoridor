@@ -14,6 +14,8 @@
   .hidden { display:none !important; }
 
   #menu { position:fixed; inset:0; z-index:5; background:rgba(20,24,33,.94); }
+  #menu.fadein { animation: menuIn .6s ease-out both; }
+  @keyframes menuIn { from { opacity:0; transform:scale(1.03); } to { opacity:1; transform:none; } }
   #menu .center { position:absolute; left:50%; top:9vh; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; }
   .logo { margin:0; font-size:clamp(70px,10vw,128px); font-weight:900; letter-spacing:-3px; line-height:1.05;
     background:linear-gradient(180deg,#b8f3ff 0%,#4cc9f0 45%,#3a7bd5 100%); -webkit-background-clip:text; background-clip:text; color:transparent;
@@ -172,6 +174,7 @@ for (const h of HUES) {
 let myPlayed = false;
 let ws = null, myCid = 0, myId = 0, worldR = 4000, tickMs = 1000 / 30;
 const snakes = new Map();      // id -> snake
+const ghosts = [];             // dying snakes, faded out client-side
 const food = new Map();        // id -> pellet
 let lastSnap = performance.now(), snapGap = tickMs;
 let camSrv = { x: 0, y: 0 }, cam = { x: 0, y: 0 }, scale = 0.8;
@@ -224,19 +227,25 @@ function onMsg(m) {
     case 'spawn':
       myId = m.id; menu.classList.add('hidden'); hud.classList.remove('hidden');
       break;
-    case 'dead':
-      myId = 0; voice.closeAll();
-      showMenu(`Your final length was <b>${m.score}</b>!<small>${m.by ? 'eaten by ' + esc(m.by) : 'you hit the edge'}</small>`);
+    case 'dead': {
+      const me = snakes.get(myId);
+      if (me) voice.grace(me.rh || me.segs[0]);          // keep talking for 2 s where we died
+      myId = 0;
+      const msg = `Your final length was <b>${m.score}</b>!<small>${m.by ? 'eaten by ' + esc(m.by) : 'you hit the edge'}</small>`;
+      setTimeout(() => { if (!myId) showMenu(msg, true); }, 1100);   // let the death animation play first
       break;
+    }
     case 'st': applyState(m); break;
     case 'sig': voice.onSignal(m.from, m.d); break;
   }
 }
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
-function showMenu(msg) {
+function showMenu(msg, fade) {
   $('deathMsg').innerHTML = msg;
   menu.classList.remove('hidden'); hud.classList.add('hidden');
-  setTimeout(() => nick.focus(), 50);
+  menu.classList.toggle('fadein', !!fade);
+  // don't grab the keyboard while push-to-talk may still be held during the 2 s voice grace
+  setTimeout(() => nick.focus(), fade ? 1000 : 50);
 }
 
 function applyState(m) {
@@ -266,6 +275,12 @@ function applyState(m) {
       chainBody(s.segs, e.x, e.y, e.n, spacingFor(e.r));
     }
     if (!prev.length) for (const p of s.segs) prev.push({ x: p.x, y: p.y });
+  }
+  if (m.dd) for (const id of m.dd) {
+    const sn = snakes.get(id); if (!sn || !sn.segs.length) continue;
+    const src = sn.rp && sn.rp.length === sn.segs.length ? sn.rp : sn.segs;
+    ghosts.push({ pts: src.map(p => ({ x: p.x, y: p.y })), r: sn.r, hue: sn.hue, skin: sn.skin || 0, look: sn.look || 0, id, t0: now, me: id === myId });
+    present.delete(id);
   }
   for (const id of snakes.keys()) if (!present.has(id)) snakes.delete(id);
 
@@ -463,13 +478,32 @@ const voice = {
   closeAll() { for (const cid of [...this.peers.keys()]) this.close(cid, true); },
 
   // called ~4x/sec: open/close connections by distance
+  // after dying, keep our voice links open for 2 s at the spot where we died
+  graceUntil: 0, gracePos: null, last: new Map(),
+  grace(pos) { this.graceUntil = performance.now() + 2000; this.gracePos = { x: pos.x, y: pos.y }; },
+  myPos() {
+    const me = snakes.get(myId);
+    if (me) return me.segs[0];
+    return performance.now() < this.graceUntil ? this.gracePos : null;
+  },
+  // where a remote player is: their head, or (for 2 s after they vanish, e.g. died) where we last saw them
+  posOf(cid, byCid, now) {
+    const s = byCid.get(cid);
+    if (s) { const h = s.segs[0]; this.last.set(cid, { x: h.x, y: h.y, t: now }); return h; }
+    const l = this.last.get(cid);
+    return l && now - l.t < 2000 ? l : null;
+  },
   manage() {
     if (!this.enabled) return;
-    const me = snakes.get(myId);
-    if (!me) { if (this.peers.size) this.closeAll(); return; }
+    const h = this.myPos();
+    if (!h) { if (this.peers.size) this.closeAll(); return; }
     const byCid = new Map();
     for (const s of snakes.values()) if (s.cid && s.cid !== myCid && s.v) byCid.set(s.cid, s);
-    const h = me.segs[0], now = performance.now();
+    const now = performance.now();
+    if (!snakes.get(myId)) {                       // dead: keep existing links, open no new ones
+      for (const cid of [...this.peers.keys()]) { const q = this.posOf(cid, byCid, now); if (!q || Math.hypot(q.x - h.x, q.y - h.y) > VOICE_DROP) this.close(cid, true); }
+      return;
+    }
     for (const [cid, s] of byCid) {
       if (this.peers.has(cid) || myCid > cid) continue;          // lower cid starts the call
       if ((this.cooldown.get(cid) || 0) > now) continue;
@@ -477,21 +511,22 @@ const voice = {
       if (d < VOICE_RANGE) this.createPeer(cid, true);
     }
     for (const cid of [...this.peers.keys()]) {
-      const s = byCid.get(cid);
-      if (!s || Math.hypot(s.segs[0].x - h.x, s.segs[0].y - h.y) > VOICE_DROP) this.close(cid, true);
+      const q = this.posOf(cid, byCid, now);
+      if (!q || Math.hypot(q.x - h.x, q.y - h.y) > VOICE_DROP) this.close(cid, true);
     }
   },
   // called every frame: spatialise audio + speaking levels
   spatialise(hx, hy) {
-    const byCid = new Map();
+    const byCid = new Map(), now = performance.now();
     for (const s of snakes.values()) if (s.cid) byCid.set(s.cid, s);
+    const mp = this.myPos(); if (mp) { hx = mp.x; hy = mp.y; }
     let live = 0;
     for (const p of this.peers.values()) {
       if (!p.gain) continue;
-      const s = byCid.get(p.cid);
+      const q = this.posOf(p.cid, byCid, now);
       let vol = 0, pan = 0;
-      if (s) {
-        const dx = s.segs[0].x - hx, dy = s.segs[0].y - hy, d = Math.hypot(dx, dy);
+      if (q) {
+        const dx = q.x - hx, dy = q.y - hy, d = Math.hypot(dx, dy);
         const t = clamp((d - VOICE_FULL) / (VOICE_RANGE - VOICE_FULL), 0, 1);
         vol = Math.pow(1 - t, 1.6);
         pan = clamp(dx / 700, -0.85, 0.85);
@@ -634,17 +669,19 @@ function getVignette() {
   return vignette;
 }
 
-let lastFrame = performance.now();
+let lastFrame = performance.now(), boostZoom = 1;
+let ghostLayer = null;
 function frame(now) {
   requestAnimationFrame(frame);
   lastFrame = now;
-  const alpha = clamp((now - lastSnap) / snapGap, 0, 1);
+  const alpha = clamp((now - lastSnap) / snapGap, 0, 1.35);   // >1 = short extrapolation so late packets don't freeze fast snakes
   const me = snakes.get(myId);
 
   let tx = camSrv.x, ty = camSrv.y;
   if (me) { const p = me.segs[0], q = me.prev[0] || p; tx = lerp(q.x, p.x, alpha); ty = lerp(q.y, p.y, alpha); cam.x = tx; cam.y = ty; }
   else { cam.x = lerp(cam.x, tx, 0.08); cam.y = lerp(cam.y, ty, 0.08); }
-  const viewR = 720 * (me ? 1 + (me.r - 10) / 32 : 1.25);
+  boostZoom = lerp(boostZoom, me && me.b ? 1.07 : 1, 0.06);
+  const viewR = 720 * (me ? 1 + (me.r - 10) / 32 : 1.25) * boostZoom;
   scale = lerp(scale, Math.hypot(W, H) / 2 / viewR, 0.04);
 
   // floor
@@ -685,6 +722,7 @@ function frame(now) {
   // snakes (biggest first, me on top)
   const order = [...snakes.values()].sort((a, b) => (a.id === myId) - (b.id === myId) || b.segs.length - a.segs.length);
   for (const s of order) drawSnake(s, alpha, now, s.id === myId, hw, hh);
+  drawGhosts(now, hw, hh);
 
   // world edge
   ctx.beginPath(); ctx.rect(cam.x - hw, cam.y - hh, hw * 2, hh * 2); ctx.arc(0, 0, worldR, 0, Math.PI * 2, true);
@@ -713,6 +751,38 @@ function frame(now) {
   if (voice.enabled && voice.ctx) voice.spatialise(cam.x, cam.y);
   if (me) $('score').innerHTML = `Your length: <b>${Math.max(0, Math.floor(lbScore()))}</b>&nbsp; · &nbsp;Rank ${rank || '–'} of ${total}`;
   drawMinimap(me);
+}
+// death animation: the body brightens, swells slightly and dissolves into light over ~0.9 s
+function drawGhosts(now, hw, hh) {
+  if (!ghosts.length) return;
+  const DUR = 1000;
+  if (!ghostLayer || ghostLayer.width !== cv.width || ghostLayer.height !== cv.height) {
+    ghostLayer = document.createElement('canvas'); ghostLayer.width = cv.width; ghostLayer.height = cv.height;
+  }
+  const g = ghostLayer.getContext('2d');
+  const tf = ctx.getTransform();
+  for (let i = ghosts.length - 1; i >= 0; i--) {
+    const gh = ghosts[i], k = (now - gh.t0) / DUR;
+    if (k >= 1) { ghosts.splice(i, 1); continue; }
+    const e = 1 - Math.pow(1 - k, 2);
+    // body, drawn to a layer so it can fade as one piece
+    g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, ghostLayer.width, ghostLayer.height);
+    g.setTransform(tf); g.imageSmoothingQuality = 'high';
+    paintBody(g, gh.pts, gh.pts.length, gh.r * (1 + 0.18 * e), gh.hue, gh.skin, true, now, gh.look, gh.id, hw + gh.r * 4, hh + gh.r * 4, cam.x, cam.y);
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = Math.max(0, 1 - k * k);          // body holds, then melts away
+    ctx.drawImage(ghostLayer, 0, 0);
+    ctx.restore();
+    // sparks rising off the body
+    ctx.globalCompositeOperation = 'lighter';
+    for (let j = 0; j < gh.pts.length; j += 3) {
+      const p = gh.pts[j]; if (Math.abs(p.x - cam.x) > hw || Math.abs(p.y - cam.y) > hh) continue;
+      const c = segColor(gh.skin, gh.hue, j), rr = gh.r * (1.2 + 2.4 * e);
+      ctx.globalAlpha = 0.55 * (1 - k);
+      ctx.drawImage(auraSprite(wrapH(c[0])), p.x - rr, p.y - rr, rr * 2, rr * 2);
+    }
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  }
 }
 function lbScore() {
   for (const [, sc, cid] of lb) if (cid === myCid) return sc;
@@ -748,11 +818,11 @@ function paintBody(g, pts, n, r, hue, skin, boost, now, look, id, hw, hh, cx, cy
   // 2. boost aura
   if (boost) {
     g.globalCompositeOperation = 'lighter';
-    const pulse = 0.8 + 0.2 * Math.sin(now / 55);
     for (let i = n - 1; i >= 0; i -= 2) {
       const p = pts[i]; if (!inView(p)) continue;
-      const c = segColor(skin, hue, i), rr = r * 2.6 * taper(i) * pulse;
-      g.globalAlpha = 0.5; g.drawImage(auraSprite(wrapH(c[0])), p.x - rr, p.y - rr, rr * 2, rr * 2);
+      const wave = 0.5 + 0.5 * Math.sin(now / 70 - i * 0.45);          // pulses run from head to tail
+      const c = segColor(skin, hue, i), rr = r * (2.2 + 0.9 * wave) * taper(i);
+      g.globalAlpha = 0.32 + 0.4 * wave; g.drawImage(auraSprite(wrapH(c[0])), p.x - rr, p.y - rr, rr * 2, rr * 2);
     }
     g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
   }
