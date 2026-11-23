@@ -15,8 +15,8 @@ const { WebSocketServer } = require('ws');
 const PORT = +(process.env.PORT || 3000);
 const TICK_RATE = 30;
 const WORLD_R = 4000;
-const FOOD_TARGET = 5000;
-const BOT_POP = +(process.env.BOTS ?? 40);      // bots fill the world up to this many snakes
+const FOOD_TARGET = 8000;
+const BOT_POP = +(process.env.BOTS ?? 50);      // bots fill the world up to this many snakes
 const BOT_MIN = +(process.env.BOTS_MIN ?? 8);     // ...but never fewer than this many bots
 const BASE_VIEW = 1500;          // world units visible (radius) at minimum size
 const BASE_SPEED = 5.4;
@@ -114,9 +114,12 @@ function sweepFood() {
 }
 function spawnRandomFood(n) {
   for (let i = 0; i < n; i++) {
-    const p = randInWorld(0.98);
+    let p;
+    if (Math.random() < 0.55) { const a = Math.random() * Math.PI * 2, rr = WORLD_R * 0.5 * Math.sqrt(Math.random()); p = { x: Math.cos(a) * rr, y: Math.sin(a) * rr }; }
+    else p = randInWorld(0.85);                     // never in the outer edge band
     const v = Math.random() < 0.08 ? 3 : Math.random() < 0.3 ? 2 : 1;
-    addFood(p.x, p.y, v, Math.floor(Math.random() * 360));
+    // natural food also expires (1.5-3 min) and respawns elsewhere, so uneaten corners never pile up
+    addFood(p.x, p.y, v, Math.floor(Math.random() * 360), Math.floor(rand(90, 180) * TICK_RATE));
   }
 }
 
@@ -284,7 +287,7 @@ function hiddenSpawn() {
   for (let t = 0; t < 120; t++) {
     // mostly near the middle: 3 in 4 tries pick a point within 45% of the radius
     let p;
-    if (t % 4 !== 3) { const ang = Math.random() * Math.PI * 2, rr = WORLD_R * 0.45 * Math.sqrt(Math.random()); p = { x: Math.cos(ang) * rr, y: Math.sin(ang) * rr }; }
+    if (t % 8 !== 7) { const ang = Math.random() * Math.PI * 2, rr = WORLD_R * 0.35 * Math.sqrt(Math.random()); p = { x: Math.cos(ang) * rr, y: Math.sin(ang) * rr }; }
     else p = randInWorld(0.85);
     let seen = Infinity;                                  // distance outside the nearest player's view (negative = visible)
     for (const pl of players.values()) {
@@ -436,7 +439,11 @@ function botThink(s) {
       });
       if (best && best.id !== b.foodT) b.foodAge = 0;
       b.foodT = best ? best.id : null;
-      if (!best) b.wander += rand(-0.8, 0.8);
+      if (!best) {
+        b.wander += rand(-0.8, 0.8);
+        const dc = Math.hypot(h.x, h.y);
+        if (dc > WORLD_R * 0.4) b.wander = angDiff(Math.atan2(-h.y, -h.x), 0) + rand(-0.6, 0.6);   // head back to the middle
+      }
       if (best) {
         // how much food is in that patch? (death piles and boost trails)
         let patch = 0; forFoodNear(best.x, best.y, 90, f => { if ((f.x - best.x) ** 2 + (f.y - best.y) ** 2 < 8100) patch += f.v; });
@@ -467,7 +474,7 @@ function pathClear(s, heading, speed) {
 }
 function botSteer(s, desired, wantBoost) {
   const b = s.bot, h = s.segs[0];
-  if (Math.hypot(h.x, h.y) > WORLD_R - 500) { desired = Math.atan2(-h.y, -h.x); wantBoost = false; }
+  if (Math.hypot(h.x, h.y) > WORLD_R - 260) { desired = Math.atan2(-h.y, -h.x); wantBoost = false; }
 
   // re-plan every 2nd tick (cheap enough for the free server), keep the last plan in between
   b.plan = (b.plan || 0) - 1;
@@ -579,7 +586,7 @@ function tick() {
   for (const [v, k] of deaths) if (!spared.has(v)) kill(v, k);
 
   // world upkeep
-  if (food.size < FOOD_TARGET) spawnRandomFood(Math.min(25, FOOD_TARGET - food.size));
+  if (food.size < FOOD_TARGET) spawnRandomFood(Math.min(80, FOOD_TARGET - food.size));
   for (let i = botRespawns.length - 1; i >= 0; i--) if (botRespawns[i] <= tickNo) { botRespawns.splice(i, 1); spawnBot(); }
   if (tickNo % TICK_RATE === 0) {
     manageBots(); sweepFood();
