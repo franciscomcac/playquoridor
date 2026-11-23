@@ -80,10 +80,10 @@ function cleanName(n) {
 const food = new Map();
 const foodGrid = new Map();
 let nextFoodId = 1;
-function addFood(x, y, v, h) {
+function addFood(x, y, v, h, ttl = 0) {
   const d = Math.hypot(x, y);
   if (d > WORLD_R - 20) { x *= (WORLD_R - 20) / d; y *= (WORLD_R - 20) / d; }
-  const f = { id: nextFoodId++, x, y, v, h, k: cellKey(cellOf(x), cellOf(y)) };
+  const f = { id: nextFoodId++, x, y, v, h, k: cellKey(cellOf(x), cellOf(y)), exp: ttl ? tickNo + ttl : 0 };
   food.set(f.id, f);
   let c = foodGrid.get(f.k); if (!c) foodGrid.set(f.k, c = new Set());
   c.add(f);
@@ -99,6 +99,18 @@ function forFoodNear(x, y, rad, fn) {
     const c = foodGrid.get(cellKey(cx, cy)); if (!c) continue;
     for (const f of c) fn(f);
   }
+}
+// dropped food (deaths, boosting) fades out after a while, and the world never holds more than
+// FOOD_MAX pellets: the oldest dropped pellets go first, so it can't pile up forever
+const FOOD_MAX = FOOD_TARGET * 2;
+function sweepFood() {
+  const dropped = [];
+  for (const f of food.values()) {
+    if (!f.exp) continue;
+    if (f.exp <= tickNo) removeFood(f); else dropped.push(f);
+  }
+  let extra = food.size - FOOD_MAX;
+  if (extra > 0) { dropped.sort((a, b) => a.exp - b.exp); for (let i = 0; i < dropped.length && extra > 0; i++, extra--) removeFood(dropped[i]); }
 }
 function spawnRandomFood(n) {
   for (let i = 0; i < n; i++) {
@@ -179,7 +191,7 @@ function step(s) {
     if (s.boostAcc >= 1) {
       s.boostAcc -= 1;
       const t = s.segs[s.segs.length - 1];
-      addFood(t.x + rand(-6, 6), t.y + rand(-6, 6), 1, s.hue);
+      addFood(t.x + rand(-6, 6), t.y + rand(-6, 6), 1, s.hue, Math.floor(rand(25, 40) * TICK_RATE));
     }
   }
   s.r = radiusFor(s.score);
@@ -215,7 +227,7 @@ function kill(s, killer) {
   const per = clamp(total / drops, 1, 12);
   for (let i = 0; i < s.segs.length; i += step) {
     const p = s.segs[i];
-    addFood(p.x + rand(-s.r * 0.6, s.r * 0.6), p.y + rand(-s.r * 0.6, s.r * 0.6), r1(per * rand(0.7, 1.3)), s.hue);
+    addFood(p.x + rand(-s.r * 0.6, s.r * 0.6), p.y + rand(-s.r * 0.6, s.r * 0.6), r1(per * rand(0.7, 1.3)), s.hue, Math.floor(rand(50, 90) * TICK_RATE));
   }
   if (s.player) {
     const pl = s.player;
@@ -307,6 +319,22 @@ function botThink(s) {
   const b = s.bot, h = s.segs[0];
   b.think--; b.retarget--;
   let desired = b.wander, wantBoost = false;
+  // stuck detection: if we've barely gone anywhere in 2 seconds we're circling something
+  b.chkT = (b.chkT || 0) + 1;
+  if (b.chkT >= 60) {
+    if (b.chkX !== undefined && Math.hypot(h.x - b.chkX, h.y - b.chkY) < 220 && b.mode !== 'coil') {
+      b.unstuck = 45; b.wander = s.angle + rand(-0.4, 0.4);
+      if (b.foodT) { (b.skip = b.skip || new Set()).add(b.foodT); b.foodT = null; }
+    }
+    b.chkX = h.x; b.chkY = h.y; b.chkT = 0;
+    if (b.skip && b.skip.size > 50) b.skip.clear();
+  }
+  if (b.unstuck > 0) {
+    b.unstuck--;
+    desired = b.wander;
+    // fall through to avoidance only
+    return botSteer(s, desired, false);
+  }
 
   // --- what to do
   if (b.retarget <= 0) {
@@ -344,19 +372,28 @@ function botThink(s) {
     if (b.think <= 0) {
       b.think = 6 + Math.floor(Math.random() * 6);
       let best = null, bestScore = 0;
+      const turnR = BASE_SPEED / (0.19 / (1 + (s.r - 10) / 25));   // tightest circle we can turn
       forFoodNear(h.x, h.y, 520, f => {
         const d = Math.hypot(f.x - h.x, f.y - h.y);
-        if (d > 520) return;
-        const sc = f.v / (d + 60);
+        if (d > 520 || (b.skip && b.skip.has(f.id))) return;
+        const off = Math.abs(angDiff(Math.atan2(f.y - h.y, f.x - h.x), s.angle));
+        if (d < turnR * 2.2 && off > 0.7) return;                    // beside us, inside our turn: unreachable
+        const sc = f.v / (d + 60) * (1.5 - off / Math.PI);           // prefer food ahead of us
         if (sc > bestScore) { bestScore = sc; best = f; }
       });
+      if (best && best.id !== b.foodT) b.foodAge = 0;
       b.foodT = best ? best.id : null;
       if (!best) b.wander += rand(-0.8, 0.8);
       if (best && best.v >= 4 && s.score > 40 && Math.random() < 0.5) b.boostT = 18;
     }
     const f = b.foodT && food.get(b.foodT);
     if (f) desired = Math.atan2(f.y - h.y, f.x - h.x); else b.foodT = null;
+    if (f && ++b.foodAge > 75) { (b.skip = b.skip || new Set()).add(f.id); b.foodT = null; b.think = 0; }  // took too long: give up
   }
+  botSteer(s, desired, wantBoost);
+}
+function botSteer(s, desired, wantBoost) {
+  const b = s.bot, h = s.segs[0];
   if (Math.hypot(h.x, h.y) > WORLD_R - 500) { desired = Math.atan2(-h.y, -h.x); wantBoost = false; }
 
   // --- avoidance: closest safe heading to the one we want (skill = how far ahead we look)
@@ -453,7 +490,7 @@ function tick() {
   // world upkeep
   if (food.size < FOOD_TARGET) spawnRandomFood(Math.min(25, FOOD_TARGET - food.size));
   for (let i = botRespawns.length - 1; i >= 0; i--) if (botRespawns[i] <= tickNo) { botRespawns.splice(i, 1); spawnBot(); }
-  if (tickNo % TICK_RATE === 0) manageBots();
+  if (tickNo % TICK_RATE === 0) { manageBots(); sweepFood(); }
 
   broadcast();
 }
