@@ -427,8 +427,7 @@ function botThink(s) {
     let dj = Infinity, j = 0;
     for (let k = 0; k < F.pts.length; k++) { const p = F.pts[k], dd = (p.x - h.x) ** 2 + (p.y - h.y) ** 2; if (dd < dj) { dj = dd; j = k; } }
     dj = Math.sqrt(dj);
-    if (dj > 900 + 500 * dare) continue;
-    if (dj > 150 && (F.crowd || 0) > 2 + 5 * dare) continue;        // a mosh pit already: brave little ones still dive in
+    if (dj > 1400 + 500 * dare) continue;
     const sc = (F.v * F.pts.length / (F.n0 = F.n0 || F.pts.length) + 10) / (dj + 150);
     if (sc > feastScore) { feastScore = sc; feast = F; feastJ = j; feastD = dj; }
   }
@@ -683,11 +682,7 @@ function tick() {
       const F = feasts[i];
       if (F.until <= tickNo) { feasts.splice(i, 1); continue; }
       F.pts = F.pts.filter(p => { let left = 0; forFoodNear(p.x, p.y, 70, f => { if ((f.x - p.x) ** 2 + (f.y - p.y) ** 2 < 4900) left += f.v; }); return left >= 1; });
-      if (!F.pts.length) { feasts.splice(i, 1); continue; }
-      // how many snakes are already on it
-      let crowd = 0;
-      for (const o of snakes.values()) { const oh = o.segs[0]; for (let k = 0; k < F.pts.length; k += 3) if ((F.pts[k].x - oh.x) ** 2 + (F.pts[k].y - oh.y) ** 2 < 90000) { crowd++; break; } }
-      F.crowd = crowd;
+      if (!F.pts.length) feasts.splice(i, 1);
     }
   }
 
