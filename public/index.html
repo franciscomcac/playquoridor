@@ -184,19 +184,31 @@ let mouseA = 0, boosting = false, lastSent = { a: 99, b: false, t: 0 };
 const lerp = (a, b, t) => a + (b - a) * t;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 
-function chainBody(segs, hx, hy, n, spacing) {
-  segs[0].x = hx; segs[0].y = hy;
-  // grow like slither: tail holds still, body unrolls behind the head (mirrors server)
-  if (segs.length < n) {
-    const t = segs[segs.length - 1], u = segs[segs.length - 2];
-    if (!u || (t.x - u.x) ** 2 + (t.y - u.y) ** 2 >= (spacing * 0.6) ** 2) segs.push({ x: t.x, y: t.y });
+function sampleTrail(trail, segs, n, spacing) {
+  // Slither-style body: every segment sits ON the exact path the head travelled (trail[0] = head,
+  // newest first). Nothing cuts corners, so bodies never sweep sideways across other snakes.
+  // If the trail runs out (the snake just grew), the tail simply waits at the end of the path
+  // and the new length unrolls behind the head as it moves.
+  const h = trail[0];
+  if (segs[0]) { segs[0].x = h.x; segs[0].y = h.y; } else segs[0] = { x: h.x, y: h.y };
+  let i = 0, acc = 0, k = 1;
+  for (; k < n; k++) {
+    const want = k * spacing;
+    let placed = false;
+    while (i < trail.length - 1) {
+      const a = trail[i], b = trail[i + 1];
+      const d = Math.hypot(b.x - a.x, b.y - a.y);
+      if (acc + d >= want) {
+        const t = d > 0 ? (want - acc) / d : 0, x = a.x + (b.x - a.x) * t, y = a.y + (b.y - a.y) * t;
+        if (segs[k]) { segs[k].x = x; segs[k].y = y; } else segs[k] = { x, y };
+        placed = true; break;
+      }
+      acc += d; i++;
+    }
+    if (!placed) break;
   }
-  while (segs.length > n && segs.length > 3) segs.pop();
-  for (let i = 1; i < segs.length; i++) {
-    const a = segs[i - 1], b = segs[i];
-    const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy);
-    if (d > spacing) { const k = spacing / d; b.x = a.x + dx * k; b.y = a.y + dy * k; }
-  }
+  segs.length = Math.max(1, k);
+  if (k >= n && trail.length > i + 3) trail.length = i + 3;   // forget path we no longer need
 }
 
 // =====================================================================================
@@ -275,8 +287,11 @@ function applyState(m) {
     if (e.s) {
       const n = e.s.length / 2; s.segs.length = n;
       for (let i = 0; i < n; i++) { const p = s.segs[i]; if (p) { p.x = e.s[i * 2]; p.y = e.s[i * 2 + 1]; } else s.segs[i] = { x: e.s[i * 2], y: e.s[i * 2 + 1] }; }
+      s.trail = s.segs.map(p => ({ x: p.x, y: p.y }));
     } else {
-      chainBody(s.segs, e.x, e.y, e.n, spacingFor(e.r));
+      if (!s.trail) s.trail = s.segs.map(p => ({ x: p.x, y: p.y }));
+      s.trail.unshift({ x: e.x, y: e.y });
+      sampleTrail(s.trail, s.segs, e.n, spacingFor(e.r));
     }
     if (!prev.length) for (const p of s.segs) prev.push({ x: p.x, y: p.y });
   }

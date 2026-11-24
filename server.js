@@ -14,9 +14,9 @@ const { WebSocketServer } = require('ws');
 // ---------------------------------------------------------------- config
 const PORT = +(process.env.PORT || 3000);
 const TICK_RATE = 30;
-const WORLD_R = 4000;
-const FOOD_TARGET = 5000;
-const BOT_POP = +(process.env.BOTS ?? 50);      // bots fill the world up to this many snakes
+const WORLD_R = 6000;
+const FOOD_TARGET = 4000;
+const BOT_POP = +(process.env.BOTS ?? 60);      // bots fill the world up to this many snakes
 const BOT_MIN = +(process.env.BOTS_MIN ?? 8);     // ...but never fewer than this many bots
 const BASE_VIEW = 1500;          // world units visible (radius) at minimum size
 const BASE_SPEED = 5.4;
@@ -64,8 +64,10 @@ function randInWorld(f = 0.95) {
   const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * WORLD_R * f;
   return { x: Math.cos(a) * r, y: Math.sin(a) * r };
 }
-const radiusFor = s => Math.min(44, 10 + Math.sqrt(Math.max(0, s)) * 0.85);
-const segCountFor = s => Math.min(520, Math.floor(10 + s / 4));
+// thickness keeps growing your whole life (no cap you'll hit in practice), like slither
+const radiusFor = s => Math.min(100, 8 + 1.9 * Math.pow(Math.max(0, s), 0.42));
+// length grows fast early, then slower once you're big (the extra size goes into thickness)
+const segCountFor = s => Math.min(700, Math.floor(s <= 800 ? 10 + s / 4 : 210 + (s - 800) / 8));
 const spacingFor = r => r * 0.5;
 const foodRadius = v => 3 + v * 1.2;
 const cellKey = (cx, cy) => ((cx + 512) << 10) | (cy + 512);
@@ -162,6 +164,7 @@ function createSnake({ name, hue, skin = 0, isBot = false, player = null, score 
     pts.reverse(); s.segs = pts;
     s.angle = s.target = Math.atan2(pts[0].y - pts[1].y, pts[0].x - pts[1].x);
   }
+  s.trail = s.segs.map(p => ({ x: p.x, y: p.y }));
   computeBBox(s);
   snakes.set(s.id, s);
   return s;
@@ -172,20 +175,31 @@ function computeBBox(s) {
   s.bbox = [a - s.r, b - s.r, c + s.r, d + s.r];
 }
 // same algorithm runs on the client to reconstruct bodies between keyframes
-function chainBody(segs, hx, hy, n, spacing) {
-  segs[0].x = hx; segs[0].y = hy;
-  // grow like slither: the tail holds still and the body unrolls behind the head —
-  // at most one new segment per step, only once the last link has stretched out
-  if (segs.length < n) {
-    const t = segs[segs.length - 1], u = segs[segs.length - 2];
-    if (!u || (t.x - u.x) ** 2 + (t.y - u.y) ** 2 >= (spacing * 0.6) ** 2) segs.push({ x: t.x, y: t.y });
+function sampleTrail(trail, segs, n, spacing) {
+  // Slither-style body: every segment sits ON the exact path the head travelled (trail[0] = head,
+  // newest first). Nothing cuts corners, so bodies never sweep sideways across other snakes.
+  // If the trail runs out (the snake just grew), the tail simply waits at the end of the path
+  // and the new length unrolls behind the head as it moves.
+  const h = trail[0];
+  if (segs[0]) { segs[0].x = h.x; segs[0].y = h.y; } else segs[0] = { x: h.x, y: h.y };
+  let i = 0, acc = 0, k = 1;
+  for (; k < n; k++) {
+    const want = k * spacing;
+    let placed = false;
+    while (i < trail.length - 1) {
+      const a = trail[i], b = trail[i + 1];
+      const d = Math.hypot(b.x - a.x, b.y - a.y);
+      if (acc + d >= want) {
+        const t = d > 0 ? (want - acc) / d : 0, x = a.x + (b.x - a.x) * t, y = a.y + (b.y - a.y) * t;
+        if (segs[k]) { segs[k].x = x; segs[k].y = y; } else segs[k] = { x, y };
+        placed = true; break;
+      }
+      acc += d; i++;
+    }
+    if (!placed) break;
   }
-  while (segs.length > n && segs.length > 3) segs.pop();
-  for (let i = 1; i < segs.length; i++) {
-    const a = segs[i - 1], b = segs[i];
-    const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy);
-    if (d > spacing) { const k = spacing / d; b.x = a.x + dx * k; b.y = a.y + dy * k; }
-  }
+  segs.length = Math.max(1, k);
+  if (k >= n && trail.length > i + 3) trail.length = i + 3;   // forget path we no longer need
 }
 function step(s) {
   const h = s.segs[0];
@@ -205,7 +219,8 @@ function step(s) {
     }
   }
   s.r = radiusFor(s.score);
-  chainBody(s.segs, h.x + Math.cos(s.angle) * sp, h.y + Math.sin(s.angle) * sp, segCountFor(s.score), spacingFor(s.r));
+  s.trail.unshift({ x: h.x + Math.cos(s.angle) * sp, y: h.y + Math.sin(s.angle) * sp });
+  sampleTrail(s.trail, s.segs, segCountFor(s.score), spacingFor(s.r));
   computeBBox(s);
 }
 function buildSegGrid() {
@@ -227,16 +242,17 @@ function forSegsNear(x, y, rad, fn) {
   return false;
 }
 const deathsThisTick = [];
-const feasts = [];   // death piles bots race to: {x, y, v, until}
+const feasts = [];   // food trails left by dead snakes, bots race to them: {pts:[{x,y}], v, until}
 function kill(s, killer) {
   if (!s.alive) return;
   s.alive = false;
   deathsThisTick.push(s.id);
-  // mark the pile: a point every ~quarter of the body (long snakes leave a long trail of food)
-  const nPts = Math.min(6, Math.max(1, Math.round(s.segs.length / 40)));
-  for (let k = 0; k < nPts; k++) {
-    const p = s.segs[Math.floor((k + 0.5) / nPts * s.segs.length)];
-    feasts.push({ x: p.x, y: p.y, v: s.score * 0.8 / nPts, until: tickNo + 20 * TICK_RATE });
+  // remember the body as a food trail bots can sprint along (a point every ~40 units)
+  {
+    const stepI = Math.max(1, Math.round(40 / spacingFor(s.r)));
+    const pts = [];
+    for (let i = 0; i < s.segs.length; i += stepI) pts.push({ x: s.segs[i].x, y: s.segs[i].y });
+    feasts.push({ pts, v: s.score * 0.8, until: tickNo + 25 * TICK_RATE, id: s.id });
   }
   snakes.delete(s.id);
   // turn the body into food
@@ -350,13 +366,21 @@ function nearestThreat(s, range) {
   }
   return best;
 }
-function pickPrey(s) {
+// How brave a bot is: small snakes have nothing to lose, so they take risky plays (cutting off
+// bigger snakes, sprinting for food); big ones protect their length.
+function daring(s) {
+  const base = s.bot.persona === 'hunter' ? 1.2 : s.bot.persona === 'coward' ? 0.55 : 0.9;
+  return clamp(base * (1.15 - s.score / 700), 0.12, 1.2);
+}
+const bodyLen = o => o.segs.length * spacingFor(o.r);
+function pickPrey(s, dare) {
   const h = s.segs[0]; let best = null, bestScore = 0;
+  const maxRatio = 1.1 + dare * 4;          // a brave small snake will try to cut off something 5x its size
   for (const o of snakes.values()) {
-    if (o === s || o.score > s.score * 1.1 || o.score < 15) continue;
-    const d = Math.hypot(o.segs[0].x - h.x, o.segs[0].y - h.y);
-    if (d > 950) continue;
-    const sc = (o.player ? 1.6 : 1) * (o.score + 20) / (d + 150);   // juicy, close, and preferably human
+    if (o === s || o.score > s.score * maxRatio + 40 * dare) continue;
+    const oh = o.segs[0], d = Math.hypot(oh.x - h.x, oh.y - h.y);
+    if (d > 650 + 400 * dare) continue;
+    const sc = (o.player ? 2.2 : 1) * (o.score + 25) / (d + 120);   // juicy, close, and preferably human
     if (sc > bestScore) { bestScore = sc; best = o; }
   }
   return best;
@@ -364,6 +388,7 @@ function pickPrey(s) {
 function botThink(s) {
   const b = s.bot, h = s.segs[0];
   b.think--; b.retarget--;
+  const dare = daring(s);
   let desired = b.wander, wantBoost = false;
   // stuck detection: if we've barely gone anywhere in 2 seconds we're circling something
   b.chkT = (b.chkT || 0) + 1;
@@ -386,48 +411,89 @@ function botThink(s) {
   if (b.retarget <= 0) {
     b.retarget = 25 + Math.floor(Math.random() * 20);
     b.target = null;
-    if (b.persona === 'hunter' && s.score > 80) { const prey = pickPrey(s); if (prey && prey.score < s.score * 0.65) b.target = prey.id; }
-    else if (b.persona === 'farmer' && s.score > 400 && Math.random() < 0.1) { const prey = pickPrey(s); if (prey && prey.score < s.score * 0.3) b.target = prey.id; }
+    const want = b.persona === 'hunter' ? 0.75 : b.persona === 'farmer' ? 0.32 : 0.12;
+    if (Math.random() < want * (0.4 + dare)) { const prey = pickPrey(s, dare); if (prey) { b.target = prey.id; b.huntUntil = tickNo + Math.floor(rand(4, 9) * TICK_RATE); } }
   }
+  if (b.target && tickNo > (b.huntUntil || 0)) b.target = null;          // give up a chase after a while
   const prey = b.target && snakes.get(b.target);
   // food first: only a close or aimed threat breaks a bot off its meal
   let threat = nearestThreat(s, b.persona === 'coward' ? 300 : b.persona === 'hunter' ? 150 : 200);
-  if (threat && !threat.aimed && threat.d > (b.persona === 'coward' ? 200 : 130)) threat = null;
-  // nearest worthwhile feast (death pile) within reach
-  let feast = null, feastScore = 0;
+  if (threat && !threat.aimed && threat.d > (b.persona === 'coward' ? 200 : 130) * (1.3 - dare * 0.6)) threat = null;
+  if (threat && b.mode === 'hunt' && threat.o === prey && dare > 0.5) threat = null;   // mid-attack: commit
+  // nearest worthwhile food trail (a dead snake) within reach
+  let feast = null, feastScore = 0, feastJ = 0, feastD = 0;
   for (const F of feasts) {
-    const d = Math.hypot(F.x - h.x, F.y - h.y);
-    if (d > 1400) continue;
-    const sc = (F.v + 10) / (d + 150);
-    if (sc > feastScore) { feastScore = sc; feast = F; }
+    if (!F.pts.length) continue;
+    let dj = Infinity, j = 0;
+    for (let k = 0; k < F.pts.length; k++) { const p = F.pts[k], dd = (p.x - h.x) ** 2 + (p.y - h.y) ** 2; if (dd < dj) { dj = dd; j = k; } }
+    dj = Math.sqrt(dj);
+    if (dj > 900 + 500 * dare) continue;
+    if (dj > 150 && (F.crowd || 0) > 2 + 5 * dare) continue;        // a mosh pit already: brave little ones still dive in
+    const sc = (F.v * F.pts.length / (F.n0 = F.n0 || F.pts.length) + 10) / (dj + 150);
+    if (sc > feastScore) { feastScore = sc; feast = F; feastJ = j; feastD = dj; }
   }
-
   if (threat) {
     // run: away from the threat's head, slightly sideways so we don't run in a straight line forever
     const th = threat.o.segs[0];
     desired = Math.atan2(h.y - th.y, h.x - th.x) + (b.id2 = b.id2 || (Math.random() < 0.5 ? 0.4 : -0.4));
-    wantBoost = (threat.aimed || threat.d < 150) && s.score > MIN_BOOST_SCORE + 1;
+    wantBoost = threat.aimed && threat.d < 220 && s.score > MIN_BOOST_SCORE + 1;
     b.mode = 'flee';
-  } else if (feast && Math.hypot(feast.x - h.x, feast.y - h.y) > 110) {
-    // a snake just died: sprint to the pile
-    desired = Math.atan2(feast.y - h.y, feast.x - h.x);
-    wantBoost = s.score > MIN_BOOST_SCORE + 1;
+  } else if (feast) {
+    // a snake just died: sprint to its trail, then race along it gobbling everything up
+    const P = feast.pts;
+    if (b.feastId !== feast.id) { b.feastId = feast.id; b.fdir = 0; }
+    if (feastD > 90) {
+      desired = Math.atan2(P[feastJ].y - h.y, P[feastJ].x - h.x);
+      b.fdir = 0;
+    } else {
+      if (!b.fdir) {
+        // run the way we're already facing, unless the other way has much more food left
+        const fwd = P[Math.min(P.length - 1, feastJ + 1)], back = P[Math.max(0, feastJ - 1)];
+        const aF = Math.abs(angDiff(Math.atan2(fwd.y - h.y, fwd.x - h.x), s.angle)), aB = Math.abs(angDiff(Math.atan2(back.y - h.y, back.x - h.x), s.angle));
+        const nF = P.length - 1 - feastJ, nB = feastJ;
+        b.fdir = (aF < aB ? nF * 2 > nB : nB * 2 <= nF) ? 1 : -1;
+        if (nF === 0) b.fdir = -1; if (nB === 0) b.fdir = 1;
+      }
+      const t = P[clamp(feastJ + b.fdir * 2, 0, P.length - 1)];
+      desired = Math.atan2(t.y - h.y, t.x - h.x);
+    }
+    wantBoost = s.score > MIN_BOOST_SCORE + 1 && (feastD > 90 || P.length > 2);
     b.mode = 'feast'; b.foodT = null;
   } else if (prey && prey.alive) {
     const ph = prey.segs[0], d = Math.hypot(ph.x - h.x, ph.y - h.y);
-    if (s.score > prey.score * 3.5 && d < 420) {
-      // much bigger: orbit around them to coil them in
-      desired = Math.atan2(ph.y - h.y, ph.x - h.x) + Math.PI / 2 * (b.orbit = b.orbit || (Math.random() < 0.5 ? 1 : -1));
+    const ring = prey.r * 2 + s.r * 2 + 40 + Math.min(220, bodyLen(prey) * 0.08);   // radius we'd need to circle them
+    if (bodyLen(s) > Math.PI * 2 * ring * 1.15 && s.score > prey.score * 1.4 && d < ring * 2.4) {
+      // long enough to wrap all the way around them: circle, and keep tightening the loop
+      const dir = (b.orbit = b.orbit || (Math.random() < 0.5 ? 1 : -1));
+      const tight = clamp((d - ring) / ring, -0.6, 0.8);           // too far: lean in, too close: lean out
+      desired = Math.atan2(ph.y - h.y, ph.x - h.x) + dir * (Math.PI / 2 - tight * 0.9);
+      wantBoost = d > ring * 1.5 && dare > 0.3 && s.score > 60;   // close the gap fast before they slip out
       b.mode = 'coil';
     } else {
-      // cut them off: aim for a point in front of their head
-      const lead = Math.min(320, d * 0.6) + prey.r * 3;
-      const ix = ph.x + Math.cos(prey.angle) * lead, iy = ph.y + Math.sin(prey.angle) * lead;
-      desired = Math.atan2(iy - h.y, ix - h.x);
-      wantBoost = d < 380 && d > 90 && Math.abs(angDiff(desired, s.angle)) < 0.35 && s.score > 40 && Math.random() < 0.9;
+      // cut them off: find where their head will be, and get there first
+      const pv = (prey.boosting ? BOOST_SPEED : BASE_SPEED);
+      let best = null;
+      for (let t = 6; t <= 36; t += 3) {
+        const ix = ph.x + Math.cos(prey.angle) * pv * t + Math.cos(prey.angle) * prey.r * 2;
+        const iy = ph.y + Math.sin(prey.angle) * pv * t + Math.sin(prey.angle) * prey.r * 2;
+        const myT = Math.hypot(ix - h.x, iy - h.y) / BOOST_SPEED;
+        if (myT < t * 0.95) { best = { ix, iy, t, myT }; break; }
+      }
+      if (best) {
+        desired = Math.atan2(best.iy - h.y, best.ix - h.x);
+        // sprint across their nose when we can win the race and we're pointed the right way
+        wantBoost = Math.abs(angDiff(desired, s.angle)) < 0.5 && s.score > MIN_BOOST_SCORE + 2 && Math.random() < 0.6 + dare * 0.4;
+        // once we're in front of them, turn across their path so they run into our body
+        const side = Math.sin(prey.angle - Math.atan2(h.y - ph.y, h.x - ph.x));
+        const ahead = Math.cos(prey.angle - Math.atan2(h.y - ph.y, h.x - ph.x));
+        if (ahead > 0.55 && d < 160 + prey.r * 4) { desired = prey.angle + (side > 0 ? -1 : 1) * Math.PI / 2; wantBoost = dare > 0.4 && s.score > MIN_BOOST_SCORE + 2; }
+      } else {
+        // can't win the race yet: shadow them from the side, ready for a gap
+        desired = Math.atan2(Math.sin(Math.atan2(ph.y - h.y, ph.x - h.x)) + Math.sin(prey.angle), Math.cos(Math.atan2(ph.y - h.y, ph.x - h.x)) + Math.cos(prey.angle));
+      }
       b.mode = 'hunt';
     }
-    if (d > 1300) b.target = null;
+    if (d > 1400) b.target = null;
   } else {
     b.mode = 'eat';
     if (b.think <= 0) {
@@ -453,7 +519,7 @@ function botThink(s) {
         // how much food is in that patch? (death piles and boost trails)
         let patch = 0; forFoodNear(best.x, best.y, 90, f => { if ((f.x - best.x) ** 2 + (f.y - best.y) ** 2 < 8100) patch += f.v; });
         const d = Math.hypot(best.x - h.x, best.y - h.y);
-        if (patch >= 3 && d > 70 && s.score > MIN_BOOST_SCORE + 1)
+        if (patch >= 3.5 - dare * 2 && d > 70 && s.score > MIN_BOOST_SCORE + 1 && Math.random() < 0.55 + dare * 0.45)
           b.boostT = Math.min(40, Math.ceil(d / BOOST_SPEED));      // sprint there, just long enough to arrive
       }
     }
@@ -470,10 +536,23 @@ function pathClear(s, heading, speed) {
   const turn = 0.19 / (1 + (s.r - 10) / 25);
   let x = h.x, y = h.y, a = s.angle;
   const steps = 20, pad = 10 + speed;              // a wider margin when moving fast
+  // other heads nearby keep moving: predict where they'll be so we don't meet them head-on
+  const heads = [];
+  for (const o of snakes.values()) {
+    if (o === s) continue;
+    const oh = o.segs[0];
+    if ((oh.x - h.x) ** 2 + (oh.y - h.y) ** 2 > 450 * 450) continue;
+    const v = o.boosting ? BOOST_SPEED : BASE_SPEED;
+    heads.push(oh.x, oh.y, Math.cos(o.angle) * v, Math.sin(o.angle) * v, o.r + s.r + 14);
+  }
   for (let i = 1; i <= steps; i++) {
     a += clamp(angDiff(heading, a), -turn, turn);
     x += Math.cos(a) * speed; y += Math.sin(a) * speed;
     if (i % 2 === 0 && isDanger(s, x, y, pad)) return false;
+    if (i <= 14) for (let k = 0; k < heads.length; k += 5) {
+      const px = heads[k] + heads[k + 2] * i, py = heads[k + 1] + heads[k + 3] * i, rr = heads[k + 4];
+      if ((px - x) ** 2 + (py - y) ** 2 < rr * rr) return false;
+    }
   }
   return true;
 }
@@ -569,10 +648,14 @@ function tick() {
     const h = s.segs[0];
     if (Math.hypot(h.x, h.y) > WORLD_R - s.r * 0.5) { deaths.push([s, null]); continue; }
     let killer = null;
-    forSegsNear(h.x, h.y, s.r + 50, (o, i) => {
+    // Only the very front of the head counts (a point at the tip of the snout), and bodies hit a bit
+    // smaller than they're drawn, like slither: brushing someone with the side of your head is safe,
+    // and you can squeeze through a gap that looks just barely too tight.
+    const fx = h.x + Math.cos(s.angle) * s.r * 0.75, fy = h.y + Math.sin(s.angle) * s.r * 0.75;
+    forSegsNear(fx, fy, s.r + 50, (o, i) => {
       if (o === s) return false;
-      const p = o.segs[i], rr = (s.r + o.r) * 0.72;
-      if ((p.x - h.x) ** 2 + (p.y - h.y) ** 2 < rr * rr) { killer = o; return true; }
+      const p = o.segs[i], rr = o.r * 0.8 + s.r * 0.12;
+      if ((p.x - fx) ** 2 + (p.y - fy) ** 2 < rr * rr) { killer = o; return true; }
       return false;
     });
     if (killer) deaths.push([s, killer]);
@@ -595,11 +678,16 @@ function tick() {
   for (let i = botRespawns.length - 1; i >= 0; i--) if (botRespawns[i] <= tickNo) { botRespawns.splice(i, 1); spawnBot(); }
   if (tickNo % TICK_RATE === 0) {
     manageBots(); sweepFood();
-    // drop feasts that are old or eaten
+    // drop eaten parts of food trails, and trails that are old or empty
     for (let i = feasts.length - 1; i >= 0; i--) {
-      const F = feasts[i]; let left = 0;
-      if (F.until > tickNo) forFoodNear(F.x, F.y, 120, f => { if ((f.x - F.x) ** 2 + (f.y - F.y) ** 2 < 14400) left += f.v; });
-      if (left < 3) feasts.splice(i, 1);
+      const F = feasts[i];
+      if (F.until <= tickNo) { feasts.splice(i, 1); continue; }
+      F.pts = F.pts.filter(p => { let left = 0; forFoodNear(p.x, p.y, 70, f => { if ((f.x - p.x) ** 2 + (f.y - p.y) ** 2 < 4900) left += f.v; }); return left >= 1; });
+      if (!F.pts.length) { feasts.splice(i, 1); continue; }
+      // how many snakes are already on it
+      let crowd = 0;
+      for (const o of snakes.values()) { const oh = o.segs[0]; for (let k = 0; k < F.pts.length; k += 3) if ((F.pts[k].x - oh.x) ** 2 + (F.pts[k].y - oh.y) ** 2 < 90000) { crowd++; break; } }
+      F.crowd = crowd;
     }
   }
 
