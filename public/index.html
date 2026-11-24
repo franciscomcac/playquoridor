@@ -17,10 +17,26 @@
   #menu.fadein { animation: menuIn .6s ease-out both; }
   @keyframes menuIn { from { opacity:0; transform:scale(1.03); } to { opacity:1; transform:none; } }
   #menu .center { position:absolute; left:50%; top:9vh; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; }
-  .logo { margin:0; font-size:clamp(70px,10vw,128px); font-weight:900; letter-spacing:-3px; line-height:1.05;
-    background:linear-gradient(180deg,#b8f3ff 0%,#4cc9f0 45%,#3a7bd5 100%); -webkit-background-clip:text; background-clip:text; color:transparent;
-    filter:drop-shadow(0 6px 0 rgba(0,0,0,.35)) drop-shadow(0 10px 24px rgba(76,201,240,.2)); }
-  .logo span { background:linear-gradient(180deg,#ffe29a,#ffb347 55%,#f07b2b); -webkit-background-clip:text; background-clip:text; }
+  /* Fredoka Bold (SIL Open Font License), subset to just the logo's letters and inlined: 1.4 KB, no extra request */
+  @font-face { font-family:'YapLogo'; font-weight:700; font-display:block; src:url(data:font/woff2;base64,d09GMgABAAAAAAVgAA8AAAAACfAAAAUIAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGhYbgWwcMAZgP1NUQVRAAGQRCAqHVIYSATYCJAMgCxIABCAFhA4HIBsXCCMRdnNyagLxFwm2IUr7sUZFNY5GKG07rMYs71IuKoRZ+lahH+rjxZX3P+d4+P/98e1z3/v2QAlMIBLo6K4IhjIJikwT6TbTZq0XAAN5WjIq6Dq4TtbMSDvI/h0x/M4/4Xe3Avj/v5sNkq+NiWU9D4tvjdayA+GGLsf/tenDcE2Rp8QTGXNqvDdwgmG2t+VZOoECPDDMdK4ISIMuF2nt6+DDBKoBSQhlQqDSYGOkKdPmLFG7fc3+ndrlUNxyjQ/Etg17dypHQJVLtKRS/0Or5QiNQshkonif2m1lxU0yR47ldipVAhSfNdT37uKvSvU03ISBSs3ptyZnFUITsmQlGhwIuapcxkCDZfHNm+PX7tWjaEKPCqzPU890poR0LgVh9raXWGl4YCAePnDfvvUbXF7jSPYyTPbNfwHxN7iHXnIhlEtoltBPOrRp8/7AofX7N0cIuXoBUZruIYQUtdaDhAzNXd7Azi1AvXoZ1thgm5122+dIUQil+P3l44cO7N+7Q1AaI4pbdYFy3N+ZamImcRKQA5IkhExIXaUtR5eiEbC8nIOMeHTLiXJV39KRRMsVELD6Okuy9XgZqRw53V47DgRVY0cBraubYPXKikTL0Rrglo+jtaVj3uWLS8A9l5DoX96XbD1chHSTuUw9Pwy4x69DuNggWD2yYHjhUuz5tOXtoxP2MqBq7Eii5WQCFK6ejDEkcPV0n3V/ynKJ/yusYNbwENI8sHp6eEthAQxViRiWhPrYm6g9KT+hS+1rdPq591LzYb1oaOvppiF540Q6KOvL/hkXYPXoqPLFRfLuH+8/xy6C1QMLCwf0mycXO4Vp95FNuzPNvLQk0XJiTJzrs/bPS+fdeHC8DbjX/g9nuKs2T535P4ctX7sfGLIxa3H3Du6/K4KvC8jw7v7Uxn2YtnxaiL4eLdiO583EtT7c40uKreKDXIpREi12frkHfdKAYO6vZliQgCFPCFCHXBMJGw/VUI4nWVjq4GUdyEinkmpmpdilTUMYisKNfCExhevDtAAJNdFQuJfYLfNISvrdkEK7PgY8HbV1MVqN8hooyTFBi5118ZBkFKcUhYRcSoH9fAq6OpKStQ28eEBh2evjndHCIJzlOC6mkC/T3vQV0Xel6TtSQ43n7IfrhhSjs5S6txQUVEeFTwdwBPT4DNwRCQRk0WCcJJkE5sOy49GCCX1akK29D+3TGyw4EVVHE10w7Ze9XkhTcG4znBEQrCEAw4JcGCJ++eVVHKVsFbvRyqZ/W8ksaQU1BQ8EYoiJPUi4pCAJB7SpDEMuGa5Nyq8vxiieihE7NdJy3t1ItVCRiOTnRmGt3qg3h/jSrEDg7FL4t8tPdY8f0J9g/e5nLaD240/iYN/KZ2xp+jc6BJJJb417DyLrxvwrz7Lv8Mr99Q3e8vbMKo7fNuf+2VehVALBb8Ga71Eg/u/eRcCg8tTT8ISrS20LPPomYz2Sqs54oC5NUCpQ7oQy6+UuDFn3VznHFOUVuI1YodNtVlLuCSszwlNWrl8IsEp0Bp1Zqk/YigTVsZYVKmNnR6lbW9SqfdZhk21c1m9XQp6gT+gZa/hJBryd0cUg8NoXzcgJdtcpl/0AZtJ5rkfD5SaqCdqF89hlKpIQX+ZToSJY/5nnzKIkLG4pj+4WS2tdInlei9yDorSVhpaMGnRuAQoMrDiDSrcDwjUbIjKyJmVpip6G/nN5J9QDISQd0wc=) format('woff2'); }
+  /* logo: chunky rounded letters, each with a thick ink outline, a candy gradient, a glossy
+     highlight across the top half and a hard drop shadow; the letters bob in a slow wave */
+  .logo { position:relative; z-index:0; margin:0; display:flex; align-items:flex-end; font-family:'YapLogo', ui-rounded, 'SF Pro Rounded', Nunito, system-ui, sans-serif;
+    font-size:clamp(72px,10.5vw,136px); font-weight:700; line-height:1; letter-spacing:-0.02em; user-select:none; padding:0 .12em .1em; }
+  .logo .l { position:relative; display:inline-block; color:transparent;
+    transform:rotate(var(--rot)); animation:bob 2.6s ease-in-out infinite; animation-delay:calc(var(--i) * -0.16s); }
+  .logo .l::before, .logo .l::after { content:attr(data-l); position:absolute; left:0; top:0; }
+  /* back layer: thick ink outline + stacked hard shadow */
+  .logo .l::before { color:#0a0f1e; -webkit-text-stroke:.17em #0a0f1e;
+    text-shadow:0 .07em 0 #0a0f1e, 0 .12em 0 #0a0f1e, 0 .2em .18em rgba(0,0,0,.55); }
+  /* front layer: gloss band over the candy gradient, both clipped to the letter */
+  .logo .l::after { color:transparent; -webkit-background-clip:text; background-clip:text;
+    background-image:linear-gradient(180deg, rgba(255,255,255,.7) 0%, rgba(255,255,255,.2) 44%, rgba(255,255,255,0) 45%), var(--fill); }
+  .logo .yap { --fill:linear-gradient(180deg,#c9f6ff 0%,#56c8ff 38%,#2f7bff 72%,#2353d6 100%); }
+  .logo .snk { --fill:linear-gradient(180deg,#fff6b8 0%,#ffcc3d 36%,#ff8a1f 70%,#e8521a 100%); }
+  .logo .gap { margin-left:.04em; }
+  @keyframes bob { 0%,100% { transform:translateY(0) rotate(var(--rot)); } 50% { transform:translateY(-.05em) rotate(var(--rot)); } }
+  @media (prefers-reduced-motion: reduce) { .logo .l { animation:none; } }
   #deathMsg { min-height:24px; margin:26px 0 22px; font-size:17px; color:#9aa3b8; text-align:center; font-weight:600; }
   #deathMsg b { color:#fff; }
   #deathMsg small { display:block; margin-top:4px; font-size:13px; color:#6f7891; font-weight:500; }
@@ -90,7 +106,7 @@
 
 <div id="menu">
   <div class="center">
-    <h1 class="logo">yap<span>snake</span></h1>
+    <h1 class="logo" aria-label="yapsnake"><span class="l yap" data-l="y" style="--i:0;--rot:-4deg">y</span><span class="l yap" data-l="a" style="--i:1;--rot:3deg">a</span><span class="l yap" data-l="p" style="--i:2;--rot:-2deg">p</span><span class="l snk gap" data-l="s" style="--i:3;--rot:4deg">s</span><span class="l snk" data-l="n" style="--i:4;--rot:-3deg">n</span><span class="l snk" data-l="a" style="--i:5;--rot:2deg">a</span><span class="l snk" data-l="k" style="--i:6;--rot:-3deg">k</span><span class="l snk" data-l="e" style="--i:7;--rot:4deg">e</span></h1>
     <p id="deathMsg"></p>
     <input id="nick" maxlength="16" placeholder="Nickname" autocomplete="off" spellcheck="false">
     <button id="play" disabled>Connecting…</button>
@@ -144,13 +160,14 @@ const HUES = [150, 200, 265, 320, 0, 28, 50, 95];
 // DOM
 // =====================================================================================
 const $ = id => document.getElementById(id);
-const cv = $('c'), ctx = cv.getContext('2d');
+const cv = $('c'), ctx = cv.getContext('2d', { alpha: false });   // opaque canvas: cheaper to composite
 const mmCv = $('mm'), mmx = mmCv.getContext('2d');
 const menu = $('menu'), hud = $('hud'), playBtn = $('play'), nick = $('nick');
 let W = 0, H = 0, DPR = 1;
 let HQ = true; try { HQ = localStorage.getItem('coil.hq') !== '0'; } catch {}
+let renderScale = 1;      // lowered automatically if the machine can't keep up (see frame())
 function resize() {
-  DPR = HQ ? Math.min(2, window.devicePixelRatio || 1) : 1;
+  DPR = (HQ ? Math.min(2, window.devicePixelRatio || 1) : 1) * renderScale;
   W = innerWidth; H = innerHeight;
   cv.width = W * DPR; cv.height = H * DPR;
   cv.style.width = W + 'px'; cv.style.height = H + 'px';
@@ -266,6 +283,9 @@ function showMenu(msg, fade) {
 
 function applyState(m) {
   const now = performance.now();
+  // where things are drawn right now (between the last two updates): new motion starts from here, so
+  // an update that arrives early or late never makes a snake snap backwards or jump forwards
+  const aNow = clamp((now - lastSnap) / snapGap, 0, 1.35);
   snapGap = lerp(snapGap, clamp(now - lastSnap, 10, 120), 0.2);
   lastSnap = now;
   camSrv.x = m.cx; camSrv.y = m.cy;
@@ -279,9 +299,13 @@ function applyState(m) {
     }
     present.add(e.i);
     // keep previous positions for interpolation
-    const prev = s.prev; prev.length = s.segs.length;
-    for (let i = 0; i < s.segs.length; i++) { const p = s.segs[i]; prev[i] = prev[i] ? (prev[i].x = p.x, prev[i].y = p.y, prev[i]) : { x: p.x, y: p.y }; }
-    s.prevR = s.r;
+    const prev = s.prev, old = prev.length; prev.length = s.segs.length;
+    for (let i = 0; i < s.segs.length; i++) {
+      const p = s.segs[i], q = prev[i];
+      if (q && i < old) { q.x += (p.x - q.x) * aNow; q.y += (p.y - q.y) * aNow; }
+      else prev[i] = { x: p.x, y: p.y };
+    }
+    s.prevR = s.prevR + (s.r - s.prevR) * aNow;
     s.r = e.r; s.a = e.a; s.b = e.b; s.v = e.v;
     if (e.nm !== undefined) { s.name = e.nm; s.hue = e.h; s.cid = e.c; s.skin = e.k || 0; }
     if (e.s) {
@@ -590,18 +614,21 @@ $('micBtn').onclick = e => { voice.toggleMode(); e.currentTarget.blur(); };
 const LIGHT = { x: -0.42, y: -0.58 };
 const SKINS = ['Classic', 'Stripes', 'Duo', 'Spectrum', 'Neon', 'Candy'];
 const wrapH = h => ((Math.round(h / 4) * 4) % 360 + 360) % 360;
-// colour of segment i for a skin: [hue, sat, light, glow?]
-function segColor(skin, h, i) {
+// colour of segment i for a skin -> written into SC (no allocation; called thousands of times a frame)
+const SC = { h: 0, s: 0, l: 0, g: 0 };
+function segColorInto(skin, h, i) {
+  SC.g = 0;
   switch (skin) {
-    case 1: return [h, 85, Math.floor(i / 3) % 2 ? 56 : 30, 0];
-    case 2: return [Math.floor(i / 4) % 2 ? h : h + 150, 85, 50, 0];
-    case 3: return [h + i * 7, 90, 52, 0];
-    case 4: return i % 7 === 0 ? [h, 100, 62, 1] : [h, 45, 17, 0];
-    case 5: return Math.floor(i / 2) % 2 ? [h, 25, 92, 0] : [h, 90, 55, 0];
-    default: return [h, 85, 50, 0];
+    case 1: SC.h = h; SC.s = 85; SC.l = Math.floor(i / 3) % 2 ? 56 : 30; break;
+    case 2: SC.h = Math.floor(i / 4) % 2 ? h : h + 150; SC.s = 85; SC.l = 50; break;
+    case 3: SC.h = h + i * 7; SC.s = 90; SC.l = 52; break;
+    case 4: if (i % 7 === 0) { SC.h = h; SC.s = 100; SC.l = 62; SC.g = 1; } else { SC.h = h; SC.s = 45; SC.l = 17; } break;
+    case 5: SC.h = h; if (Math.floor(i / 2) % 2) { SC.s = 25; SC.l = 92; } else { SC.s = 90; SC.l = 55; } break;
+    default: SC.h = h; SC.s = 85; SC.l = 50;
   }
+  return SC;
 }
-
+function segColor(skin, h, i) { const c = segColorInto(skin, h, i); return [c.h, c.s, c.l, c.g]; }
 const sprites = new Map();
 function ballSprite(h, s, l) {
   h = wrapH(h);
@@ -624,12 +651,20 @@ function ballSprite(h, s, l) {
 }
 // one body segment: domed disc, lit from the top-left, with a defined darker rim so
 // each overlapping piece reads clearly against the one beneath it
+const scaleCache = new Map();
+// one body segment: domed disc lit from the top-left with a darker rim, plus its soft contact
+// shadow baked in as a dark falloff just outside the rim (so it's one draw instead of two).
+// The disc itself has radius SEG_R inside a SEG_S canvas; the shadow fills the margin.
+const SEG_S = 184, SEG_C = 92, SEG_R = 78, SEG_K = SEG_C / SEG_R;
 function scaleSprite(h, s, l) {
   h = wrapH(h);
-  const k = `s${h}|${s}|${l}`; let c = sprites.get(k); if (c) return c;
-  const S = 160, R = 78, C = 80;
+  const nk = h * 100000 + s * 1000 + l; let c = scaleCache.get(nk); if (c) return c;
+  const S = SEG_S, R = SEG_R, C = SEG_C;
   c = document.createElement('canvas'); c.width = c.height = S;
   const g = c.getContext('2d');
+  const sh = g.createRadialGradient(C, C, R * 0.9, C, C, C);
+  sh.addColorStop(0, 'rgba(0,0,0,.42)'); sh.addColorStop(0.45, 'rgba(0,0,0,.22)'); sh.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = sh; g.fillRect(0, 0, S, S);
   const grd = g.createRadialGradient(C + LIGHT.x * R * 0.42, C + LIGHT.y * R * 0.42, R * 0.03, C, C, R);
   grd.addColorStop(0, `hsl(${h},${s}%,${Math.min(93, l + 26)}%)`);
   grd.addColorStop(0.35, `hsl(${h},${s}%,${Math.min(90, l + 8)}%)`);
@@ -642,7 +677,7 @@ function scaleSprite(h, s, l) {
   rim.addColorStop(0, `hsla(${h},100%,70%,.18)`); rim.addColorStop(1, `hsla(${h},100%,70%,0)`);
   g.globalCompositeOperation = 'lighter';
   g.fillStyle = rim; g.beginPath(); g.arc(C, C, R, 0, Math.PI * 2); g.fill();
-  sprites.set(k, c); return c;
+  scaleCache.set(nk, c); return c;
 }
 function radialSprite(key, size, stops) {
   let c = sprites.get(key); if (c) return c;
@@ -653,9 +688,39 @@ function radialSprite(key, size, stops) {
   g.fillStyle = grd; g.fillRect(0, 0, size, size);
   sprites.set(key, c); return c;
 }
-const haloSprite = h => radialSprite('h' + h, 128, [[0, `hsla(${h},100%,70%,.75)`], [0.12, `hsla(${h},100%,62%,.42)`], [0.4, `hsla(${h},100%,55%,.12)`], [1, `hsla(${h},100%,50%,0)`]]);
-const coreSprite = h => radialSprite('c' + h, 64, [[0, '#fff'], [0.3, `hsla(${h},100%,86%,1)`], [0.55, `hsla(${h},100%,64%,.9)`], [0.75, `hsla(${h},100%,58%,.22)`], [1, `hsla(${h},100%,50%,0)`]]);
-const auraSprite = h => radialSprite('a' + h, 96, [[0, `hsla(${h},100%,70%,.85)`], [0.35, `hsla(${h},100%,60%,.35)`], [1, `hsla(${h},100%,55%,0)`]]);
+// Pre-shrunk copies of a sprite (1/2, 1/4, 1/8 ...), made once with high-quality filtering.
+// Drawing a 160px sprite at 30px with 'high' smoothing every frame is slow; picking a copy that's
+// already about the right size and drawing it with plain bilinear filtering looks the same and is
+// several times cheaper.
+function mip(c, px) {
+  let m = c.__m;
+  if (!m) {
+    m = c.__m = [c];
+    let src = c;
+    while (src.width > 8) {
+      const d = document.createElement('canvas'); d.width = Math.ceil(src.width / 2); d.height = Math.ceil(src.height / 2);
+      const g = d.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(src, 0, 0, d.width, d.height);
+      m.push(d); src = d;
+    }
+  }
+  for (let i = m.length - 1; i > 0; i--) if (m[i].width >= px) return m[i];
+  return c;
+}
+const hueCache = (fn) => { const arr = new Array(90); return h => { const i = (wrapH(h) / 4) | 0; return arr[i] || (arr[i] = fn(i * 4)); }; };
+const haloSprite = hueCache(h => radialSprite('h' + h, 128, [[0, `hsla(${h},100%,70%,.75)`], [0.12, `hsla(${h},100%,62%,.42)`], [0.4, `hsla(${h},100%,55%,.12)`], [1, `hsla(${h},100%,50%,0)`]]));
+const coreSprite = hueCache(h => radialSprite('c' + h, 64, [[0, '#fff'], [0.3, `hsla(${h},100%,86%,1)`], [0.55, `hsla(${h},100%,64%,.9)`], [0.75, `hsla(${h},100%,58%,.22)`], [1, `hsla(${h},100%,50%,0)`]]));
+const auraSprite = hueCache(h => radialSprite('a' + h, 96, [[0, `hsla(${h},100%,70%,.85)`], [0.35, `hsla(${h},100%,60%,.35)`], [1, `hsla(${h},100%,55%,0)`]]));
+// eye white, pre-rendered once (a gradient per eye per frame was surprisingly costly)
+const eyeSprite = (() => {
+  const S = 64, C = 32, R = 30, c = document.createElement('canvas'); c.width = c.height = S;
+  const g = c.getContext('2d');
+  g.beginPath(); g.arc(C, C, R, 0, 7);
+  const sg = g.createRadialGradient(C + LIGHT.x * R * 0.35, C + LIGHT.y * R * 0.35, R * 0.05, C, C, R);
+  sg.addColorStop(0, '#ffffff'); sg.addColorStop(0.75, '#f3f5fb'); sg.addColorStop(1, '#c9cfdd');
+  g.fillStyle = sg; g.fill();
+  g.lineWidth = R * 0.09; g.strokeStyle = 'rgba(10,12,20,.55)'; g.beginPath(); g.arc(C, C, R - R * 0.045, 0, 7); g.stroke();
+  return c;
+})();
 const segShadow = radialSprite('segshadow', 64, [[0, 'rgba(0,0,0,.55)'], [0.78, 'rgba(0,0,0,.45)'], [1, 'rgba(0,0,0,0)']]);
 const shadowSprite = radialSprite('shadow', 64, [[0, 'rgba(0,0,0,.5)'], [0.6, 'rgba(0,0,0,.32)'], [1, 'rgba(0,0,0,0)']]);
 const outlineSprite = radialSprite('outline', 64, [[0, 'rgba(0,0,0,.75)'], [0.9, 'rgba(0,0,0,.6)'], [1, 'rgba(0,0,0,0)']]);
@@ -698,10 +763,36 @@ function getVignette() {
 }
 
 let lastFrame = performance.now(), boostZoom = 1, lastScoreHtml = '';
+let VIS = new Float32Array(5 * 2048);
+const growF32 = a => { const b = new Float32Array(a.length * 2); b.set(a); return b; };
+let lightCv = null, lightG = null;
+function lightLayer() {
+  const w = Math.max(1, Math.ceil(W / 4)), h = Math.max(1, Math.ceil(H / 4));
+  if (!lightCv) { lightCv = document.createElement('canvas'); lightG = lightCv.getContext('2d'); }
+  if (lightCv.width !== w || lightCv.height !== h) { lightCv.width = w; lightCv.height = h; }
+  return lightG;
+}
 const scoreEl = document.getElementById('score');
-let ghostLayer = null;
+let ghostLayer = null, ghostG = null;
+// Smoothness guard: watch how long frames take compared to the screen's refresh rate. If we keep
+// missing frames, render at a slightly lower resolution (the canvas is scaled back up by the browser,
+// so it just gets a touch softer); once there's plenty of headroom again, go back up.
+const fpsGuard = { ema: 16.7, base: 16.7, slow: 0, fast: 0 };
+function guardFrame(dt) {
+  if (dt <= 0 || dt > 250) return;                                 // tab was hidden / paused
+  const G = fpsGuard;
+  G.base = Math.min(G.base + 0.01, dt);                            // ~ the display's refresh interval
+  G.ema += (dt - G.ema) * 0.1;
+  // "slow" = clearly missing frames (and under ~55 fps, so a 144 Hz screen at 100 fps isn't punished)
+  if (G.ema > Math.max(G.base * 1.4, 18)) { G.slow++; G.fast = 0; } else if (G.ema < G.base * 1.12) { G.fast++; G.slow = 0; } else { G.slow = 0; G.fast = 0; }
+  const native = HQ ? Math.min(2, devicePixelRatio || 1) : 1;
+  const floor = Math.max(0.5, 0.6 / native);                       // never below ~0.6 px per CSS px
+  if (G.slow > 40 && renderScale > floor + 0.01) { renderScale = Math.max(floor, renderScale * 0.85); G.slow = 0; G.ema = G.base; resize(); }
+  else if (G.fast > 360 && renderScale < 1) { renderScale = Math.min(1, renderScale / 0.85); G.fast = 0; resize(); }
+}
 function frame(now) {
   requestAnimationFrame(frame);
+  if (myId) guardFrame(now - lastFrame);
   lastFrame = now;
   const alpha = clamp((now - lastSnap) / snapGap, 0, 1.35);   // >1 = short extrapolation so late packets don't freeze fast snakes
   const me = snakes.get(myId);
@@ -714,7 +805,7 @@ function frame(now) {
   scale = lerp(scale, Math.hypot(W, H) / 2 / viewR, 0.04);
 
   // floor
-  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'low';   // sprites are pre-shrunk (mip), so plain bilinear is enough
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   ctx.fillStyle = '#05070c'; ctx.fillRect(0, 0, W, H);
@@ -724,27 +815,45 @@ function frame(now) {
 
   // orbs: light pooling on the floor, then hot cores
   const t = now / 1000;
-  const vis = [];
+  let nv = 0;
   for (const [id, f] of food) {
-    let x = f.x + Math.sin(t * 1.3 + f.ph) * 2, y = f.y + Math.cos(t * 1.1 + f.ph) * 2, k = clamp((now - f.born) / 350, 0, 1);
+    let x = f.x, y = f.y, k = 1;
     if (f.eat) {
       const e = (now - f.eat.t) / 170, s = snakes.get(f.eat.sid);
       if (e >= 1 || !s) { food.delete(id); continue; }
       const h = s.rh || s.segs[0]; const ee = e * e;
       x = lerp(f.eat.x0, h.x, ee); y = lerp(f.eat.y0, h.y, ee); k = 1 - e * 0.7;
+    } else {
+      if (x - cam.x > hw || cam.x - x > hw || y - cam.y > hh || cam.y - y > hh) continue;   // cull before any trig
+      x += Math.sin(t * 1.3 + f.ph) * 2; y += Math.cos(t * 1.1 + f.ph) * 2;
+      if (now - f.born < 350) k = (now - f.born) / 350;
     }
-    if (Math.abs(x - cam.x) > hw || Math.abs(y - cam.y) > hh) continue;
-    const tw = 0.75 + 0.25 * Math.sin(t * 4 + f.ph * 3);
-    vis.push(x, y, (2.6 + f.v * 1.15) * k, f.h, tw);
+    if (nv + 5 > VIS.length) VIS = growF32(VIS);
+    VIS[nv] = x; VIS[nv + 1] = y; VIS[nv + 2] = (2.6 + f.v * 1.15) * k; VIS[nv + 3] = f.h; VIS[nv + 4] = 0.75 + 0.25 * Math.sin(t * 4 + f.ph * 3);
+    nv += 5;
   }
-  ctx.globalCompositeOperation = 'lighter';
-  if (HQ) for (let i = 0; i < vis.length; i += 5) {
-    const r = vis[i + 2] * 13; ctx.globalAlpha = 0.7 * vis[i + 4];
-    ctx.drawImage(haloSprite(wrapH(vis[i + 3])), vis[i] - r, vis[i + 1] - r, r * 2, r * 2);
+  // the soft light pools are big and blurry, so they're drawn into a quarter-resolution buffer and
+  // blended onto the screen in one go: same look, ~1/16 of the pixels to fill (huge win on death piles)
+  if (HQ && nv) {
+    const lg = lightLayer();
+    lg.setTransform(1, 0, 0, 1, 0, 0); lg.globalCompositeOperation = 'source-over'; lg.globalAlpha = 1;
+    lg.clearRect(0, 0, lightCv.width, lightCv.height);
+    const ls = lightCv.width / W;
+    lg.setTransform(ls * scale, 0, 0, ls * scale, ls * (W / 2 - cam.x * scale), ls * (H / 2 - cam.y * scale));
+    lg.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < nv; i += 5) {
+      const r = VIS[i + 2] * 13; lg.globalAlpha = 0.7 * VIS[i + 4];
+      lg.drawImage(mip(haloSprite(VIS[i + 3]), r * 2 * scale * ls), VIS[i] - r, VIS[i + 1] - r, r * 2, r * 2);
+    }
+    ctx.save(); ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.globalCompositeOperation = 'lighter';
+    ctx.drawImage(lightCv, 0, 0, W, H); ctx.restore();
   }
-  for (let i = 0; i < vis.length; i += 5) {
-    const r = vis[i + 2] * (1.9 + 0.3 * vis[i + 4]); ctx.globalAlpha = 1;
-    ctx.drawImage(coreSprite(wrapH(vis[i + 3])), vis[i] - r, vis[i + 1] - r, r * 2, r * 2);
+  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 1;
+  const pxPerUnit = scale * DPR;
+  for (let i = 0; i < nv; i += 5) {
+    const r = VIS[i + 2] * (1.9 + 0.3 * VIS[i + 4]);
+    if (r * pxPerUnit < 0.6) continue;                               // sub-pixel: invisible anyway
+    ctx.drawImage(mip(coreSprite(VIS[i + 3]), r * 2 * pxPerUnit), VIS[i] - r, VIS[i + 1] - r, r * 2, r * 2);
   }
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
 
@@ -788,7 +897,7 @@ function drawGhosts(now, hw, hh) {
   if (!ghostLayer || ghostLayer.width !== cv.width || ghostLayer.height !== cv.height) {
     ghostLayer = document.createElement('canvas'); ghostLayer.width = cv.width; ghostLayer.height = cv.height;
   }
-  const g = ghostLayer.getContext('2d');
+  const g = ghostG = ghostLayer.getContext('2d');
   const tf = ctx.getTransform();
   for (let i = ghosts.length - 1; i >= 0; i--) {
     const gh = ghosts[i], k = (now - gh.t0) / DUR;
@@ -809,9 +918,9 @@ function drawGhosts(now, hw, hh) {
       const p = gh.pts[j]; if (Math.abs(p.x - cam.x) > hw || Math.abs(p.y - cam.y) > hh) continue;
       if ((p.x - gx) ** 2 + (p.y - gy) ** 2 < (gh.r * 0.9) ** 2) continue;
       gx = p.x; gy = p.y;
-      const c = segColor(gh.skin, gh.hue, j), rr = gh.r * (1.2 + 2.4 * e);
+      const c = segColorInto(gh.skin, gh.hue, j), rr = gh.r * (1.2 + 2.4 * e);
       ctx.globalAlpha = 0.55 * (1 - k);
-      ctx.drawImage(auraSprite(wrapH(c[0])), p.x - rr, p.y - rr, rr * 2, rr * 2);
+      ctx.drawImage(auraSprite(c.h), p.x - rr, p.y - rr, rr * 2, rr * 2);
     }
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   }
@@ -843,7 +952,10 @@ function resample(pts, n, step) {
   }
   return out;
 }
+const pupilRims = new Map();
+function pupilRim(hue, neon) { const k = wrapH(hue) * 2 + (neon ? 1 : 0); let v = pupilRims.get(k); if (!v) { v = `hsla(${wrapH(hue)},70%,${neon ? 60 : 35}%,.9)`; pupilRims.set(k, v); } return v; }
 function paintBody(g, pts, n, r, hue, skin, boost, now, look, id, hw, hh, cx, cy) {
+  const pf = g === ctx || g === ghostG ? scale * DPR : 1;            // device pixels per world unit
   const inView = p => Math.abs(p.x - cx) < hw && Math.abs(p.y - cy) < hh;
   const tailStart = Math.max(4, n - 10);
   const taper = i => i <= tailStart ? 1 : 1 - (i - tailStart) / (n - tailStart) * 0.45;
@@ -854,8 +966,7 @@ function paintBody(g, pts, n, r, hue, skin, boost, now, look, id, hw, hh, cx, cy
     for (let i = 1; i < n; i++) sp.lineTo(pts[i].x, pts[i].y);
     g.save(); g.translate(-LIGHT.x * r * 0.5, -LIGHT.y * r * 0.5);
     g.lineCap = g.lineJoin = 'round';
-    g.strokeStyle = 'rgba(0,0,0,.16)'; g.lineWidth = r * 2.9; g.stroke(sp);
-    g.strokeStyle = 'rgba(0,0,0,.22)'; g.lineWidth = r * 2.3; g.stroke(sp);
+    g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = r * 2.6; g.stroke(sp);
     g.restore();
   }
   // 2. boost aura
@@ -867,41 +978,29 @@ function paintBody(g, pts, n, r, hue, skin, boost, now, look, id, hw, hh, cx, cy
       if ((p.x - lx) ** 2 + (p.y - ly) ** 2 < minGap) continue;          // never stack glows on one spot
       lx = p.x; ly = p.y;
       const wave = 0.5 + 0.5 * Math.sin(now / 70 - i * 0.45);          // pulses run from head to tail
-      const c = segColor(skin, hue, i), rr = r * (2.2 + 0.9 * wave) * taper(i);
-      g.globalAlpha = 0.32 + 0.4 * wave; g.drawImage(auraSprite(wrapH(c[0])), p.x - rr, p.y - rr, rr * 2, rr * 2);
+      const c = segColorInto(skin, hue, i), rr = r * (2.2 + 0.9 * wave) * taper(i);
+      g.globalAlpha = 0.32 + 0.4 * wave; g.drawImage(mip(auraSprite(c.h), rr * 2 * pf), p.x - rr, p.y - rr, rr * 2, rr * 2);
     }
     g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
   }
   // 3-5. body = overlapping segments. Each segment is its own lit disc, drawn tail -> head
   // so every piece sits on top of the one behind it, and casts a soft shadow onto it.
-  const runs = [];
-  for (let i = 0; i < n; i++) {
-    const c = segColor(skin, hue, skin === 3 ? i - (i % 3) : i);
-    const last = runs[runs.length - 1];
-    if (last && last.h === c[0] && last.s === c[1] && last.l === c[2]) last.to = i;
-    else runs.push({ from: i, to: i, h: c[0], s: c[1], l: c[2], glow: c[3] });
-  }
   const bl = boost ? 7 : 0;
+  // far away (pieces only a few pixels wide) the overlap is invisible: draw every 2nd / 3rd piece
+  const dpx = r * 2 * pf, lod = dpx < 5 ? 3 : dpx < 9 ? 2 : 1;
   for (let i = n - 1; i >= 0; i--) {
+    if (lod > 1 && i % lod && i > 2) continue;
     const p = pts[i]; if (!inView(p)) continue;
-    const c = segColor(skin, hue, skin === 3 ? i - (i % 3) : i);
+    const c = segColorInto(skin, hue, skin === 3 ? i - (i % 3) : i);
     const rr = r * taper(i) * (i === 0 ? 1.04 : 1);
-    // direction toward the previous (tail-side) segment
-    const q = pts[Math.min(n - 1, i + 1)];
-    let bx = q.x - p.x, by = q.y - p.y; const bd = Math.hypot(bx, by) || 1; bx /= bd; by /= bd;
-    if (i < n - 1 && (HQ || g !== ctx)) {
-      // contact shadow cast backwards onto the segment underneath
-      const sr = rr * 1.06;
-      g.globalAlpha = 0.5;
-      g.drawImage(segShadow, p.x + bx * rr * 0.22 - sr, p.y + by * rr * 0.22 - sr, sr * 2, sr * 2);
-      g.globalAlpha = 1;
-    }
-    g.drawImage(scaleSprite(c[0], c[1], clamp(c[2] + bl, 3, 90)), p.x - rr, p.y - rr, rr * 2, rr * 2);
+    const dr = rr * SEG_K;                                           // sprite includes the shadow margin
+    g.drawImage(mip(scaleSprite(c.h, c.s, clamp(c.l + bl, 3, 90)), dr * 2 * pf), p.x - dr, p.y - dr, dr * 2, dr * 2);
   }
-  // glowing rings (Neon skin)
+  // glowing rings (Neon skin): every 7th segment
   if (skin === 4) {
-    g.globalCompositeOperation = 'lighter';
-    for (const run of runs) if (run.glow) { const p = pts[run.from]; if (!inView(p)) continue; const rr = r * 2.2; g.globalAlpha = 0.55; g.drawImage(auraSprite(wrapH(run.h)), p.x - rr, p.y - rr, rr * 2, rr * 2); }
+    g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.55;
+    const rr = r * 2.2, aura = mip(auraSprite(hue), rr * 2 * pf);
+    for (let i = 0; i < n; i += 7) { const p = pts[i]; if (!inView(p)) continue; g.drawImage(aura, p.x - rr, p.y - rr, rr * 2, rr * 2); }
     g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
   }
   // 6. head
@@ -909,7 +1008,6 @@ function paintBody(g, pts, n, r, hue, skin, boost, now, look, id, hw, hh, cx, cy
   const a = Math.atan2(h0.y - h1.y, h0.x - h1.x);
   const fx = Math.cos(a), fy = Math.sin(a), px = -fy, py = fx;
   const hr = r * 1.1;
-  const hc = segColor(skin, hue, 0);
   const hx = h0.x + fx * r * 0.12, hy = h0.y + fy * r * 0.12;
 
   // tongue flick (every ~3.5s, per-snake phase)
@@ -929,16 +1027,13 @@ function paintBody(g, pts, n, r, hue, skin, boost, now, look, id, hw, hh, cx, cy
     // socket shadow
     g.beginPath(); g.arc(ex - LIGHT.x * er * 0.18, ey - LIGHT.y * er * 0.18, er * 1.1, 0, 7);
     g.fillStyle = 'rgba(0,0,0,.28)'; g.fill();
-    // white
-    const sg = g.createRadialGradient(ex + LIGHT.x * er * 0.35, ey + LIGHT.y * er * 0.35, er * 0.05, ex, ey, er);
-    sg.addColorStop(0, '#ffffff'); sg.addColorStop(0.75, '#f3f5fb'); sg.addColorStop(1, '#c9cfdd');
-    g.beginPath(); g.arc(ex, ey, er, 0, 7); g.fillStyle = sg; g.fill();
-    g.lineWidth = Math.max(1, er * 0.09); g.strokeStyle = 'rgba(10,12,20,.55)'; g.stroke();
+    // white (pre-rendered sprite)
+    g.drawImage(mip(eyeSprite, er * 64 / 30 * pf), ex - er * 32 / 30, ey - er * 32 / 30, er * 64 / 30, er * 64 / 30);
     // pupil
     const lx = ex + Math.cos(look) * er * 0.44, ly = ey + Math.sin(look) * er * 0.44;
     g.beginPath(); g.arc(lx, ly, er * 0.54, 0, 7); g.fillStyle = '#07080d'; g.fill();
     g.beginPath(); g.arc(lx, ly, er * 0.54, 0, 7);
-    g.lineWidth = er * 0.1; g.strokeStyle = `hsla(${wrapH(hue)},70%,${skin === 4 ? 60 : 35}%,.9)`; g.stroke();
+    g.lineWidth = er * 0.1; g.strokeStyle = pupilRim(hue, skin === 4); g.stroke();
     // catch-lights
     g.fillStyle = '#fff';
     g.beginPath(); g.arc(lx + LIGHT.x * er * 0.26, ly + LIGHT.y * er * 0.26, er * 0.17, 0, 7); g.fill();
@@ -1033,7 +1128,7 @@ function syncMenuLabels() {
   $('gfxLbl').textContent = HQ ? 'High quality' : 'Low quality';
   $('voiceLbl').textContent = 'Voice chat: ' + ($('voiceOpt').checked ? 'On' : 'Off');
 }
-$('gfxBtn').onclick = () => { HQ = !HQ; try { localStorage.setItem('coil.hq', HQ ? '1' : '0'); } catch {} resize(); syncMenuLabels(); };
+$('gfxBtn').onclick = () => { renderScale = 1; HQ = !HQ; try { localStorage.setItem('coil.hq', HQ ? '1' : '0'); } catch {} resize(); syncMenuLabels(); };
 $('voiceBtn').onclick = () => { const v = $('voiceOpt'); v.checked = !v.checked; try { localStorage.setItem('coil.voice', v.checked ? '1' : '0'); } catch {} syncMenuLabels(); };
 try { if (localStorage.getItem('coil.voice') === '0') $('voiceOpt').checked = false; } catch {}
 $('howBtn').onclick = $('ctlBtn').onclick = e => { e.preventDefault(); $('howBox').classList.toggle('hidden'); };
