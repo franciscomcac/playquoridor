@@ -194,6 +194,9 @@ const snakes = new Map();      // id -> snake
 const ghosts = [];             // dying snakes, faded out client-side
 const food = new Map();        // id -> pellet
 let lastSnap = performance.now(), snapGap = tickMs;
+// how far (in snapshots, 15/s) we keep moving snakes forward when an update is late. Covers a ~130 ms network or
+// server hiccup without a freeze; when the update arrives, motion continues from where we drew it.
+const EXTRAP = 2;
 let camSrv = { x: 0, y: 0 }, cam = { x: 0, y: 0 }, scale = 0.8;
 let lb = [], rank = 0, total = 0, mm = [];
 let mouseA = 0, boosting = false, lastSent = { a: 99, b: false, t: 0 };
@@ -202,30 +205,31 @@ const lerp = (a, b, t) => a + (b - a) * t;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 
 function sampleTrail(trail, segs, n, spacing) {
-  // Slither-style body: every segment sits ON the exact path the head travelled (trail[0] = head,
-  // newest first). Nothing cuts corners, so bodies never sweep sideways across other snakes.
-  // If the trail runs out (the snake just grew), the tail simply waits at the end of the path
-  // and the new length unrolls behind the head as it moves.
-  const h = trail[0];
+  // Slither-style body: every segment sits ON the exact path the head travelled. The path is
+  // stored oldest-first (new head points are pushed on the end, which is O(1); unshifting a
+  // multi-thousand-point array every tick was the server's biggest cost). Nothing cuts corners,
+  // so bodies never sweep sideways across other snakes. If the path runs out (the snake just
+  // grew), the tail simply waits at the end of it while the new length unrolls behind the head.
+  const L = trail.length, h = trail[L - 1];
   if (segs[0]) { segs[0].x = h.x; segs[0].y = h.y; } else segs[0] = { x: h.x, y: h.y };
-  let i = 0, acc = 0, k = 1;
+  let i = L - 1, acc = 0, k = 1;
   for (; k < n; k++) {
     const want = k * spacing;
     let placed = false;
-    while (i < trail.length - 1) {
-      const a = trail[i], b = trail[i + 1];
+    while (i > 0) {
+      const a = trail[i], b = trail[i - 1];
       const d = Math.hypot(b.x - a.x, b.y - a.y);
       if (acc + d >= want) {
         const t = d > 0 ? (want - acc) / d : 0, x = a.x + (b.x - a.x) * t, y = a.y + (b.y - a.y) * t;
         if (segs[k]) { segs[k].x = x; segs[k].y = y; } else segs[k] = { x, y };
         placed = true; break;
       }
-      acc += d; i++;
+      acc += d; i--;
     }
     if (!placed) break;
   }
   segs.length = Math.max(1, k);
-  if (k >= n && trail.length > i + 3) trail.length = i + 3;   // forget path we no longer need
+  if (k >= n && i > 66) trail.splice(0, i - 2);   // forget path we no longer need (in batches)
 }
 
 // =====================================================================================
@@ -285,8 +289,8 @@ function applyState(m) {
   const now = performance.now();
   // where things are drawn right now (between the last two updates): new motion starts from here, so
   // an update that arrives early or late never makes a snake snap backwards or jump forwards
-  const aNow = clamp((now - lastSnap) / snapGap, 0, 1.35);
-  snapGap = lerp(snapGap, clamp(now - lastSnap, 10, 120), 0.2);
+  const aNow = clamp((now - lastSnap) / snapGap, 0, EXTRAP);
+  snapGap = tickMs;   // the server runs in real time (it catches up after hiccups), so motion always advances at the tick rate
   lastSnap = now;
   camSrv.x = m.cx; camSrv.y = m.cy;
   const present = new Set();
@@ -311,10 +315,10 @@ function applyState(m) {
     if (e.s) {
       const n = e.s.length / 2; s.segs.length = n;
       for (let i = 0; i < n; i++) { const p = s.segs[i]; if (p) { p.x = e.s[i * 2]; p.y = e.s[i * 2 + 1]; } else s.segs[i] = { x: e.s[i * 2], y: e.s[i * 2 + 1] }; }
-      s.trail = s.segs.map(p => ({ x: p.x, y: p.y }));
+      s.trail = s.segs.map(p => ({ x: p.x, y: p.y })).reverse();   // oldest (tail) first
     } else {
-      if (!s.trail) s.trail = s.segs.map(p => ({ x: p.x, y: p.y }));
-      s.trail.unshift({ x: e.x, y: e.y });
+      if (!s.trail) s.trail = s.segs.map(p => ({ x: p.x, y: p.y })).reverse();
+      s.trail.push({ x: e.x, y: e.y });
       sampleTrail(s.trail, s.segs, e.n, spacingFor(e.r));
     }
     if (!prev.length) for (const p of s.segs) prev.push({ x: p.x, y: p.y });
@@ -384,7 +388,7 @@ setInterval(() => {
     sendMsg({ t: 'in', a: Math.round(mouseA * 1000) / 1000, b: boosting });
     lastSent = { a: mouseA, b: boosting, t: now };
   }
-}, 33);
+}, 50);   // 20 inputs/s is plenty (the snake's turn rate is the limit), and it's lighter on the server
 
 async function play() {
   if (playBtn.disabled) return;
@@ -794,7 +798,7 @@ function frame(now) {
   requestAnimationFrame(frame);
   if (myId) guardFrame(now - lastFrame);
   lastFrame = now;
-  const alpha = clamp((now - lastSnap) / snapGap, 0, 1.35);   // >1 = short extrapolation so late packets don't freeze fast snakes
+  const alpha = clamp((now - lastSnap) / snapGap, 0, EXTRAP);   // >1 = keep moving if an update is late, instead of freezing
   const me = snakes.get(myId);
 
   let tx = camSrv.x, ty = camSrv.y;

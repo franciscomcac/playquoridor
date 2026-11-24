@@ -25,7 +25,8 @@ const START_SCORE = +(process.env.START_SCORE || 10);
 const MIN_BOOST_SCORE = 6;        // can boost from the start, down to a tiny snake
 const BOOST_COST = 0.075;       // score per tick while boosting (~2.25 length/s, drops a pellet every ~0.45 s)
 const CELL = 120;                // spatial hash cell size
-const KEYFRAME_EVERY = 15;       // full body resync interval (ticks)
+const SEND_RATE = 15;             // snapshots per second sent to players (simulation still runs at TICK_RATE)
+const KEYFRAME_EVERY = 8;        // full body resync interval (snapshots, ~0.5 s)
 const MAX_MSG = 16384;
 
 // ---------------------------------------------------------------- http
@@ -89,10 +90,14 @@ function addFood(x, y, v, h, ttl = 0) {
   food.set(f.id, f);
   let c = foodGrid.get(f.k); if (!c) foodGrid.set(f.k, c = new Set());
   c.add(f);
+  foodAdded.push(f);
   return f;
 }
+// food changes this tick, so players can get small diffs instead of a full re-scan every tick
+const foodAdded = [], foodRemoved = [];
 function removeFood(f) {
   food.delete(f.id);
+  foodRemoved.push(f.id);
   const c = foodGrid.get(f.k); if (c) { c.delete(f); if (!c.size) foodGrid.delete(f.k); }
 }
 function forFoodNear(x, y, rad, fn) {
@@ -164,7 +169,7 @@ function createSnake({ name, hue, skin = 0, isBot = false, player = null, score 
     pts.reverse(); s.segs = pts;
     s.angle = s.target = Math.atan2(pts[0].y - pts[1].y, pts[0].x - pts[1].x);
   }
-  s.trail = s.segs.map(p => ({ x: p.x, y: p.y }));
+  s.trail = s.segs.map(p => ({ x: p.x, y: p.y })).reverse();   // oldest (tail) first
   computeBBox(s);
   snakes.set(s.id, s);
   return s;
@@ -176,30 +181,31 @@ function computeBBox(s) {
 }
 // same algorithm runs on the client to reconstruct bodies between keyframes
 function sampleTrail(trail, segs, n, spacing) {
-  // Slither-style body: every segment sits ON the exact path the head travelled (trail[0] = head,
-  // newest first). Nothing cuts corners, so bodies never sweep sideways across other snakes.
-  // If the trail runs out (the snake just grew), the tail simply waits at the end of the path
-  // and the new length unrolls behind the head as it moves.
-  const h = trail[0];
+  // Slither-style body: every segment sits ON the exact path the head travelled. The path is
+  // stored oldest-first (new head points are pushed on the end, which is O(1); unshifting a
+  // multi-thousand-point array every tick was the server's biggest cost). Nothing cuts corners,
+  // so bodies never sweep sideways across other snakes. If the path runs out (the snake just
+  // grew), the tail simply waits at the end of it while the new length unrolls behind the head.
+  const L = trail.length, h = trail[L - 1];
   if (segs[0]) { segs[0].x = h.x; segs[0].y = h.y; } else segs[0] = { x: h.x, y: h.y };
-  let i = 0, acc = 0, k = 1;
+  let i = L - 1, acc = 0, k = 1;
   for (; k < n; k++) {
     const want = k * spacing;
     let placed = false;
-    while (i < trail.length - 1) {
-      const a = trail[i], b = trail[i + 1];
+    while (i > 0) {
+      const a = trail[i], b = trail[i - 1];
       const d = Math.hypot(b.x - a.x, b.y - a.y);
       if (acc + d >= want) {
         const t = d > 0 ? (want - acc) / d : 0, x = a.x + (b.x - a.x) * t, y = a.y + (b.y - a.y) * t;
         if (segs[k]) { segs[k].x = x; segs[k].y = y; } else segs[k] = { x, y };
         placed = true; break;
       }
-      acc += d; i++;
+      acc += d; i--;
     }
     if (!placed) break;
   }
   segs.length = Math.max(1, k);
-  if (k >= n && trail.length > i + 3) trail.length = i + 3;   // forget path we no longer need
+  if (k >= n && i > 66) trail.splice(0, i - 2);   // forget path we no longer need (in batches)
 }
 function step(s) {
   const h = s.segs[0];
@@ -219,14 +225,17 @@ function step(s) {
     }
   }
   s.r = radiusFor(s.score);
-  s.trail.unshift({ x: h.x + Math.cos(s.angle) * sp, y: h.y + Math.sin(s.angle) * sp });
+  s.trail.push({ x: h.x + Math.cos(s.angle) * sp, y: h.y + Math.sin(s.angle) * sp });
   sampleTrail(s.trail, s.segs, segCountFor(s.score), spacingFor(s.r));
   computeBBox(s);
 }
 function buildSegGrid() {
   segGrid = new Map();
   for (const s of snakes.values()) {
-    for (let i = 0; i < s.segs.length; i++) {
+    // every 2nd piece is enough: pieces sit half a radius apart, and hit tests use ~0.8 radius,
+    // so a head can't slip between two registered pieces. Halves the grid work every tick.
+    const n = s.segs.length;
+    for (let i = 0; i < n; i += (i === 0 || i >= n - 2 ? 1 : 2)) {
       const p = s.segs[i], k = cellKey(cellOf(p.x), cellOf(p.y));
       let c = segGrid.get(k); if (!c) segGrid.set(k, c = []);
       c.push(s, i);
@@ -417,7 +426,9 @@ function botThink(s) {
   if (b.target && tickNo > (b.huntUntil || 0)) b.target = null;          // give up a chase after a while
   const prey = b.target && snakes.get(b.target);
   // food first: only a close or aimed threat breaks a bot off its meal
-  let threat = nearestThreat(s, b.persona === 'coward' ? 300 : b.persona === 'hunter' ? 150 : 200);
+  // who's dangerous only needs re-checking every 3rd tick (path-checking still runs on fresh data)
+  if (!(b.thT-- > 0) || (b.th && !b.th.o.alive)) { b.th = nearestThreat(s, b.persona === 'coward' ? 300 : b.persona === 'hunter' ? 150 : 200); b.thT = 2; }
+  let threat = b.th;
   if (threat && !threat.aimed && threat.d > (b.persona === 'coward' ? 200 : 130) * (1.3 - dare * 0.6)) threat = null;
   if (threat && b.mode === 'hunt' && threat.o === prey && dare > 0.5) threat = null;   // mid-attack: commit
   // nearest worthwhile food trail (a dead snake) within reach
@@ -565,7 +576,7 @@ function botSteer(s, desired, wantBoost) {
   if (b.plan > 0 && b.lastDesired !== undefined && Math.abs(angDiff(desired, b.lastDesired)) < 0.3) {
     s.target = b.chosen; if (b.boostT > 0) b.boostT--; s.boost = b.boostOk && (wantBoost || b.boostT > 0); return;
   }
-  b.plan = 2; b.lastDesired = desired;
+  b.plan = 1; b.lastDesired = desired;   // botThink runs every 2nd tick, so this re-plans every 66 ms
 
   // closest heading to the one we want whose simulated path is clear
   const offsets = [0, 0.3, -0.3, 0.65, -0.65, 1.0, -1.0, 1.4, -1.4, 1.9, -1.9, 2.5, -2.5, Math.PI];
@@ -589,7 +600,7 @@ let nextCid = 1;
 wss.on('connection', ws => {
   const p = { cid: nextCid++, ws, snake: null, cam: { x: 0, y: 0 }, voice: false, known: new Set(), foodKnown: new Set(), msgCount: 0 };
   players.set(p.cid, p);
-  send(ws, { t: 'hello', cid: p.cid, worldR: WORLD_R, tickRate: TICK_RATE });
+  send(ws, { t: 'hello', cid: p.cid, worldR: WORLD_R, tickRate: SEND_RATE });   // clients pace their smoothing to the snapshot rate
 
   ws.on('message', raw => {
     if (++p.msgCount > 240) { ws.close(1008, 'rate'); return; }
@@ -629,7 +640,9 @@ setInterval(() => { for (const p of players.values()) p.msgCount = 0; }, 1000);
 let tickNo = 0;
 function tick() {
   tickNo++;
-  for (const s of snakes.values()) if (s.isBot) botThink(s);
+  // bots re-think every other tick (half of them each tick): a 66 ms reaction time, still quicker
+  // than a person, at half the CPU. Movement itself still updates every tick.
+  for (const s of snakes.values()) if (s.isBot && (s.id + tickNo) % 2 === 0) botThink(s);
   for (const s of snakes.values()) step(s);
 
   // eat
@@ -690,20 +703,36 @@ function tick() {
     }
   }
 
-  broadcast();
 }
 
+let sendNo = 0;
+function snakeJson(o, key) {
+  if (o.jTick !== sendNo) { o.jTick = sendNo; o.jLite = null; o.jKey = null; }
+  if (key) {
+    if (!o.jKey) {
+      const n = o.segs.length, flat = new Array(n * 2);
+      for (let i = 0; i < n; i++) { flat[i * 2] = r1(o.segs[i].x); flat[i * 2 + 1] = r1(o.segs[i].y); }
+      o.jKey = JSON.stringify({ i: o.id, x: r1(o.segs[0].x), y: r1(o.segs[0].y), a: r2(o.angle), r: r2(o.r), n, b: o.boosting ? 1 : 0, v: o.player && o.player.voice ? 1 : 0,
+        s: flat, nm: o.name, h: o.hue, k: o.skin, c: o.player ? o.player.cid : 0 });
+    }
+    return o.jKey;
+  }
+  if (!o.jLite) o.jLite = JSON.stringify({ i: o.id, x: r1(o.segs[0].x), y: r1(o.segs[0].y), a: r2(o.angle), r: r2(o.r), n: o.segs.length, b: o.boosting ? 1 : 0, v: o.player && o.player.voice ? 1 : 0 });
+  return o.jLite;
+}
 function broadcast() {
-  try { broadcastInner(); } finally { deathsThisTick.length = 0; }
+  try { broadcastInner(); } finally { deathsThisTick.length = 0; foodAdded.length = 0; foodRemoved.length = 0; }
 }
 function broadcastInner() {
-  const sendLb = tickNo % 15 === 0;
-  let lb = null, ranked = null, mm = null;
+  sendNo++;
+  const sendLb = sendNo % 8 === 0;
+  let lb = null, ranked = null, mm = null, lbJson = '', mmJson = '';
   if (sendLb) {
     ranked = [...snakes.values()].sort((a, b) => b.score - a.score);
     lb = ranked.slice(0, 10).map(s => [s.name, Math.floor(s.score), s.player ? s.player.cid : 0]);
     mm = [];
     for (const s of snakes.values()) mm.push(Math.round(s.segs[0].x / WORLD_R * 100), Math.round(s.segs[0].y / WORLD_R * 100), s.player ? 1 : 0);
+    lbJson = JSON.stringify(lb); mmJson = JSON.stringify(mm);
   }
 
   for (const p of players.values()) {
@@ -713,7 +742,8 @@ function broadcastInner() {
     const vr = BASE_VIEW * (me ? 1 + (me.r - 10) / 40 : 1.1);
     const cx = p.cam.x, cy = p.cam.y;
 
-    // snakes
+    // snakes: each snake's JSON is built once per tick and shared by every player that sees it
+    // (one string for the light per-tick update, one for the full-body keyframe)
     const out = [];
     const seen = new Set();
     for (const o of snakes.values()) {
@@ -721,42 +751,61 @@ function broadcastInner() {
       const nx = clamp(cx, a, c), ny = clamp(cy, b, d);
       if ((nx - cx) ** 2 + (ny - cy) ** 2 > vr * vr) continue;
       seen.add(o.id);
-      const h = o.segs[0];
-      const e = { i: o.id, x: r1(h.x), y: r1(h.y), a: r2(o.angle), r: r2(o.r), n: o.segs.length, b: o.boosting ? 1 : 0, v: o.player && o.player.voice ? 1 : 0 };
-      if (!p.known.has(o.id) || (tickNo + o.id) % KEYFRAME_EVERY === 0) {
-        const flat = new Array(o.segs.length * 2);
-        for (let i = 0; i < o.segs.length; i++) { flat[i * 2] = r1(o.segs[i].x); flat[i * 2 + 1] = r1(o.segs[i].y); }
-        e.s = flat; e.nm = o.name; e.h = o.hue; e.k = o.skin; e.c = o.player ? o.player.cid : 0;
-      }
-      out.push(e);
+      if (!p.known.has(o.id) || (sendNo + o.id) % KEYFRAME_EVERY === 0) out.push(snakeJson(o, true));
+      else out.push(snakeJson(o, false));
     }
     const dd = deathsThisTick.filter(id => p.known.has(id));
     p.known = seen;
 
-    // food diff
-    const vis = new Set(), fa = [];
-    forFoodNear(cx, cy, vr, f => {
-      vis.add(f.id);
-      if (!p.foodKnown.has(f.id)) fa.push(f.id, Math.round(f.x), Math.round(f.y), f.v, f.h);
-    });
-    const fr = [];
-    for (const id of p.foodKnown) if (!vis.has(id)) fr.push(id);
-    p.foodKnown = vis;
-
-    const msg = { t: 'st', s: out, cx: r1(cx), cy: r1(cy) };
-    if (dd.length) msg.dd = dd;
-    if (fa.length) msg.fa = fa;
-    if (fr.length) msg.fr = fr;
-    if (sendLb) {
-      msg.lb = lb; msg.mm = mm; msg.tot = ranked.length;
-      if (me) msg.rk = ranked.indexOf(me) + 1;
+    // food diff. A full re-scan of everything in view is costly, so it only happens every few
+    // ticks (and on join); in between we just forward what was eaten / spawned this tick. The
+    // server's view radius is ~2x the screen, so food at the edge is never late on screen.
+    const fa = [], fr = [];
+    if (p.foodScan === undefined || (sendNo + p.cid) % 3 === 0) {
+      const vis = new Set();
+      forFoodNear(cx, cy, vr, f => {
+        vis.add(f.id);
+        if (!p.foodKnown.has(f.id)) fa.push(f.id, Math.round(f.x), Math.round(f.y), f.v, f.h);
+      });
+      for (const id of p.foodKnown) if (!vis.has(id)) fr.push(id);
+      p.foodKnown = vis; p.foodScan = tickNo;
+    } else {
+      for (const id of foodRemoved) if (p.foodKnown.delete(id)) fr.push(id);
+      const vr2 = vr * vr;
+      for (const f of foodAdded) if (food.has(f.id) && (f.x - cx) ** 2 + (f.y - cy) ** 2 < vr2 && !p.foodKnown.has(f.id)) {
+        p.foodKnown.add(f.id); fa.push(f.id, Math.round(f.x), Math.round(f.y), f.v, f.h);
+      }
     }
-    p.ws.send(JSON.stringify(msg));
+
+    let msg = '{"t":"st","s":[' + out.join(',') + '],"cx":' + r1(cx) + ',"cy":' + r1(cy);
+    if (dd.length) msg += ',"dd":' + JSON.stringify(dd);
+    if (fa.length) msg += ',"fa":' + JSON.stringify(fa);
+    if (fr.length) msg += ',"fr":' + JSON.stringify(fr);
+    if (sendLb) {
+      msg += ',"lb":' + lbJson + ',"mm":' + mmJson + ',"tot":' + ranked.length;
+      if (me) msg += ',"rk":' + (ranked.indexOf(me) + 1);
+    }
+    p.ws.send(msg + '}');
   }
 }
 
 // ---------------------------------------------------------------- boot
 spawnRandomFood(FOOD_TARGET);
 for (let i = 0; i < wantedBots(); i++) spawnBot();
-setInterval(tick, 1000 / TICK_RATE);
+// Fixed-timestep loop that catches up. On a small cloud instance the process can get paused for a
+// moment (CPU quota); with a plain setInterval the whole game then stalls and snakes visibly freeze
+// and jump. Here game time keeps running in real time: after a pause we run the missed ticks
+// back-to-back (up to 5) and send one up-to-date snapshot, so clients just keep moving smoothly.
+const TICK_MS = 1000 / TICK_RATE;
+let nextTick = performance.now(), nextSend = performance.now();
+function loop() {
+  const now = performance.now();
+  let ran = 0;
+  while (now >= nextTick && ran < 5) { tick(); nextTick += TICK_MS; ran++; }
+  if (now - nextTick > TICK_MS * 5) nextTick = now + TICK_MS;     // too far behind: drop the backlog
+  // snapshots go out at SEND_RATE; the client smoothly moves everything in between
+  if (ran && performance.now() >= nextSend) { broadcast(); nextSend = Math.max(nextSend + 1000 / SEND_RATE, performance.now() - 1000 / SEND_RATE); }
+  setTimeout(loop, Math.max(0, nextTick - performance.now()));
+}
+loop();
 server.listen(PORT, () => console.log(`yapsnake running on http://localhost:${PORT}`));
